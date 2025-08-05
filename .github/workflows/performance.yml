@@ -107,7 +107,7 @@ jobs:
           ruby benchmarks/performance_test.rb
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
           path: benchmarks/
@@ -227,7 +227,7 @@ jobs:
 
       - name: Upload profiling results
         if: github.event_name == 'schedule'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: profiling-results
           path: profile.txt

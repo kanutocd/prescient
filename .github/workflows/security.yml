@@ -39,7 +39,7 @@ jobs:
 
       - name: Upload security report
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-report
           path: security-report.json
@@ -63,7 +63,7 @@ jobs:
         run: brakeman --no-pager --force --format json --output brakeman-report.json
 
       - name: Upload Brakeman report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: brakeman-report
           path: brakeman-report.json

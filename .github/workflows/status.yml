@@ -152,7 +152,7 @@ jobs:
           echo "Status summary created"
 
       - name: Upload status artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: status-report
           path: |

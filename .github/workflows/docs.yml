@@ -61,7 +61,7 @@ jobs:
           xargs -I {} sh -c 'echo "Checking links in: {}"; grep -o "https\?://[^[:space:])]*" {} | head -10'
 
       - name: Upload documentation artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: documentation
           path: |
