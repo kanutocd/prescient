@@ -43,17 +43,6 @@ jobs:
 
       - name: Run tests with coverage
         run: bundle exec rake coverage
-        env:
-          COVERAGE: true
-
-      - name: Check coverage threshold
-        run: |
-          COVERAGE=$(ruby -r json -e "puts JSON.parse(File.read('coverage/.resultset.json'))['Unit Tests']['coverage'].values.sum.to_f / JSON.parse(File.read('coverage/.resultset.json'))['Unit Tests']['coverage'].size * 100")
-          echo "Coverage: $COVERAGE%"
-          if (( $(echo "$COVERAGE < 85" | bc -l) )); then
-            echo "Coverage $COVERAGE% is below threshold of 85%"
-            exit 1
-          fi
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
