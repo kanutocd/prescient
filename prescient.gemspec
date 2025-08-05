@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description = "Prescient provides a unified interface for AI providers including local Ollama, Anthropic Claude, OpenAI GPT, and HuggingFace models. Built for AI applications with error handling, health monitoring, and provider switching."
   spec.homepage = "https://github.com/yourcompany/prescient"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.0.0"
+  spec.required_ruby_version = ">= 3.1.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
   spec.metadata["homepage_uri"] = spec.homepage
@@ -31,23 +31,23 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Runtime dependencies
-  spec.add_dependency "httparty", "~> 0.22.0"
+  spec.add_dependency "httparty", "~> 0.23.1"
 
   # Optional dependencies for vector database integration
-  spec.add_development_dependency "pg", "~> 1.5" # PostgreSQL adapter for pgvector integration
+  spec.add_development_dependency "pg", "~> 1.6" # PostgreSQL adapter for pgvector integration
 
   # Development dependencies
-  spec.add_development_dependency "minitest", "~> 5.20"
-  spec.add_development_dependency "mocha", "~> 2.1"
-  spec.add_development_dependency "webmock", "~> 3.18"
-  spec.add_development_dependency "vcr", "~> 6.1"
-  spec.add_development_dependency "rubocop", "~> 1.50"
-  spec.add_development_dependency "rubocop-minitest", "~> 0.35"
-  spec.add_development_dependency "rubocop-performance", "~> 1.19"
-  spec.add_development_dependency "rubocop-rake", "~> 0.6"
-  spec.add_development_dependency "simplecov", "~> 0.22"
-  spec.add_development_dependency "rake", "~> 13.0"
-  spec.add_development_dependency "irb"
+  spec.add_development_dependency "minitest", "~> 5.25"
+  spec.add_development_dependency "mocha", "~> 2.7"
+  spec.add_development_dependency "webmock", "~> 3.25"
+  spec.add_development_dependency "vcr", "~> 6.3"
+  spec.add_development_dependency "rubocop", "~> 1.79"
+  spec.add_development_dependency "rubocop-minitest", "~> 0.38.1"
+  spec.add_development_dependency "rubocop-performance", "~> 1.25"
+  spec.add_development_dependency "rubocop-rake", "~> 0.7.1"
+  spec.add_development_dependency "simplecov", "~> 0.22.0"
+  spec.add_development_dependency "rake", "~> 13.3"
+  spec.add_development_dependency "irb", "~> 1.15"
   spec.add_development_dependency "yard", "~> 0.9.37"
   spec.add_development_dependency "kramdown", "~> 2.5"
 end

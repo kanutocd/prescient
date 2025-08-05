@@ -9,8 +9,8 @@ plugins:
   - rubocop-rake
 
 AllCops:
-  # Target Ruby 3.0+ (matches gemspec requirement)
-  TargetRubyVersion: 3.0
+  # Target Ruby 3.1+ (matches gemspec requirement)
+  TargetRubyVersion: 3.1
 
   # Use new cops by default
   NewCops: enable
