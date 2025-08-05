@@ -1,0 +1,153 @@
+# Docker Compose configuration for running Ollama with Prescient gem
+# This provides a local AI environment for development and testing
+
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: prescient-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      # Persist models and data
+      - ollama_data:/root/.ollama
+      # Optional: Mount models from host for faster startup
+      # - ./models:/root/.ollama/models
+    environment:
+      # Optional: Set Ollama environment variables
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    restart: unless-stopped
+    # Resource limits - adjust based on your hardware
+    deploy:
+      resources:
+        limits:
+          # Allocate most available memory for model loading
+          memory: 12G
+          cpus: '4.0'
+        reservations:
+          memory: 4G
+          cpus: '2.0'
+          # GPU support (uncomment if you have NVIDIA GPU)
+          # devices:
+          #   - driver: nvidia
+          #     count: 1
+          #     capabilities: [gpu]
+    # Optional: Shared memory for better performance
+    shm_size: 2g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Optional: Model initialization service
+  # This pulls required models on startup
+  ollama-init:
+    image: curlimages/curl:latest
+    container_name: prescient-ollama-init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/scripts:ro
+    command: |
+      sh -c '
+        echo "Pulling required models for Prescient..."
+        
+        # Pull embedding model
+        curl -X POST http://ollama:11434/api/pull \
+          -H "Content-Type: application/json" \
+          -d "{\"name\": \"nomic-embed-text\"}"
+        
+        # Pull chat model  
+        curl -X POST http://ollama:11434/api/pull \
+          -H "Content-Type: application/json" \
+          -d "{\"name\": \"llama3.1:8b\"}"
+        
+        echo "Models pulled successfully!"
+      '
+    restart: "no"
+
+  # PostgreSQL with pgvector extension for vector storage
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: prescient-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=prescient_development
+      - POSTGRES_USER=prescient
+      - POSTGRES_PASSWORD=prescient_password
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prescient -d prescient_development"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Optional: Redis for caching embeddings (useful for development)
+  redis:
+    image: redis:7-alpine
+    container_name: prescient-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Optional: Example Ruby application using Prescient
+  prescient-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.example
+    container_name: prescient-example-app
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      # Ollama configuration
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+      - OLLAMA_CHAT_MODEL=llama3.1:8b
+      
+      # Optional: Other AI provider configurations
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-}
+      
+      # Redis configuration (if using caching)
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      # Mount your application code
+      - .:/app
+      - /app/vendor/bundle  # Bundle cache volume
+    working_dir: /app
+    # Keep container running for development
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: prescient-network
