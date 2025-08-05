@@ -118,7 +118,7 @@ class Prescient::Provider::OpenAI < Prescient::Base
         }
       end
     end
-  rescue Prescient::ConnectionError => e
+  rescue Prescient::Error => e
     {
       status:   'unavailable',
       provider: 'openai',

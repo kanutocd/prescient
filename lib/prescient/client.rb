@@ -9,18 +9,26 @@ module Prescient
       @provider_name = provider_name || Prescient.configuration.default_provider
       @provider = Prescient.configuration.provider(@provider_name)
 
-      raise Prescient::Error, "Provider '#{@provider_name}' not configured" unless @provider
+      raise Prescient::Error, "Provider not found: #{@provider_name}" unless @provider
     end
 
     def generate_embedding(text, **options)
       with_error_handling do
-        @provider.generate_embedding(text, **options)
+        if options.any?
+          @provider.generate_embedding(text, **options)
+        else
+          @provider.generate_embedding(text)
+        end
       end
     end
 
     def generate_response(prompt, context_items = [], **options)
       with_error_handling do
-        @provider.generate_response(prompt, context_items, **options)
+        if options.any?
+          @provider.generate_response(prompt, context_items, **options)
+        else
+          @provider.generate_response(prompt, context_items)
+        end
       end
     end
 
@@ -35,13 +43,30 @@ module Prescient
     def provider_info
       {
         name:      @provider_name,
-        class:     @provider.class.name,
+        class:     @provider.class.name.split('::').last,
         available: available?,
-        options:   @provider.options.except(:api_key), # Hide sensitive data
+        options:   sanitize_options(@provider.options),
       }
     end
 
+    def method_missing(method_name, ...)
+      if @provider.respond_to?(method_name)
+        @provider.send(method_name, ...)
+      else
+        super
+      end
+    end
+
+    def respond_to_missing?(method_name, include_private = false)
+      @provider.respond_to?(method_name, include_private) || super
+    end
+
     private
+
+    def sanitize_options(options)
+      sensitive_keys = [:api_key, :password, :token, :secret]
+      options.reject { |key, _| sensitive_keys.include?(key.to_sym) }
+    end
 
     def with_error_handling
       retries = 0

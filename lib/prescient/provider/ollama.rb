@@ -31,8 +31,13 @@ class Prescient::Provider::Ollama < Prescient::Base
 
   def generate_response(prompt, context_items = [], **options)
     handle_errors do
-      generated_text = fetch_and_parse('post', '/api/generate',
-                                       prepare_generate_response(prompt, context_items, **options))
+      request_options = prepare_generate_response(prompt, context_items, **options)
+
+      # Make the request and store both text and full response
+      response = self.class.post('/api/generate', **request_options)
+      validate_response!(response, 'POST /api/generate')
+
+      generated_text = response.parsed_response['response']
       raise Prescient::InvalidResponseError, 'No response generated' unless generated_text
 
       {
@@ -52,21 +57,24 @@ class Prescient::Provider::Ollama < Prescient::Base
   def health_check
     handle_errors do
       models = available_models
-      hash = {
+      embedding_available = models.any? { |m| m[:embedding] }
+      chat_available = models.any? { |m| m[:chat] }
+
+      {
         status:           'healthy',
         provider:         'ollama',
         url:              @options[:url],
-        models_available: models.map { |m| m['name'] },
+        models_available: models.map { |m| m[:name] },
         embedding_model:  {
           name:      @options[:embedding_model],
-          available: models.any? { |m| m[:embedding] },
+          available: embedding_available,
         },
         chat_model:       {
           name:      @options[:chat_model],
-          available: models.any? { |m| m[:chat] },
+          available: chat_available,
         },
+        ready:            embedding_available && chat_available,
       }
-      hash.merge(ready: models[:embedding][:ready] && models[:chat][:ready])
     end
   rescue Prescient::Error => e
     {

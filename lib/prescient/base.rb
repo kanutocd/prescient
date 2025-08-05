@@ -35,6 +35,9 @@ class Prescient::Base
 
   def handle_errors
     yield
+  rescue Prescient::Error
+    # Re-raise Prescient errors without wrapping
+    raise
   rescue Net::ReadTimeout, Net::OpenTimeout => e
     raise Prescient::ConnectionError, "Request timeout: #{e.message}"
   rescue Net::HTTPError => e

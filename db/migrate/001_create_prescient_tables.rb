@@ -94,30 +94,30 @@ class CreatePrescientTables < ActiveRecord::Migration[7.0]
 
     # Vector indexes for document embeddings
     execute <<-SQL
-      CREATE INDEX idx_document_embeddings_cosine 
-      ON document_embeddings 
+      CREATE INDEX idx_document_embeddings_cosine#{' '}
+      ON document_embeddings#{' '}
       USING hnsw (embedding vector_cosine_ops)
       WITH (m = 16, ef_construction = 64);
     SQL
 
     execute <<-SQL
-      CREATE INDEX idx_document_embeddings_l2 
-      ON document_embeddings 
+      CREATE INDEX idx_document_embeddings_l2#{' '}
+      ON document_embeddings#{' '}
       USING hnsw (embedding vector_l2_ops)
       WITH (m = 16, ef_construction = 64);
     SQL
 
     # Vector indexes for chunk embeddings
     execute <<-SQL
-      CREATE INDEX idx_chunk_embeddings_cosine 
-      ON chunk_embeddings 
+      CREATE INDEX idx_chunk_embeddings_cosine#{' '}
+      ON chunk_embeddings#{' '}
       USING hnsw (embedding vector_cosine_ops)
       WITH (m = 16, ef_construction = 64);
     SQL
 
     execute <<-SQL
-      CREATE INDEX idx_chunk_embeddings_l2 
-      ON chunk_embeddings 
+      CREATE INDEX idx_chunk_embeddings_l2#{' '}
+      ON chunk_embeddings#{' '}
       USING hnsw (embedding vector_l2_ops)
       WITH (m = 16, ef_construction = 64);
     SQL

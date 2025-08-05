@@ -170,11 +170,14 @@ Metrics/ModuleLength:
 
 Metrics/ClassLength:
   Max: 150
+  Exclude:
+    - 'test/**/*'
 
 Metrics/MethodLength:
   Max: 25
   Exclude:
     - 'test/**/*'
+    - 'db/**/*'
     - 'lib/prescient/provider/*.rb'
 
 Metrics/BlockLength:
@@ -187,6 +190,7 @@ Metrics/AbcSize:
   Max: 20
   Exclude:
     - 'test/**/*'
+    - 'db/**/*'
     - 'lib/prescient/provider/*.rb'
 
 Metrics/CyclomaticComplexity:
@@ -304,7 +308,7 @@ Performance/Sum:
 # === MINITEST ===
 
 Minitest/MultipleAssertions:
-  Max: 5
+  Max: 10
 
 Minitest/AssertTruthy:
   Enabled: true
