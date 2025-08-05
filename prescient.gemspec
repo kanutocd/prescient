@@ -32,6 +32,9 @@ Gem::Specification.new do |spec|
 
   # Runtime dependencies
   spec.add_dependency "httparty", "~> 0.22.0"
+  
+  # Optional dependencies for vector database integration
+  spec.add_development_dependency "pg", "~> 1.5" # PostgreSQL adapter for pgvector integration
 
   # Development dependencies
   spec.add_development_dependency "minitest", "~> 5.20"

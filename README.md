@@ -346,6 +346,213 @@ response = client.generate_response("Analyze this", [
 
 See `examples/custom_contexts.rb` for complete examples.
 
+## Vector Database Integration (pgvector)
+
+Prescient integrates seamlessly with PostgreSQL's pgvector extension for storing and searching embeddings:
+
+### Setup with Docker
+
+The included `docker-compose.yml` provides a complete setup with PostgreSQL + pgvector:
+
+```bash
+# Start PostgreSQL with pgvector
+docker-compose up -d postgres
+
+# The database will automatically:
+# - Install pgvector extension
+# - Create tables for documents and embeddings
+# - Set up optimized vector indexes
+# - Insert sample data for testing
+```
+
+### Database Schema
+
+The setup creates these key tables:
+
+- **`documents`** - Store original content and metadata
+- **`document_embeddings`** - Store vector embeddings for documents
+- **`document_chunks`** - Break large documents into searchable chunks
+- **`chunk_embeddings`** - Store embeddings for document chunks
+- **`search_queries`** - Track search queries and performance
+- **`query_results`** - Store search results for analysis
+
+### Vector Search Example
+
+```ruby
+require 'prescient'
+require 'pg'
+
+# Connect to database
+db = PG.connect(
+  host: 'localhost',
+  port: 5432,
+  dbname: 'prescient_development',
+  user: 'prescient',
+  password: 'prescient_password'
+)
+
+# Generate embedding for a document
+client = Prescient.client(:ollama)
+text = "Ruby is a dynamic programming language"
+embedding = client.generate_embedding(text)
+
+# Store embedding in database
+vector_str = "[#{embedding.join(',')}]"
+db.exec_params(
+  "INSERT INTO document_embeddings (document_id, embedding_provider, embedding_model, embedding_dimensions, embedding, embedding_text) VALUES ($1, $2, $3, $4, $5, $6)",
+  [doc_id, 'ollama', 'nomic-embed-text', 768, vector_str, text]
+)
+
+# Perform similarity search
+query_text = "What is Ruby programming?"
+query_embedding = client.generate_embedding(query_text)
+query_vector = "[#{query_embedding.join(',')}]"
+
+results = db.exec_params(
+  "SELECT d.title, d.content, de.embedding <=> $1::vector AS distance 
+   FROM documents d 
+   JOIN document_embeddings de ON d.id = de.document_id 
+   ORDER BY de.embedding <=> $1::vector 
+   LIMIT 5",
+  [query_vector]
+)
+```
+
+### Distance Functions
+
+pgvector supports three distance functions:
+
+- **Cosine Distance** (`<=>`): Best for normalized embeddings
+- **L2 Distance** (`<->`): Euclidean distance, good general purpose  
+- **Inner Product** (`<#>`): Dot product, useful for specific cases
+
+```sql
+-- Cosine similarity (most common)
+ORDER BY embedding <=> query_vector
+
+-- L2 distance 
+ORDER BY embedding <-> query_vector
+
+-- Inner product
+ORDER BY embedding <#> query_vector
+```
+
+### Vector Indexes
+
+The setup automatically creates HNSW indexes for fast similarity search:
+
+```sql
+-- Example index for cosine distance
+CREATE INDEX idx_embeddings_cosine 
+ON document_embeddings 
+USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);
+```
+
+### Advanced Search with Filters
+
+Combine vector similarity with metadata filtering:
+
+```ruby
+# Search with tag filtering
+results = db.exec_params(
+  "SELECT d.title, de.embedding <=> $1::vector as distance
+   FROM documents d 
+   JOIN document_embeddings de ON d.id = de.document_id
+   WHERE d.metadata->'tags' ? 'programming'
+   ORDER BY de.embedding <=> $1::vector 
+   LIMIT 5",
+  [query_vector]
+)
+
+# Search with difficulty and tag filters  
+results = db.exec_params(
+  "SELECT d.title, de.embedding <=> $1::vector as distance
+   FROM documents d 
+   JOIN document_embeddings de ON d.id = de.document_id
+   WHERE d.metadata->>'difficulty' = 'beginner'
+     AND d.metadata->'tags' ?| $2::text[]
+   ORDER BY de.embedding <=> $1::vector 
+   LIMIT 5",
+  [query_vector, ['ruby', 'programming']]
+)
+```
+
+### Performance Optimization
+
+#### Index Configuration
+
+For large datasets, tune HNSW parameters:
+
+```sql
+-- High accuracy (slower build, more memory)
+WITH (m = 32, ef_construction = 128)
+
+-- Fast build (lower accuracy, less memory)  
+WITH (m = 8, ef_construction = 32)
+
+-- Balanced (recommended default)
+WITH (m = 16, ef_construction = 64)
+```
+
+#### Query Performance
+
+```sql
+-- Set ef_search for query-time accuracy/speed tradeoff
+SET hnsw.ef_search = 100;  -- Higher = more accurate, slower
+
+-- Use EXPLAIN ANALYZE to optimize queries
+EXPLAIN ANALYZE 
+SELECT * FROM document_embeddings 
+ORDER BY embedding <=> '[0.1,0.2,...]'::vector 
+LIMIT 10;
+```
+
+#### Chunking Strategy
+
+For large documents, use chunking for better search granularity:
+
+```ruby
+def chunk_document(text, chunk_size: 500, overlap: 50)
+  chunks = []
+  start = 0
+  
+  while start < text.length
+    end_pos = [start + chunk_size, text.length].min
+    chunk = text[start...end_pos]
+    chunks << chunk
+    start += chunk_size - overlap
+  end
+  
+  chunks
+end
+
+# Generate embeddings for each chunk
+chunks = chunk_document(document.content)
+chunks.each_with_index do |chunk, index|
+  embedding = client.generate_embedding(chunk)
+  # Store chunk and embedding...
+end
+```
+
+### Example Usage
+
+Run the complete vector search example:
+
+```bash
+# Start services
+docker-compose up -d postgres ollama
+
+# Run example
+DB_HOST=localhost ruby examples/vector_search.rb
+```
+
+The example demonstrates:
+- Document embedding generation and storage
+- Similarity search with different distance functions
+- Metadata filtering and advanced queries
+- Performance comparison between approaches
+
 ## Advanced Usage
 
 ### Custom Provider Implementation
@@ -416,6 +623,205 @@ puts info[:options]   # => {...} (excluding sensitive data)
 - Open-source models
 - Research-friendly
 - Free tier available
+
+## Docker Setup (Recommended for Ollama)
+
+The easiest way to get started with Prescient and Ollama is using Docker Compose:
+
+### Hardware Requirements
+
+Before starting, ensure your system meets the minimum requirements for running Ollama:
+
+#### **Minimum Requirements:**
+- **CPU**: 4+ cores (x86_64 or ARM64)
+- **RAM**: 8GB+ (16GB recommended)
+- **Storage**: 10GB+ free space for models
+- **OS**: Linux, macOS, or Windows with Docker
+
+#### **Model-Specific Requirements:**
+
+| Model | RAM Required | Storage | Notes |
+|-------|-------------|---------|-------|
+| `nomic-embed-text` | 1GB | 274MB | Embedding model |
+| `llama3.1:8b` | 8GB | 4.7GB | Chat model (8B parameters) |
+| `llama3.1:70b` | 64GB+ | 40GB | Large chat model (70B parameters) |
+| `codellama:7b` | 8GB | 3.8GB | Code generation model |
+
+#### **Performance Recommendations:**
+- **SSD Storage**: Significantly faster model loading
+- **GPU (Optional)**: NVIDIA GPU with 8GB+ VRAM for acceleration
+- **Network**: Stable internet for initial model downloads
+- **Docker**: 4GB+ memory limit configured
+
+#### **GPU Acceleration (Optional):**
+- **NVIDIA GPU**: RTX 3060+ with 8GB+ VRAM recommended
+- **CUDA**: Version 11.8+ required
+- **Docker**: NVIDIA Container Toolkit installed
+- **Performance**: 3-10x faster inference with compatible models
+
+> **💡 Tip**: Start with smaller models like `llama3.1:8b` and upgrade based on your hardware capabilities and performance needs.
+
+### Quick Start with Docker
+
+1. **Start Ollama service:**
+   ```bash
+   docker-compose up -d ollama
+   ```
+
+2. **Pull required models:**
+   ```bash
+   # Automatic setup
+   docker-compose up ollama-init
+   
+   # Or manual setup
+   ./scripts/setup-ollama-models.sh
+   ```
+
+3. **Run examples:**
+   ```bash
+   # Set environment variable
+   export OLLAMA_URL=http://localhost:11434
+   
+   # Run examples
+   ruby examples/custom_contexts.rb
+   ```
+
+### Docker Compose Services
+
+The included `docker-compose.yml` provides:
+
+- **ollama**: Ollama AI service with persistent model storage
+- **ollama-init**: Automatically pulls required models on startup
+- **redis**: Optional caching layer for embeddings
+- **prescient-app**: Example Ruby application container
+
+### Configuration Options
+
+```yaml
+# docker-compose.yml environment variables
+services:
+  ollama:
+    ports:
+      - "11434:11434"  # Ollama API port
+    volumes:
+      - ollama_data:/root/.ollama  # Persist models
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+```
+
+### GPU Support (Optional)
+
+For GPU acceleration, uncomment the GPU configuration in `docker-compose.yml`:
+
+```yaml
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+```
+
+### Environment Variables
+
+```bash
+# Ollama Configuration
+OLLAMA_URL=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+OLLAMA_CHAT_MODEL=llama3.1:8b
+
+# Optional: Other AI providers
+OPENAI_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here
+HUGGINGFACE_API_KEY=your_key_here
+```
+
+### Model Management
+
+```bash
+# Check available models
+curl http://localhost:11434/api/tags
+
+# Pull a specific model
+curl -X POST http://localhost:11434/api/pull \
+  -H "Content-Type: application/json" \
+  -d '{"name": "llama3.1:8b"}'
+
+# Health check
+curl http://localhost:11434/api/version
+```
+
+### Production Deployment
+
+For production use:
+
+1. Use specific image tags instead of `latest`
+2. Configure proper resource limits
+3. Set up monitoring and logging
+4. Use secrets management for API keys
+5. Configure backups for model data
+
+### Troubleshooting
+
+#### **Common Issues:**
+
+**Out of Memory Errors:**
+```bash
+# Check available memory
+free -h
+
+# Increase Docker memory limit (Docker Desktop)
+# Settings > Resources > Memory: 8GB+
+
+# Use smaller models if hardware limited
+OLLAMA_CHAT_MODEL=llama3.1:7b ruby examples/custom_contexts.rb
+```
+
+**Slow Model Loading:**
+```bash
+# Check disk I/O
+iostat -x 1
+
+# Move Docker data to SSD if on HDD
+# Docker Desktop: Settings > Resources > Disk image location
+```
+
+**Model Download Failures:**
+```bash
+# Check disk space
+df -h
+
+# Manually pull models with retry
+docker exec prescient-ollama ollama pull llama3.1:8b
+```
+
+**GPU Not Detected:**
+```bash
+# Check NVIDIA Docker runtime
+docker run --rm --gpus all nvidia/cuda:11.8-base nvidia-smi
+
+# Install NVIDIA Container Toolkit if missing
+# https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+```
+
+#### **Performance Monitoring:**
+
+```bash
+# Monitor resource usage
+docker stats prescient-ollama
+
+# Check Ollama logs
+docker logs prescient-ollama
+
+# Test API response time
+time curl -X POST http://localhost:11434/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{"model": "llama3.1:8b", "prompt": "Hello", "stream": false}'
+```
 
 ## Testing
 
