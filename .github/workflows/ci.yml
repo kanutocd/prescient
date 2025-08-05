@@ -71,7 +71,7 @@ jobs:
       - name: Run Brakeman
         run: |
           gem install brakeman
-          brakeman --no-pager --format github
+          brakeman --no-pager --force --format github
 
   build:
     runs-on: ubuntu-latest
