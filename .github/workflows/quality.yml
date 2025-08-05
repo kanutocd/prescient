@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  id-token: write
 jobs:
   rubocop:
     runs-on: ubuntu-latest
@@ -45,12 +47,13 @@ jobs:
         run: bundle exec rake coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
-          directory: ./coverage
-          flags: unittests
-          name: prescient-coverage
-          fail_ci_if_error: true
+          verbose: true
+          use_oidc: true
+          files: ./coverage.xml,./coverage/coverage.xml,./coverage/.resultset.json
+          fail_ci_if_error: false
+        continue-on-error: true
 
   documentation:
     runs-on: ubuntu-latest
