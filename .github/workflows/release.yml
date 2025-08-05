@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby-version: ["3.1", "3.2", "3.3", "3.4"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby ${{ matrix.ruby-version }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+
+      - name: Run tests
+        run: bundle exec rake test
+
+  build-and-publish:
+    runs-on: ubuntu-latest
+    needs: test
+    environment:
+      name: release
+      url: https://rubygems.org/gems/prescient
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Extract version from tag
+        id: extract_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Verify version consistency
+        run: |
+          GEMSPEC_VERSION=$(ruby -e "require './lib/prescient/version'; puts Prescient::VERSION")
+          if [ "$GEMSPEC_VERSION" != "${{ steps.extract_version.outputs.VERSION }}" ]; then
+            echo "Version mismatch: tag is ${{ steps.extract_version.outputs.VERSION }}, gemspec is $GEMSPEC_VERSION"
+            exit 1
+          fi
+
+      - name: Build gem
+        run: gem build prescient.gemspec
+
+      - name: Configure gem credentials
+        run: |
+          mkdir -p ~/.gem
+          cat > ~/.gem/credentials << EOF
+          ---
+          :rubygems_api_key: ${{ secrets.RUBYGEMS_API_KEY }}
+          EOF
+          chmod 600 ~/.gem/credentials
+
+      - name: Publish to RubyGems
+        run: gem push prescient-${{ steps.extract_version.outputs.VERSION }}.gem
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: prescient-${{ steps.extract_version.outputs.VERSION }}.gem
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update CHANGELOG
+        run: |
+          echo "## [${{ steps.extract_version.outputs.VERSION }}] - $(date +%Y-%m-%d)" >> CHANGELOG_TEMP.md
+          echo "" >> CHANGELOG_TEMP.md
+          echo "Released via GitHub Actions" >> CHANGELOG_TEMP.md
+          echo "" >> CHANGELOG_TEMP.md
+          if [ -f CHANGELOG.md ]; then
+            cat CHANGELOG.md >> CHANGELOG_TEMP.md
+          fi
+          mv CHANGELOG_TEMP.md CHANGELOG.md
+
+      - name: Commit updated CHANGELOG
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add CHANGELOG.md
+          git commit -m "Update CHANGELOG for version ${{ steps.extract_version.outputs.VERSION }}" || exit 0
+          git push origin HEAD:main || exit 0

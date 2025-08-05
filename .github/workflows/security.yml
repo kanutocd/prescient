@@ -1,0 +1,86 @@
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security checks daily at 2 AM UTC
+    - cron: "0 2 * * *"
+
+jobs:
+  dependency-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Install bundler-audit
+        run: gem install bundler-audit
+
+      - name: Update vulnerability database
+        run: bundler-audit --update
+
+      - name: Run dependency security audit
+        run: bundler-audit
+
+      - name: Create security report
+        if: failure()
+        run: |
+          bundler-audit --format json > security-report.json
+          echo "Security vulnerabilities found. Check the artifact for details."
+
+      - name: Upload security report
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: security-report.json
+
+  static-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Install Brakeman
+        run: gem install brakeman
+
+      - name: Run Brakeman static analysis
+        run: brakeman --no-pager --format json --output brakeman-report.json
+
+      - name: Upload Brakeman report
+        uses: actions/upload-artifact@v3
+        with:
+          name: brakeman-report
+          path: brakeman-report.json
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Fetch full history for secret scanning
+          fetch-depth: 0
+
+      - name: Run TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified

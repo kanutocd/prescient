@@ -1,0 +1,233 @@
+name: Performance Monitoring
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run performance tests weekly on Sundays at 6 AM UTC
+    - cron: "0 6 * * 0"
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Install benchmark dependencies
+        run: |
+          gem install benchmark-ips
+          gem install memory_profiler
+          gem install ruby-prof
+
+      - name: Create comprehensive benchmarks
+        run: |
+          cat > benchmarks/performance_test.rb << 'EOF'
+          require 'benchmark/ips'
+          require 'memory_profiler'
+          require_relative '../lib/prescient'
+
+          # Configure test providers
+          Prescient.configure do |config|
+            config.add_provider(:test1, Prescient::Provider::Ollama,
+                                url: 'http://localhost:11434',
+                                embedding_model: 'nomic-embed-text',
+                                chat_model: 'llama3.1:8b')
+            config.add_provider(:test2, Prescient::Provider::Ollama,
+                                url: 'http://localhost:11434',
+                                embedding_model: 'nomic-embed-text',
+                                chat_model: 'llama3.1:8b')
+            config.fallback_providers = [:test2]
+          end
+
+          puts "=== Client Creation Benchmark ==="
+          Benchmark.ips do |x|
+            x.report("Client without fallback") {
+              Prescient::Client.new(:test1, enable_fallback: false)
+            }
+            x.report("Client with fallback") {
+              Prescient::Client.new(:test1, enable_fallback: true)
+            }
+            x.compare!
+          end
+
+          puts "\n=== Configuration Access Benchmark ==="
+          Benchmark.ips do |x|
+            x.report("Get provider") {
+              Prescient.configuration.provider(:test1)
+            }
+            x.report("Available providers") {
+              Prescient.configuration.available_providers
+            }
+            x.compare!
+          end
+
+          puts "\n=== Memory Usage Analysis ==="
+          report = MemoryProfiler.report do
+            100.times do
+              client = Prescient::Client.new(:test1, enable_fallback: true)
+              client.provider_info
+            end
+          end
+
+          puts "Total allocated: #{report.total_allocated} bytes (#{report.total_allocated_memsize} objects)"
+          puts "Total retained: #{report.total_retained} bytes (#{report.total_retained_memsize} objects)"
+
+          # Performance regression detection
+          puts "\n=== Performance Baseline ==="
+          baseline_time = Benchmark.realtime do
+            1000.times { Prescient::Client.new(:test1, enable_fallback: false) }
+          end
+
+          fallback_time = Benchmark.realtime do
+            1000.times { Prescient::Client.new(:test1, enable_fallback: true) }
+          end
+
+          overhead = ((fallback_time - baseline_time) / baseline_time * 100).round(2)
+          puts "Baseline time: #{baseline_time.round(4)}s"
+          puts "Fallback time: #{fallback_time.round(4)}s"
+          puts "Overhead: #{overhead}%"
+
+          # Fail if overhead is too high
+          if overhead > 50
+            puts "ERROR: Fallback overhead (#{overhead}%) exceeds threshold (50%)"
+            exit 1
+          end
+          EOF
+
+          mkdir -p benchmarks
+          ruby benchmarks/performance_test.rb
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: benchmarks/
+
+  memory-leak-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Install memory leak detection tools
+        run: gem install memory_profiler
+
+      - name: Run memory leak detection
+        run: |
+          cat > memory_leak_test.rb << 'EOF'
+          require 'memory_profiler'
+          require_relative 'lib/prescient'
+
+          # Configure test provider
+          Prescient.configure do |config|
+            config.add_provider(:test, Prescient::Provider::Ollama,
+                                url: 'http://localhost:11434',
+                                embedding_model: 'nomic-embed-text',
+                                chat_model: 'llama3.1:8b')
+          end
+
+          puts "Testing for memory leaks..."
+
+          # Test client creation and destruction
+          report = MemoryProfiler.report do
+            1000.times do |i|
+              client = Prescient::Client.new(:test, enable_fallback: true)
+              client.provider_info
+              client = nil
+
+              # Force garbage collection every 100 iterations
+              GC.start if i % 100 == 0
+            end
+          end
+
+          puts "Memory retained: #{report.total_retained} bytes"
+          puts "Objects retained: #{report.total_retained_memsize}"
+
+          # Check for potential memory leaks
+          if report.total_retained > 10_000  # 10KB threshold
+            puts "WARNING: Potential memory leak detected"
+            puts "Retained objects by class:"
+            report.retained_objects_by_class.each do |klass, count|
+              puts "  #{klass}: #{count}"
+            end
+          else
+            puts "No significant memory leaks detected"
+          end
+          EOF
+
+          ruby memory_leak_test.rb
+
+  profiling:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Install profiling tools
+        run: gem install ruby-prof
+
+      - name: Run profiling
+        run: |
+          cat > profile_test.rb << 'EOF'
+          require 'ruby-prof'
+          require_relative 'lib/prescient'
+
+          # Configure test provider
+          Prescient.configure do |config|
+            config.add_provider(:test, Prescient::Provider::Ollama,
+                                url: 'http://localhost:11434',
+                                embedding_model: 'nomic-embed-text',
+                                chat_model: 'llama3.1:8b')
+          end
+
+          # Profile client operations
+          RubyProf.start
+
+          100.times do
+            client = Prescient::Client.new(:test, enable_fallback: true)
+            client.provider_info
+          end
+
+          result = RubyProf.stop
+
+          # Print a flat profile to text
+          printer = RubyProf::FlatPrinter.new(result)
+          File.open('profile.txt', 'w') do |file|
+            printer.print(file)
+          end
+
+          puts "Profiling complete. Top 10 methods by total time:"
+          printer = RubyProf::FlatPrinter.new(result)
+          printer.print(STDOUT, min_percent: 1)
+          EOF
+
+          ruby profile_test.rb
+
+      - name: Upload profiling results
+        if: github.event_name == 'schedule'
+        uses: actions/upload-artifact@v3
+        with:
+          name: profiling-results
+          path: profile.txt

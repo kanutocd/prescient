@@ -1,0 +1,202 @@
+name: Welcome New Contributors
+
+on:
+  pull_request_target:
+    types: [opened]
+  issues:
+    types: [opened]
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Welcome new contributor
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const { number } = context.issue;
+          const author = context.payload.sender.login;
+          
+          // Check if this is the user's first contribution
+          const { data: contributions } = await github.rest.search.issuesAndPullRequests({
+            q: `repo:${owner}/${repo} author:${author}`
+          });
+          
+          const isFirstContribution = contributions.total_count === 1;
+          
+          if (isFirstContribution) {
+            const eventType = context.eventName === 'pull_request_target' ? 'pull request' : 'issue';
+            
+            const welcomeMessage = `
+            👋 Welcome to Prescient, @${author}!
+            
+            Thank you for opening your first ${eventType}! We're excited to have you contribute to the project.
+            
+            ## What happens next?
+            
+            ${eventType === 'pull request' ? `
+            ### For Pull Requests:
+            - 🔍 Your PR will be automatically checked by our CI/CD pipeline
+            - ✅ Tests will be run across multiple Ruby versions
+            - 🔒 Security scans will be performed
+            - 📊 Code quality checks will be executed
+            - 👥 A maintainer will review your changes
+            
+            ### Tips for success:
+            - Ensure all tests pass locally by running \`bundle exec rake test\`
+            - Follow our code style by running \`bundle exec rubocop\`
+            - Add tests for any new functionality
+            - Update documentation if needed
+            ` : `
+            ### For Issues:
+            - 🏷️ A maintainer will triage and label your issue
+            - 📋 We may ask for additional information
+            - 🚀 If it's a feature request, we'll discuss the implementation
+            - 🐛 If it's a bug, we'll work on reproducing and fixing it
+            `}
+            
+            ## Resources
+            
+            - 📖 [Contributing Guide](CONTRIBUTING.md)
+            - 🔧 [Development Setup](README.md#development)
+            - 📚 [API Documentation](https://yourcompany.github.io/prescient)
+            - 💬 Join our discussions in the GitHub Discussions tab
+            
+            ## Code of Conduct
+            
+            Please note that this project follows our [Code of Conduct](CODE_OF_CONDUCT.md). 
+            By participating, you agree to abide by its terms.
+            
+            ---
+            
+            If you have any questions, feel free to ask! We're here to help. 🎉
+            `;
+            
+            if (eventType === 'pull request') {
+              await github.rest.pulls.createReview({
+                owner,
+                repo,
+                pull_number: number,
+                body: welcomeMessage,
+                event: 'COMMENT'
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: number,
+                body: welcomeMessage
+              });
+            }
+            
+            // Add welcome label
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: number,
+              labels: ['welcome', 'first-contribution']
+            });
+          }
+
+  assign-reviewers:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target'
+    
+    steps:
+    - name: Auto-assign reviewers for first-time contributors
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const { number } = context.issue;
+          const author = context.payload.sender.login;
+          
+          // Check if this is the user's first contribution
+          const { data: contributions } = await github.rest.search.issuesAndPullRequests({
+            q: `repo:${owner}/${repo} author:${author} type:pr`
+          });
+          
+          const isFirstPR = contributions.total_count === 1;
+          
+          if (isFirstPR) {
+            // Add helpful labels for first-time contributors
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: number,
+              labels: ['good first contribution', 'needs-review']
+            });
+            
+            // You can add automatic reviewer assignment here if needed
+            // await github.rest.pulls.requestReviewers({
+            //   owner,
+            //   repo,
+            //   pull_number: number,
+            //   reviewers: ['maintainer1', 'maintainer2']
+            // });
+          }
+
+  check-contribution-guidelines:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+    
+    - name: Check contribution guidelines
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const { number } = context.issue;
+          
+          // Check if PR description contains certain keywords
+          const prBody = context.payload.pull_request.body || '';
+          const suggestions = [];
+          
+          // Check for test coverage mention
+          if (!prBody.toLowerCase().includes('test')) {
+            suggestions.push('📝 Consider mentioning what tests were added or modified');
+          }
+          
+          // Check for breaking changes mention
+          if (prBody.toLowerCase().includes('breaking')) {
+            suggestions.push('⚠️  This appears to contain breaking changes - please ensure they are documented');
+          }
+          
+          // Check if it's a large PR
+          const { data: files } = await github.rest.pulls.listFiles({
+            owner,
+            repo,
+            pull_number: number
+          });
+          
+          const totalChanges = files.reduce((sum, file) => sum + file.additions + file.deletions, 0);
+          
+          if (totalChanges > 500) {
+            suggestions.push('📏 This is a large PR - consider breaking it into smaller, focused changes');
+          }
+          
+          if (suggestions.length > 0) {
+            const suggestionComment = `
+            ## 💡 Contribution Suggestions
+            
+            Thank you for your contribution! Here are some suggestions to help make your PR even better:
+            
+            ${suggestions.map(s => `- ${s}`).join('\n')}
+            
+            These are just suggestions - your contribution is valuable regardless! 🙏
+            `;
+            
+            await github.rest.pulls.createReview({
+              owner,
+              repo,
+              pull_number: number,
+              body: suggestionComment,
+              event: 'COMMENT'
+            });
+          }

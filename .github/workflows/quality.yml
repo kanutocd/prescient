@@ -1,0 +1,139 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  rubocop:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Run RuboCop
+        run: bundle exec rubocop --format github --format json --out rubocop-report.json
+
+      - name: Upload RuboCop report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: rubocop-report
+          path: rubocop-report.json
+
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Run tests with coverage
+        run: bundle exec rake coverage
+        env:
+          COVERAGE: true
+
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(ruby -r json -e "puts JSON.parse(File.read('coverage/.resultset.json'))['Unit Tests']['coverage'].values.sum.to_f / JSON.parse(File.read('coverage/.resultset.json'))['Unit Tests']['coverage'].size * 100")
+          echo "Coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 85" | bc -l) )); then
+            echo "Coverage $COVERAGE% is below threshold of 85%"
+            exit 1
+          fi
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./coverage
+          flags: unittests
+          name: prescient-coverage
+          fail_ci_if_error: true
+
+  documentation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Generate YARD documentation
+        run: bundle exec yard doc
+
+      - name: Check documentation coverage
+        run: |
+          bundle exec yard stats --list-undoc > undocumented.txt
+          if [ -s undocumented.txt ]; then
+            echo "Undocumented methods found:"
+            cat undocumented.txt
+            echo "Please add documentation for the above methods."
+            # Don't fail the build for now, just warn
+            # exit 1
+          fi
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: yard-documentation
+          path: doc/
+
+  performance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Install benchmark dependencies
+        run: |
+          gem install benchmark-ips
+          gem install memory_profiler
+
+      - name: Run performance benchmarks
+        run: |
+          cat > benchmark.rb << 'EOF'
+          require 'benchmark/ips'
+          require 'memory_profiler'
+          require_relative 'lib/prescient'
+
+          # Simple benchmark for client creation
+          Benchmark.ips do |x|
+            x.report("Client.new") { Prescient::Client.new(:ollama, enable_fallback: false) }
+            x.report("Client.new with fallback") { Prescient::Client.new(:ollama, enable_fallback: true) }
+            x.compare!
+          end
+
+          # Memory usage benchmark
+          report = MemoryProfiler.report do
+            100.times { Prescient::Client.new(:ollama, enable_fallback: false) }
+          end
+
+          puts "\nMemory Usage Report:"
+          puts "Total allocated: #{report.total_allocated} bytes"
+          puts "Total retained: #{report.total_retained} bytes"
+          EOF
+
+          ruby benchmark.rb

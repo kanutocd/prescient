@@ -1,0 +1,134 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/**/*.rb"
+      - "**/*.md"
+      - ".github/workflows/docs.yml"
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Generate YARD documentation
+        run: |
+          bundle exec yard doc --output-dir docs/api
+          bundle exec yard stats
+
+      - name: Generate coverage badge
+        run: |
+          COVERAGE=$(ruby -r json -e "
+            require 'simplecov'
+            SimpleCov.start
+            system('bundle exec rake test > /dev/null 2>&1')
+            result = SimpleCov.result
+            puts result.covered_percent.round(2)
+          ")
+          echo "Coverage: $COVERAGE%"
+
+          # Create a simple coverage badge
+          COLOR="red"
+          if (( $(echo "$COVERAGE >= 90" | bc -l) )); then
+            COLOR="brightgreen"
+          elif (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+            COLOR="yellow"
+          elif (( $(echo "$COVERAGE >= 70" | bc -l) )); then
+            COLOR="orange"
+          fi
+
+          curl -s "https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}" > docs/coverage-badge.svg
+
+      - name: Check documentation links
+        run: |
+          gem install html-proofer
+          # Check markdown files for broken links
+          find . -name "*.md" -not -path "./vendor/*" -not -path "./.git/*" | \
+          xargs grep -l "http" | \
+          head -5 | \
+          xargs -I {} sh -c 'echo "Checking links in: {}"; grep -o "https\?://[^[:space:])]*" {} | head -10'
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation
+          path: |
+            docs/
+            *.md
+            CHANGELOG.md
+            INTEGRATION_GUIDE.md
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+    needs: build-docs
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Generate documentation
+        run: |
+          bundle exec yard doc --output-dir docs/api
+
+          # Create a simple index.html
+          cat > docs/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Prescient Documentation</title>
+              <meta charset="UTF-8">
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; }
+                  .header { border-bottom: 1px solid #ccc; padding-bottom: 20px; }
+                  .nav { margin: 20px 0; }
+                  .nav a { margin-right: 20px; text-decoration: none; color: #0066cc; }
+                  .nav a:hover { text-decoration: underline; }
+              </style>
+          </head>
+          <body>
+              <div class="header">
+                  <h1>Prescient Documentation</h1>
+                  <p>AI provider abstraction for Ruby applications</p>
+              </div>
+              <div class="nav">
+                  <a href="api/index.html">API Documentation</a>
+                  <a href="https://github.com/yourcompany/prescient">GitHub Repository</a>
+                  <a href="https://rubygems.org/gems/prescient">RubyGems</a>
+              </div>
+              <div class="content">
+                  <h2>Quick Links</h2>
+                  <ul>
+                      <li><a href="api/index.html">Full API Documentation</a></li>
+                      <li><a href="api/Prescient/Client.html">Client Class</a></li>
+                      <li><a href="api/Prescient/Base.html">Base Provider Class</a></li>
+                      <li><a href="api/Prescient/Configuration.html">Configuration</a></li>
+                  </ul>
+              </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          force_orphan: true

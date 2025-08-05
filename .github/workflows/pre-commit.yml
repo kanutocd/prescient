@@ -1,0 +1,171 @@
+name: Pre-commit Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  fast-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # Get list of changed Ruby files
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.sha }} | grep '\.rb$' | tr '\n' ' ')
+          echo "files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "Changed Ruby files: $CHANGED_FILES"
+
+      - name: Run RuboCop on changed files only
+        if: steps.changed-files.outputs.files != ''
+        run: |
+          echo "Running RuboCop on changed files..."
+          bundle exec rubocop ${{ steps.changed-files.outputs.files }} --format github
+
+      - name: Run focused tests
+        run: |
+          # Run tests for changed files
+          CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
+          if [ -n "$CHANGED_FILES" ]; then
+            # Convert lib files to corresponding test files
+            TEST_FILES=""
+            for file in $CHANGED_FILES; do
+              if [[ $file == lib/* ]]; then
+                # Convert lib/prescient/foo.rb to test/prescient/foo_test.rb
+                test_file=$(echo $file | sed 's|^lib/|test/|' | sed 's|\.rb$|_test.rb|')
+                if [ -f "$test_file" ]; then
+                  TEST_FILES="$TEST_FILES $test_file"
+                fi
+              elif [[ $file == test/* ]]; then
+                TEST_FILES="$TEST_FILES $file"
+              fi
+            done
+
+            if [ -n "$TEST_FILES" ]; then
+              echo "Running focused tests: $TEST_FILES"
+              bundle exec ruby -Itest $TEST_FILES
+            else
+              echo "No specific tests found, running all tests"
+              bundle exec rake test
+            fi
+          else
+            echo "No Ruby files changed, running all tests"
+            bundle exec rake test
+          fi
+
+      - name: Check commit message format
+        run: |
+          # Check if commit messages follow conventional commits format
+          COMMIT_MSG=$(git log --format=%B -n 1 ${{ github.sha }})
+          echo "Checking commit message: $COMMIT_MSG"
+
+          if [[ ! $COMMIT_MSG =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+ ]]; then
+            echo "❌ Commit message doesn't follow conventional commits format"
+            echo "Expected format: type(scope): description"
+            echo "Types: feat, fix, docs, style, refactor, test, chore"
+            echo "Example: feat(client): add provider fallback mechanism"
+            # Don't fail the build, just warn
+            # exit 1
+          else
+            echo "✅ Commit message follows conventional commits format"
+          fi
+
+      - name: Check for debugging code
+        run: |
+          echo "Checking for debugging code..."
+          CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
+          if [ -n "$CHANGED_FILES" ]; then
+            # Check for common debugging patterns
+            ISSUES_FOUND=false
+
+            for file in $CHANGED_FILES; do
+              if [ -f "$file" ]; then
+                # Check for puts, p, pp, binding.pry, debugger, console.log
+                if grep -n -E "(puts |^puts$| p | pp |binding\.pry|debugger|console\.log)" "$file"; then
+                  echo "❌ Debugging code found in $file"
+                  ISSUES_FOUND=true
+                fi
+
+                # Check for TODO/FIXME without issue numbers
+                if grep -n -E "(TODO|FIXME)" "$file" | grep -v -E "#\d+"; then
+                  echo "⚠️  TODO/FIXME found without issue reference in $file"
+                  # Don't fail for this, just warn
+                fi
+              fi
+            done
+
+            if [ "$ISSUES_FOUND" = true ]; then
+              echo "Please remove debugging code before committing"
+              exit 1
+            else
+              echo "✅ No debugging code found"
+            fi
+          fi
+
+      - name: Check file size limits
+        run: |
+          echo "Checking file sizes..."
+          CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
+          if [ -n "$CHANGED_FILES" ]; then
+            for file in $CHANGED_FILES; do
+              if [ -f "$file" ]; then
+                SIZE=$(wc -l < "$file")
+                if [ $SIZE -gt 500 ]; then
+                  echo "⚠️  Large file detected: $file ($SIZE lines)"
+                  echo "Consider breaking this file into smaller modules"
+                fi
+              fi
+            done
+          fi
+
+  security-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Run security checks on changed files
+        run: |
+          # Quick security scan
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.sha }} | grep '\.rb$' | tr '\n' ' ')
+
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "Running security checks on: $CHANGED_FILES"
+
+            # Check for potential security issues
+            for file in $CHANGED_FILES; do
+              if [ -f "$file" ]; then
+                # Check for hardcoded secrets/keys
+                if grep -i -n -E "(password|secret|key|token).*=.*['\"][^'\"]+['\"]" "$file"; then
+                  echo "❌ Potential hardcoded secret found in $file"
+                  echo "Please use environment variables or configuration files"
+                  exit 1
+                fi
+
+                # Check for eval, system calls without proper escaping
+                if grep -n -E "(eval|system|exec|\`)" "$file"; then
+                  echo "⚠️  Potentially dangerous method call found in $file"
+                  echo "Please ensure proper input validation and escaping"
+                fi
+              fi
+            done
+
+            echo "✅ Security checks passed"
+          fi

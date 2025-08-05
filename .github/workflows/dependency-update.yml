@@ -1,0 +1,136 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run dependency updates weekly on Mondays at 9 AM UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: false
+
+      - name: Update dependencies
+        run: |
+          bundle update --conservative
+
+          # Check if there are any changes
+          if git diff --quiet Gemfile.lock; then
+            echo "No dependency updates available"
+            echo "UPDATES_AVAILABLE=false" >> $GITHUB_ENV
+          else
+            echo "Dependencies updated"
+            echo "UPDATES_AVAILABLE=true" >> $GITHUB_ENV
+          fi
+
+      - name: Run tests with updated dependencies
+        if: env.UPDATES_AVAILABLE == 'true'
+        run: |
+          bundle install
+          bundle exec rake test
+
+      - name: Create Pull Request
+        if: env.UPDATES_AVAILABLE == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update dependencies"
+          title: "chore: Update dependencies"
+          body: |
+            ## Dependency Updates
+
+            This PR updates the following dependencies:
+
+            ```
+            $(git diff HEAD~ Gemfile.lock | grep '^[+-]' | grep -v '^[+-][+-][+-]' | head -20)
+            ```
+
+            ### Changes
+            - Updated gem dependencies to latest compatible versions
+            - All tests are passing with the updated dependencies
+
+            ### Testing
+            - [x] All existing tests pass
+            - [x] No breaking changes detected
+
+            This PR was automatically created by the dependency update workflow.
+          branch: dependency-updates
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
+
+  check-security-updates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Install bundler-audit
+        run: gem install bundler-audit
+
+      - name: Update vulnerability database
+        run: bundler-audit --update
+
+      - name: Check for security vulnerabilities
+        run: |
+          if bundler-audit --format json > security-report.json; then
+            echo "No security vulnerabilities found"
+          else
+            echo "Security vulnerabilities detected!"
+            cat security-report.json
+
+            # Create an issue for security vulnerabilities
+            echo "SECURITY_ISSUE=true" >> $GITHUB_ENV
+          fi
+
+      - name: Create security issue
+        if: env.SECURITY_ISSUE == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const securityReport = JSON.parse(fs.readFileSync('security-report.json', 'utf8'));
+
+            const issueBody = `
+            ## 🚨 Security Vulnerabilities Detected
+
+            The following security vulnerabilities were found in our dependencies:
+
+            ${securityReport.map(vuln => `
+            ### ${vuln.gem} (${vuln.version})
+            - **Advisory**: ${vuln.advisory}
+            - **Criticality**: ${vuln.criticality}
+            - **URL**: ${vuln.url}
+            - **Solution**: ${vuln.solution || 'Update to a patched version'}
+            `).join('\n')}
+
+            Please address these vulnerabilities as soon as possible.
+
+            This issue was automatically created by the dependency update workflow.
+            `;
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Security Vulnerabilities Detected',
+              body: issueBody,
+              labels: ['security', 'critical']
+            });
