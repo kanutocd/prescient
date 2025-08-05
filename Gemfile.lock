@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    prescient (0.1.0)
+    prescient (0.2.0)
       httparty (~> 0.23.1)
 
 GEM
@@ -114,7 +114,6 @@ PLATFORMS
   aarch64-linux
   aarch64-linux-musl
   arm64-darwin
-  ruby
   x86_64-darwin
   x86_64-linux
   x86_64-linux-musl

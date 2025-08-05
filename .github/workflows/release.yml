@@ -71,27 +71,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: prescient-${{ steps.extract_version.outputs.VERSION }}.gem
-          generate_release_notes: true
+          generate_release_notes: false
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update CHANGELOG
-        run: |
-          echo "## [${{ steps.extract_version.outputs.VERSION }}] - $(date +%Y-%m-%d)" >> CHANGELOG_TEMP.md
-          echo "" >> CHANGELOG_TEMP.md
-          echo "Released via GitHub Actions" >> CHANGELOG_TEMP.md
-          echo "" >> CHANGELOG_TEMP.md
-          if [ -f CHANGELOG.md ]; then
-            cat CHANGELOG.md >> CHANGELOG_TEMP.md
-          fi
-          mv CHANGELOG_TEMP.md CHANGELOG.md
-
-      - name: Commit updated CHANGELOG
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add CHANGELOG.md
-          git commit -m "Update CHANGELOG for version ${{ steps.extract_version.outputs.VERSION }}" || exit 0
-          git push origin HEAD:main || exit 0
