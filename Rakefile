@@ -1,8 +1,30 @@
 # frozen_string_literal: true
 
 require "bundler/gem_tasks"
-require "rspec/core/rake_task"
+require "rake/testtask"
+require "rubocop/rake_task"
 
-RSpec::Core::RakeTask.new(:spec)
+Rake::TestTask.new(:test) do |t|
+  t.libs << "test"
+  t.libs << "lib"
+  t.test_files = FileList["test/**/*_test.rb"]
+end
 
-task default: :spec
+RuboCop::RakeTask.new
+
+desc "Run tests and linting"
+task default: %w[test rubocop]
+
+desc "Run tests with coverage"
+task :coverage do
+  ENV['COVERAGE'] = 'true'
+  Rake::Task[:test].execute
+end
+
+desc "Console with gem loaded"
+task :console do
+  require "bundler/setup"
+  require "prescient"
+  require "irb"
+  IRB.start
+end
