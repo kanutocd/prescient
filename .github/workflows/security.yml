@@ -60,7 +60,7 @@ jobs:
         run: gem install brakeman
 
       - name: Run Brakeman static analysis
-        run: brakeman --no-pager --format json --output brakeman-report.json
+        run: brakeman --no-pager --force --format json --output brakeman-report.json
 
       - name: Upload Brakeman report
         uses: actions/upload-artifact@v3
