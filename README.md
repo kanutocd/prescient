@@ -857,6 +857,23 @@ bundle exec rake install
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 
+## Roadmap
+
+### Version 0.2.0 (Planned)
+
+- **MariaDB Vector Support**: Integration with MariaDB using external vector databases
+- **Hybrid Database Architecture**: Support for MariaDB + Milvus/Qdrant combinations
+- **Vector Database Adapters**: Pluggable adapters for different vector storage backends
+- **Enhanced Chunking Strategies**: Smart document splitting with multiple algorithms
+- **Search Result Ranking**: Advanced scoring and re-ranking capabilities
+
+### Version 0.3.0 (Future)
+
+- **Streaming Responses**: Real-time response streaming for chat applications
+- **Multi-Model Ensembles**: Combine responses from multiple AI providers
+- **Advanced Analytics**: Search performance insights and usage analytics
+- **Cloud Provider Integration**: Direct support for Pinecone, Weaviate, etc.
+
 ## Changelog
 
 ### Version 0.1.0
@@ -866,3 +883,7 @@ The gem is available as open source under the terms of the [MIT License](https:/
 - Unified interface for embeddings and text generation
 - Comprehensive error handling and retry logic
 - Health monitoring capabilities
+- PostgreSQL pgvector integration with complete Docker setup
+- Vector similarity search with multiple distance functions
+- Document chunking and metadata filtering
+- Performance optimization guides and troubleshooting
