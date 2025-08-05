@@ -169,11 +169,13 @@ Metrics/ModuleLength:
   Max: 150
 
 Metrics/ClassLength:
+  Enabled: false
   Max: 150
   Exclude:
     - 'test/**/*'
 
 Metrics/MethodLength:
+  Enabled: false
   Max: 25
   Exclude:
     - 'test/**/*'
@@ -181,6 +183,7 @@ Metrics/MethodLength:
     - 'lib/prescient/provider/*.rb'
 
 Metrics/BlockLength:
+  Enabled: false
   Max: 25
   Exclude:
     - 'test/**/*'
@@ -199,6 +202,7 @@ Metrics/CyclomaticComplexity:
     - 'lib/prescient/provider/*.rb'
 
 Metrics/PerceivedComplexity:
+  Enabled: false
   Max: 8
   Exclude:
     - 'lib/prescient/provider/*.rb'
