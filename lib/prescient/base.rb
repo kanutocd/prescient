@@ -1,26 +1,95 @@
 # frozen_string_literal: true
 
+# Base class for all AI provider implementations
+#
+# This abstract base class defines the common interface that all AI providers
+# must implement. It provides shared functionality for text processing, context
+# formatting, prompt building, and error handling.
+#
+# @abstract Subclass and implement {#generate_embedding}, {#generate_response},
+#   {#health_check}, and {#validate_configuration!}
+#
+# @example Creating a custom provider
+#   class MyProvider < Prescient::Base
+#     def generate_embedding(text, **options)
+#       # Implementation here
+#     end
+#
+#     def generate_response(prompt, context_items = [], **options)
+#       # Implementation here
+#     end
+#
+#     def health_check
+#       # Implementation here
+#     end
+#   end
+#
+# @author Claude Code
+# @since 1.0.0
 class Prescient::Base
+  # @return [Hash] Configuration options for this provider instance
   attr_reader :options
 
+  # Initialize the provider with configuration options
+  #
+  # @param options [Hash] Provider-specific configuration options
+  # @option options [String] :api_key API key for authenticated providers
+  # @option options [String] :url Base URL for self-hosted providers
+  # @option options [Integer] :timeout Request timeout in seconds
+  # @option options [Hash] :prompt_templates Custom prompt templates
+  # @option options [Hash] :context_configs Context formatting configurations
   def initialize(**options)
     @options = options
     validate_configuration!
   end
 
-  # Abstract methods that must be implemented by subclasses
-  def generate_embedding(text)
+  # Generate embeddings for the given text
+  #
+  # This method must be implemented by subclasses to provide embedding
+  # generation functionality.
+  #
+  # @param text [String] The text to generate embeddings for
+  # @param options [Hash] Provider-specific options
+  # @return [Array<Float>] Array of embedding values
+  # @raise [NotImplementedError] If not implemented by subclass
+  # @abstract
+  def generate_embedding(text, **options)
     raise NotImplementedError, "#{self.class} must implement #generate_embedding"
   end
 
+  # Generate text response for the given prompt
+  #
+  # This method must be implemented by subclasses to provide text generation
+  # functionality with optional context items.
+  #
+  # @param prompt [String] The prompt to generate a response for
+  # @param context_items [Array<Hash, String>] Optional context items to include
+  # @param options [Hash] Provider-specific generation options
+  # @option options [Float] :temperature Sampling temperature (0.0-2.0)
+  # @option options [Integer] :max_tokens Maximum tokens to generate
+  # @option options [Float] :top_p Nucleus sampling parameter
+  # @return [Hash] Response hash with :response, :model, :provider keys
+  # @raise [NotImplementedError] If not implemented by subclass
+  # @abstract
   def generate_response(prompt, context_items = [], **options)
     raise NotImplementedError, "#{self.class} must implement #generate_response"
   end
 
+  # Check the health and availability of the provider
+  #
+  # This method must be implemented by subclasses to provide health check
+  # functionality.
+  #
+  # @return [Hash] Health status with :status, :provider keys and optional details
+  # @raise [NotImplementedError] If not implemented by subclass
+  # @abstract
   def health_check
     raise NotImplementedError, "#{self.class} must implement #health_check"
   end
 
+  # Check if the provider is currently available
+  #
+  # @return [Boolean] true if provider is healthy and available
   def available?
     health_check[:status] == 'healthy'
   rescue StandardError
@@ -29,10 +98,28 @@ class Prescient::Base
 
   protected
 
+  # Validate provider configuration
+  #
+  # Override this method in subclasses to validate required configuration
+  # options and raise appropriate errors for missing or invalid settings.
+  #
+  # @return [void]
+  # @raise [Prescient::Error] If configuration is invalid
   def validate_configuration!
     # Override in subclasses to validate required configuration
   end
 
+  # Handle and standardize errors from provider operations
+  #
+  # Wraps provider-specific operations and converts common exceptions
+  # into standardized Prescient error types while preserving existing
+  # Prescient errors.
+  #
+  # @yield The operation block to execute with error handling
+  # @return [Object] The result of the yielded block
+  # @raise [Prescient::ConnectionError] For network/timeout errors
+  # @raise [Prescient::InvalidResponseError] For JSON parsing errors
+  # @raise [Prescient::Error] For other unexpected errors
   def handle_errors
     yield
   rescue Prescient::Error
@@ -48,31 +135,40 @@ class Prescient::Base
     raise Prescient::Error, "Unexpected error: #{e.message}"
   end
 
+  # Normalize embedding dimensions to match expected size
+  #
+  # Ensures embedding vectors have consistent dimensions by truncating
+  # longer vectors or padding shorter ones with zeros.
+  #
+  # @param embedding [Array<Float>] The embedding vector to normalize
+  # @param target_dimensions [Integer] The desired number of dimensions
+  # @return [Array<Float>, nil] Normalized embedding or nil if input invalid
   def normalize_embedding(embedding, target_dimensions)
     return nil unless embedding.is_a?(Array)
-    return embedding if embedding.length == target_dimensions
+    return embedding.first(target_dimensions) if embedding.length >= target_dimensions
 
-    if embedding.length > target_dimensions
-      # Truncate
-      embedding.first(target_dimensions)
-    else
-      # Pad with zeros
-      embedding + Array.new(target_dimensions - embedding.length, 0.0)
-    end
+    embedding + Array.new(target_dimensions - embedding.length, 0.0)
   end
 
+  # Clean and preprocess text for AI processing
+  #
+  # Removes excess whitespace, normalizes spacing, and enforces length
+  # limits suitable for most AI models.
+  #
+  # @param text [String, nil] The text to clean
+  # @return [String] Cleaned text, empty string if input was nil/empty
   def clean_text(text)
-    return '' if text.nil? || text.to_s.strip.empty?
-
-    cleaned = text.to_s
-      .strip
-      .gsub(/\s+/, ' ')
-
     # Limit length for most models
-    cleaned.length > 8000 ? cleaned[0, 8000] : cleaned
+    text.to_s.gsub(/\s+/, ' ').strip.slice(0, 8000)
   end
 
-  # Default prompt templates - can be overridden in provider options
+  # Get default prompt templates
+  #
+  # Provides standard templates for system prompts and context handling
+  # that can be overridden via provider options.
+  #
+  # @return [Hash] Hash containing template strings with placeholders
+  # @private
   def default_prompt_templates
     {
       system_prompt:         'You are a helpful AI assistant. Answer questions clearly and accurately.',
@@ -96,7 +192,14 @@ class Prescient::Base
     }
   end
 
-  # Build prompt using configurable templates
+  # Build formatted prompt from query and context items
+  #
+  # Creates a properly formatted prompt using configurable templates,
+  # incorporating context items when provided.
+  #
+  # @param query [String] The user's question or prompt
+  # @param context_items [Array<Hash, String>] Optional context items
+  # @return [String] Formatted prompt ready for AI processing
   def build_prompt(query, context_items = [])
     templates = default_prompt_templates.merge(@options[:prompt_templates] || {})
     system_prompt = templates[:system_prompt]
@@ -143,6 +246,7 @@ class Prescient::Base
   # Extract text values from hash, excluding non-textual fields
   def extract_text_values(item)
     # Common fields to exclude from embedding text
+    # TODO: configurable fields to exclude aside from the common ones below
     exclude_fields = ['id', '_id', 'uuid', 'created_at', 'updated_at', 'timestamp', 'version', 'status', 'active']
 
     item.filter_map { |key, value|

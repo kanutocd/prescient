@@ -26,5 +26,6 @@ task :console do
   require "bundler/setup"
   require "prescient"
   require "irb"
+  ARGV.clear
   IRB.start
 end

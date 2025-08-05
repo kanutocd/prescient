@@ -130,17 +130,17 @@ query_embedding = client.generate_embedding(query_text)
 query_vector = "[#{query_embedding.join(',')}]"
 
 results = db.exec_params(
-  "SELECT d.title, d.content, de.embedding <=> $1::vector AS distance 
-   FROM documents d 
-   JOIN document_embeddings de ON d.id = de.document_id 
-   ORDER BY de.embedding <=> $1::vector 
+  "SELECT d.title, d.content, de.embedding <=> $1::vector AS distance
+   FROM documents d
+   JOIN document_embeddings de ON d.id = de.document_id
+   ORDER BY de.embedding <=> $1::vector
    LIMIT 5",
   [query_vector]
 )
 
 results.each do |row|
   similarity = 1 - row['distance'].to_f
-  puts "#{row['title']} (#{(similarity * 100).round(1)}% similar)"
+  puts "#{ row['title']} (#{ (similarity * 100).round(1)}% similar)"
 end
 ```
 
@@ -150,11 +150,11 @@ end
 # Search with metadata filtering
 results = db.exec_params(
   "SELECT d.title, de.embedding <=> $1::vector as distance
-   FROM documents d 
+   FROM documents d
    JOIN document_embeddings de ON d.id = de.document_id
    WHERE d.metadata->'tags' ? 'programming'
      AND d.metadata->>'difficulty' = 'beginner'
-   ORDER BY de.embedding <=> $1::vector 
+   ORDER BY de.embedding <=> $1::vector
    LIMIT 10",
   [query_vector]
 )
@@ -168,17 +168,17 @@ For large documents, split into chunks for better search granularity:
 def chunk_document(text, chunk_size: 500, overlap: 50)
   chunks = []
   start = 0
-  
+
   while start < text.length
     end_pos = [start + chunk_size, text.length].min
-    
+
     # Find word boundary to avoid cutting words
     if end_pos < text.length
       while end_pos > start && text[end_pos] != ' '
         end_pos -= 1
       end
     end
-    
+
     chunk = text[start...end_pos].strip
     chunks << {
       text: chunk,
@@ -186,11 +186,11 @@ def chunk_document(text, chunk_size: 500, overlap: 50)
       end_pos: end_pos,
       index: chunks.length
     }
-    
+
     start = end_pos - overlap
     break if start >= text.length
   end
-  
+
   chunks
 end
 
@@ -200,14 +200,14 @@ chunks.each do |chunk|
   # Insert chunk
   chunk_result = db.exec_params(
     "INSERT INTO document_chunks (document_id, chunk_index, chunk_text, chunk_metadata) VALUES ($1, $2, $3, $4) RETURNING id",
-    [document_id, chunk[:index], chunk[:text], {start_pos: chunk[:start_pos], end_pos: chunk[:end_pos]}.to_json]
+    [document_id, chunk[:index], chunk[:text], { start_pos: chunk[:start_pos], end_pos: chunk[:end_pos]}.to_json]
   )
   chunk_id = chunk_result[0]['id']
-  
+
   # Generate embedding for chunk
   chunk_embedding = client.generate_embedding(chunk[:text])
   chunk_vector = "[#{chunk_embedding.join(',')}]"
-  
+
   # Store chunk embedding
   db.exec_params(
     "INSERT INTO chunk_embeddings (chunk_id, document_id, embedding_provider, embedding_model, embedding_dimensions, embedding) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -224,20 +224,20 @@ For different dataset sizes and performance requirements:
 
 ```sql
 -- Small datasets (< 100K vectors): Fast build, good accuracy
-CREATE INDEX idx_embeddings_small 
-ON document_embeddings 
+CREATE INDEX idx_embeddings_small
+ON document_embeddings
 USING hnsw (embedding vector_cosine_ops)
 WITH (m = 8, ef_construction = 32);
 
 -- Medium datasets (100K - 1M vectors): Balanced
-CREATE INDEX idx_embeddings_medium 
-ON document_embeddings 
+CREATE INDEX idx_embeddings_medium
+ON document_embeddings
 USING hnsw (embedding vector_cosine_ops)
 WITH (m = 16, ef_construction = 64);
 
 -- Large datasets (> 1M vectors): High accuracy
-CREATE INDEX idx_embeddings_large 
-ON document_embeddings 
+CREATE INDEX idx_embeddings_large
+ON document_embeddings
 USING hnsw (embedding vector_cosine_ops)
 WITH (m = 32, ef_construction = 128);
 ```
@@ -251,9 +251,9 @@ SET hnsw.ef_search = 100;  -- Balanced (default)
 SET hnsw.ef_search = 200;  -- High accuracy, slower
 
 -- Monitor query performance
-EXPLAIN (ANALYZE, BUFFERS) 
-SELECT * FROM document_embeddings 
-ORDER BY embedding <=> '[0.1,0.2,...]'::vector 
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM document_embeddings
+ORDER BY embedding <=> '[0.1,0.2,...]'::vector
 LIMIT 10;
 ```
 
@@ -268,7 +268,7 @@ texts.each_slice(10) do |batch|
   batch.each do |text|
     embedding = client.generate_embedding(text)
     embeddings << embedding
-    
+
     # Small delay to avoid rate limiting
     sleep(0.1)
   end
@@ -295,13 +295,13 @@ Combine vector similarity with traditional text search:
 ```sql
 WITH vector_results AS (
   SELECT document_id, embedding <=> $1::vector as distance
-  FROM document_embeddings 
-  ORDER BY embedding <=> $1::vector 
+  FROM document_embeddings
+  ORDER BY embedding <=> $1::vector
   LIMIT 20
 ),
 text_results AS (
   SELECT id as document_id, ts_rank(to_tsvector(content), plainto_tsquery($2)) as rank
-  FROM documents 
+  FROM documents
   WHERE to_tsvector(content) @@ plainto_tsquery($2)
 )
 SELECT d.title, d.content,
@@ -328,10 +328,10 @@ providers = [
 
 providers.each do |provider|
   next unless provider[:client].available?
-  
+
   embedding = provider[:client].generate_embedding(text)
   vector_str = "[#{embedding.join(',')}]"
-  
+
   db.exec_params(
     "INSERT INTO document_embeddings (document_id, embedding_provider, embedding_model, embedding_dimensions, embedding, embedding_text) VALUES ($1, $2, $3, $4, $5, $6)",
     [document_id, provider[:name], provider[:model], provider[:dims], vector_str, text]
@@ -348,14 +348,14 @@ end
 def track_search(query_text, results, provider, model)
   query_embedding = client.generate_embedding(query_text)
   query_vector = "[#{query_embedding.join(',')}]"
-  
+
   # Insert search query
   query_result = db.exec_params(
     "INSERT INTO search_queries (query_text, embedding_provider, embedding_model, query_embedding, result_count) VALUES ($1, $2, $3, $4, $5) RETURNING id",
     [query_text, provider, model, query_vector, results.length]
   )
   query_id = query_result[0]['id']
-  
+
   # Insert query results
   results.each_with_index do |result, index|
     db.exec_params(
@@ -371,14 +371,14 @@ end
 ```sql
 -- Popular search terms
 SELECT query_text, COUNT(*) as search_count
-FROM search_queries 
+FROM search_queries
 WHERE created_at > NOW() - INTERVAL '7 days'
 GROUP BY query_text
 ORDER BY search_count DESC
 LIMIT 10;
 
 -- Average similarity scores
-SELECT embedding_provider, embedding_model, 
+SELECT embedding_provider, embedding_model,
        AVG(similarity_score) as avg_similarity,
        COUNT(*) as result_count
 FROM query_results qr
@@ -400,11 +400,12 @@ ORDER BY hour;
 ### Common Issues
 
 **Slow queries:**
+
 ```sql
 -- Check if indexes are being used
-EXPLAIN (ANALYZE, BUFFERS) 
-SELECT * FROM document_embeddings 
-ORDER BY embedding <=> '[...]'::vector 
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM document_embeddings
+ORDER BY embedding <=> '[...]'::vector
 LIMIT 10;
 
 -- Rebuild indexes if needed
@@ -412,10 +413,11 @@ REINDEX INDEX idx_document_embeddings_cosine;
 ```
 
 **Memory issues:**
+
 ```sql
 -- Check index sizes
 SELECT schemaname, tablename, indexname, pg_size_pretty(pg_relation_size(indexrelid)) as size
-FROM pg_stat_user_indexes 
+FROM pg_stat_user_indexes
 WHERE tablename LIKE '%embedding%'
 ORDER BY pg_relation_size(indexrelid) DESC;
 
@@ -424,6 +426,7 @@ SET work_mem = '256MB';
 ```
 
 **Dimension mismatches:**
+
 ```ruby
 # Validate embedding dimensions before storing
 expected_dims = 768

@@ -170,8 +170,8 @@ response = Prescient.generate_response(query, context_items,
 )
 
 puts response[:response]
-puts "Model: #{response[:model]}"
-puts "Provider: #{response[:provider]}"
+puts "Model: " + response[:model]
+puts "Provider: " + response[:provider]
 ```
 
 ### Error Handling
@@ -214,14 +214,14 @@ Prescient.configure do |config|
     prompt_templates: {
       system_prompt: 'You are a friendly customer service representative.',
       no_context_template: <<~TEMPLATE.strip,
-        %{system_prompt}
+        %{ system_prompt }
 
         Customer Question: %{query}
 
         Please provide a helpful response.
       TEMPLATE
       with_context_template: <<~TEMPLATE.strip
-        %{system_prompt} Use the company info below to help answer.
+        %{ system_prompt } Use the company info below to help answer.
 
         Company Information:
         %{context}
@@ -259,6 +259,7 @@ prompt_templates: {
   system_prompt: 'You are a technical documentation assistant. Provide detailed explanations with code examples.',
   # ... templates
 }
+
 ```
 
 #### Creative Writing
@@ -283,12 +284,12 @@ Prescient.configure do |config|
     context_configs: {
       'product' => {
         fields: %w[name description price category brand],
-        format: '%{name} by %{brand}: %{description} - $%{price} (%{category})',
+        format: '%{ name } by %{ brand }: %{ description } - $%{ price } (%{ category })',
         embedding_fields: %w[name description category brand]
       },
       'review' => {
         fields: %w[product_name rating review_text reviewer_name],
-        format: '%{product_name} - %{rating}/5 stars: "%{review_text}"',
+        format: '%{ product_name } - %{ rating }/5 stars: "%{ review_text }"',
         embedding_fields: %w[product_name review_text]
       }
     }
@@ -409,10 +410,10 @@ query_embedding = client.generate_embedding(query_text)
 query_vector = "[#{query_embedding.join(',')}]"
 
 results = db.exec_params(
-  "SELECT d.title, d.content, de.embedding <=> $1::vector AS distance 
-   FROM documents d 
-   JOIN document_embeddings de ON d.id = de.document_id 
-   ORDER BY de.embedding <=> $1::vector 
+  "SELECT d.title, d.content, de.embedding <=> $1::vector AS distance
+   FROM documents d
+   JOIN document_embeddings de ON d.id = de.document_id
+   ORDER BY de.embedding <=> $1::vector
    LIMIT 5",
   [query_vector]
 )
@@ -423,14 +424,14 @@ results = db.exec_params(
 pgvector supports three distance functions:
 
 - **Cosine Distance** (`<=>`): Best for normalized embeddings
-- **L2 Distance** (`<->`): Euclidean distance, good general purpose  
+- **L2 Distance** (`<->`): Euclidean distance, good general purpose
 - **Inner Product** (`<#>`): Dot product, useful for specific cases
 
 ```sql
 -- Cosine similarity (most common)
 ORDER BY embedding <=> query_vector
 
--- L2 distance 
+-- L2 distance
 ORDER BY embedding <-> query_vector
 
 -- Inner product
@@ -443,8 +444,8 @@ The setup automatically creates HNSW indexes for fast similarity search:
 
 ```sql
 -- Example index for cosine distance
-CREATE INDEX idx_embeddings_cosine 
-ON document_embeddings 
+CREATE INDEX idx_embeddings_cosine
+ON document_embeddings
 USING hnsw (embedding vector_cosine_ops)
 WITH (m = 16, ef_construction = 64);
 ```
@@ -457,22 +458,22 @@ Combine vector similarity with metadata filtering:
 # Search with tag filtering
 results = db.exec_params(
   "SELECT d.title, de.embedding <=> $1::vector as distance
-   FROM documents d 
+   FROM documents d
    JOIN document_embeddings de ON d.id = de.document_id
    WHERE d.metadata->'tags' ? 'programming'
-   ORDER BY de.embedding <=> $1::vector 
+   ORDER BY de.embedding <=> $1::vector
    LIMIT 5",
   [query_vector]
 )
 
-# Search with difficulty and tag filters  
+# Search with difficulty and tag filters
 results = db.exec_params(
   "SELECT d.title, de.embedding <=> $1::vector as distance
-   FROM documents d 
+   FROM documents d
    JOIN document_embeddings de ON d.id = de.document_id
    WHERE d.metadata->>'difficulty' = 'beginner'
      AND d.metadata->'tags' ?| $2::text[]
-   ORDER BY de.embedding <=> $1::vector 
+   ORDER BY de.embedding <=> $1::vector
    LIMIT 5",
   [query_vector, ['ruby', 'programming']]
 )
@@ -488,7 +489,7 @@ For large datasets, tune HNSW parameters:
 -- High accuracy (slower build, more memory)
 WITH (m = 32, ef_construction = 128)
 
--- Fast build (lower accuracy, less memory)  
+-- Fast build (lower accuracy, less memory)
 WITH (m = 8, ef_construction = 32)
 
 -- Balanced (recommended default)
@@ -502,9 +503,9 @@ WITH (m = 16, ef_construction = 64)
 SET hnsw.ef_search = 100;  -- Higher = more accurate, slower
 
 -- Use EXPLAIN ANALYZE to optimize queries
-EXPLAIN ANALYZE 
-SELECT * FROM document_embeddings 
-ORDER BY embedding <=> '[0.1,0.2,...]'::vector 
+EXPLAIN ANALYZE
+SELECT * FROM document_embeddings
+ORDER BY embedding <=> '[0.1,0.2,...]'::vector
 LIMIT 10;
 ```
 
@@ -516,14 +517,14 @@ For large documents, use chunking for better search granularity:
 def chunk_document(text, chunk_size: 500, overlap: 50)
   chunks = []
   start = 0
-  
+
   while start < text.length
     end_pos = [start + chunk_size, text.length].min
     chunk = text[start...end_pos]
     chunks << chunk
     start += chunk_size - overlap
   end
-  
+
   chunks
 end
 
@@ -548,6 +549,7 @@ DB_HOST=localhost ruby examples/vector_search.rb
 ```
 
 The example demonstrates:
+
 - Document embedding generation and storage
 - Similarity search with different distance functions
 - Metadata filtering and advanced queries
@@ -596,7 +598,7 @@ info = client.provider_info
 puts info[:name]      # => :ollama
 puts info[:class]     # => "Prescient::Ollama::Provider"
 puts info[:available] # => true
-puts info[:options]   # => {...} (excluding sensitive data)
+puts info[:options]   # => { ... } (excluding sensitive data)
 ```
 
 ## Provider-Specific Features
@@ -633,6 +635,7 @@ The easiest way to get started with Prescient and Ollama is using Docker Compose
 Before starting, ensure your system meets the minimum requirements for running Ollama:
 
 #### **Minimum Requirements:**
+
 - **CPU**: 4+ cores (x86_64 or ARM64)
 - **RAM**: 8GB+ (16GB recommended)
 - **Storage**: 10GB+ free space for models
@@ -640,20 +643,22 @@ Before starting, ensure your system meets the minimum requirements for running O
 
 #### **Model-Specific Requirements:**
 
-| Model | RAM Required | Storage | Notes |
-|-------|-------------|---------|-------|
-| `nomic-embed-text` | 1GB | 274MB | Embedding model |
-| `llama3.1:8b` | 8GB | 4.7GB | Chat model (8B parameters) |
-| `llama3.1:70b` | 64GB+ | 40GB | Large chat model (70B parameters) |
-| `codellama:7b` | 8GB | 3.8GB | Code generation model |
+| Model              | RAM Required | Storage | Notes                             |
+| ------------------ | ------------ | ------- | --------------------------------- |
+| `nomic-embed-text` | 1GB          | 274MB   | Embedding model                   |
+| `llama3.1:8b`      | 8GB          | 4.7GB   | Chat model (8B parameters)        |
+| `llama3.1:70b`     | 64GB+        | 40GB    | Large chat model (70B parameters) |
+| `codellama:7b`     | 8GB          | 3.8GB   | Code generation model             |
 
 #### **Performance Recommendations:**
+
 - **SSD Storage**: Significantly faster model loading
 - **GPU (Optional)**: NVIDIA GPU with 8GB+ VRAM for acceleration
 - **Network**: Stable internet for initial model downloads
 - **Docker**: 4GB+ memory limit configured
 
 #### **GPU Acceleration (Optional):**
+
 - **NVIDIA GPU**: RTX 3060+ with 8GB+ VRAM recommended
 - **CUDA**: Version 11.8+ required
 - **Docker**: NVIDIA Container Toolkit installed
@@ -664,24 +669,27 @@ Before starting, ensure your system meets the minimum requirements for running O
 ### Quick Start with Docker
 
 1. **Start Ollama service:**
+
    ```bash
    docker-compose up -d ollama
    ```
 
 2. **Pull required models:**
+
    ```bash
    # Automatic setup
    docker-compose up ollama-init
-   
+
    # Or manual setup
    ./scripts/setup-ollama-models.sh
    ```
 
 3. **Run examples:**
+
    ```bash
    # Set environment variable
    export OLLAMA_URL=http://localhost:11434
-   
+
    # Run examples
    ruby examples/custom_contexts.rb
    ```
@@ -702,9 +710,9 @@ The included `docker-compose.yml` provides:
 services:
   ollama:
     ports:
-      - "11434:11434"  # Ollama API port
+      - "11434:11434" # Ollama API port
     volumes:
-      - ollama_data:/root/.ollama  # Persist models
+      - ollama_data:/root/.ollama # Persist models
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
@@ -749,7 +757,7 @@ curl http://localhost:11434/api/tags
 # Pull a specific model
 curl -X POST http://localhost:11434/api/pull \
   -H "Content-Type: application/json" \
-  -d '{"name": "llama3.1:8b"}'
+  -d '{ "name": "llama3.1:8b"}'
 
 # Health check
 curl http://localhost:11434/api/version
@@ -770,6 +778,7 @@ For production use:
 #### **Common Issues:**
 
 **Out of Memory Errors:**
+
 ```bash
 # Check available memory
 free -h
@@ -782,6 +791,7 @@ OLLAMA_CHAT_MODEL=llama3.1:7b ruby examples/custom_contexts.rb
 ```
 
 **Slow Model Loading:**
+
 ```bash
 # Check disk I/O
 iostat -x 1
@@ -791,6 +801,7 @@ iostat -x 1
 ```
 
 **Model Download Failures:**
+
 ```bash
 # Check disk space
 df -h
@@ -800,6 +811,7 @@ docker exec prescient-ollama ollama pull llama3.1:8b
 ```
 
 **GPU Not Detected:**
+
 ```bash
 # Check NVIDIA Docker runtime
 docker run --rm --gpus all nvidia/cuda:11.8-base nvidia-smi
@@ -820,7 +832,7 @@ docker logs prescient-ollama
 # Test API response time
 time curl -X POST http://localhost:11434/api/generate \
   -H "Content-Type: application/json" \
-  -d '{"model": "llama3.1:8b", "prompt": "Hello", "stream": false}'
+  -d '{ "model": "llama3.1:8b", "prompt": "Hello", "stream": false}'
 ```
 
 ## Testing

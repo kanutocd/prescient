@@ -30,6 +30,8 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     json (2.13.2)
+    kramdown (2.5.1)
+      rexml (>= 3.3.9)
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
     mini_mime (1.1.5)
@@ -104,12 +106,14 @@ GEM
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
+    yard (0.9.37)
 
 PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
   irb
+  kramdown (~> 2.5)
   minitest (~> 5.20)
   mocha (~> 2.1)
   pg (~> 1.5)
@@ -122,6 +126,7 @@ DEPENDENCIES
   simplecov (~> 0.22)
   vcr (~> 6.1)
   webmock (~> 3.18)
+  yard (~> 0.9.37)
 
 BUNDLED WITH
    2.7.1
