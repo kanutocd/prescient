@@ -157,9 +157,7 @@ class Prescient::Provider::HuggingFace < Prescient::Base
   protected
 
   def validate_configuration!
-    required_options = [:api_key, :embedding_model, :chat_model]
-    missing_options = required_options.select { |opt| @options[opt].nil? }
-
+    missing_options = [:api_key, :embedding_model, :chat_model].select { |opt| @options[opt].nil? }
     return unless missing_options.any?
 
     raise Prescient::Error, "Missing required options: #{missing_options.join(', ')}"

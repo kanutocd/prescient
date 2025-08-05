@@ -28,10 +28,12 @@ module Prescient
     # Initialize a new client with the specified provider
     #
     # @param provider_name [Symbol, nil] Name of provider to use, or nil for default
+    # @param enable_fallback [Boolean] Whether to enable automatic fallback to other providers
     # @raise [Prescient::Error] If the specified provider is not configured
-    def initialize(provider_name = nil)
+    def initialize(provider_name = nil, enable_fallback: true)
       @provider_name = provider_name || Prescient.configuration.default_provider
       @provider = Prescient.configuration.provider(@provider_name)
+      @enable_fallback = enable_fallback
 
       raise Prescient::Error, "Provider not found: #{@provider_name}" unless @provider
     end
@@ -39,15 +41,20 @@ module Prescient
     # Generate embeddings for the given text
     #
     # Delegates to the underlying provider with automatic retry logic
-    # for transient failures.
+    # for transient failures. If fallback is enabled, tries other providers
+    # on persistent failures.
     #
     # @param text [String] The text to generate embeddings for
     # @param options [Hash] Provider-specific options
     # @return [Array<Float>] Array of embedding values
-    # @raise [Prescient::Error] If embedding generation fails
+    # @raise [Prescient::Error] If embedding generation fails on all providers
     def generate_embedding(text, **options)
-      with_error_handling do
-        @provider.generate_embedding(text, **options)
+      if @enable_fallback
+        with_fallback_handling(:generate_embedding, text, **options)
+      else
+        with_error_handling do
+          @provider.generate_embedding(text, **options)
+        end
       end
     end
 
@@ -55,6 +62,7 @@ module Prescient
     #
     # Delegates to the underlying provider with automatic retry logic
     # for transient failures. Supports optional context items for RAG.
+    # If fallback is enabled, tries other providers on persistent failures.
     #
     # @param prompt [String] The prompt to generate a response for
     # @param context_items [Array<Hash, String>] Optional context items
@@ -63,10 +71,14 @@ module Prescient
     # @option options [Integer] :max_tokens Maximum tokens to generate
     # @option options [Float] :top_p Nucleus sampling parameter
     # @return [Hash] Response hash with :response, :model, :provider keys
-    # @raise [Prescient::Error] If response generation fails
+    # @raise [Prescient::Error] If response generation fails on all providers
     def generate_response(prompt, context_items = [], **options)
-      with_error_handling do
-        @provider.generate_response(prompt, context_items, **options)
+      if @enable_fallback
+        with_fallback_handling(:generate_response, prompt, context_items, **options)
+      else
+        with_error_handling do
+          @provider.generate_response(prompt, context_items, **options)
+        end
       end
     end
 
@@ -133,22 +145,67 @@ module Prescient
         retry
       end
     end
+
+    def with_fallback_handling(method_name, *args, **options)
+      last_error = nil
+
+      providers_to_try.each_with_index do |provider_name, index|
+        # Use existing provider instance for primary provider, create new ones for fallbacks
+        provider = if index.zero? && provider_name == @provider_name
+                     @provider
+                   else
+                     Prescient.configuration.provider(provider_name)
+                   end
+        next unless provider
+
+        # Check if provider is available before trying
+        next unless provider.available?
+
+        # Use retry logic for each provider
+        return with_error_handling do
+          provider.send(method_name, *args, **options)
+        end
+      rescue Prescient::Error => e
+        last_error = e
+        # Log the error and continue to next provider
+        next
+      end
+
+      # If we get here, all providers failed
+      raise last_error || Prescient::Error.new("No available providers for #{method_name}")
+    end
+
+    def providers_to_try
+      providers = [@provider_name]
+
+      # Add configured fallback providers
+      fallback_providers = Prescient.configuration.fallback_providers
+      if fallback_providers && !fallback_providers.empty?
+        providers += fallback_providers.reject { |p| p == @provider_name }
+      else
+        # If no explicit fallbacks configured, try all available providers
+        available = Prescient.configuration.available_providers
+        providers += available.reject { |p| p == @provider_name }
+      end
+
+      providers.uniq
+    end
   end
 
   # Convenience methods for quick access
-  def self.client(provider_name = nil)
-    Client.new(provider_name)
+  def self.client(provider_name = nil, enable_fallback: true)
+    Client.new(provider_name, enable_fallback: enable_fallback)
   end
 
-  def self.generate_embedding(text, provider: nil, **options)
-    client(provider).generate_embedding(text, **options)
+  def self.generate_embedding(text, provider: nil, enable_fallback: true, **options)
+    client(provider, enable_fallback: enable_fallback).generate_embedding(text, **options)
   end
 
-  def self.generate_response(prompt, context_items = [], provider: nil, **options)
-    client(provider).generate_response(prompt, context_items, **options)
+  def self.generate_response(prompt, context_items = [], provider: nil, enable_fallback: true, **options)
+    client(provider, enable_fallback: enable_fallback).generate_response(prompt, context_items, **options)
   end
 
   def self.health_check(provider: nil)
-    client(provider).health_check
+    client(provider, enable_fallback: false).health_check
   end
 end

@@ -107,6 +107,9 @@ module Prescient
     # @return [Float] Delay between retry attempts in seconds
     attr_accessor :retry_delay
 
+    # @return [Array<Symbol>] List of fallback providers to try when primary fails
+    attr_accessor :fallback_providers
+
     # @return [Hash] Registered providers configuration
     attr_reader :providers
 
@@ -116,6 +119,7 @@ module Prescient
       @timeout = 30
       @retry_attempts = 3
       @retry_delay = 1.0
+      @fallback_providers = []
       @providers = {}
     end
 
@@ -150,6 +154,17 @@ module Prescient
       return nil unless provider_config
 
       provider_config[:class].new(**provider_config[:options])
+    end
+
+    # Get list of available providers (those that are configured and healthy)
+    #
+    # @return [Array<Symbol>] List of available provider names
+    def available_providers
+      @providers.keys.select do |name|
+        provider(name)&.available?
+      rescue StandardError
+        false
+      end
     end
   end
 

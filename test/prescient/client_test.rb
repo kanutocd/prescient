@@ -11,7 +11,7 @@ class ClientTest < PrescientTest
                           test_option: 'test_value')
     end
 
-    @client = Prescient::Client.new(:test_provider)
+    @client = Prescient::Client.new(:test_provider, enable_fallback: false)
   end
 
   def teardown

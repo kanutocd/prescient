@@ -117,6 +117,52 @@ Prescient.configure do |config|
 end
 ```
 
+### Provider Fallback Configuration
+
+Prescient supports automatic fallback to backup providers when the primary provider fails. This ensures high availability for your AI applications.
+
+```ruby
+Prescient.configure do |config|
+  # Configure primary provider
+  config.add_provider(:primary, Prescient::Provider::OpenAI,
+    api_key: ENV['OPENAI_API_KEY'],
+    embedding_model: 'text-embedding-3-small',
+    chat_model: 'gpt-3.5-turbo'
+  )
+  
+  # Configure backup providers
+  config.add_provider(:backup1, Prescient::Provider::Anthropic,
+    api_key: ENV['ANTHROPIC_API_KEY'],
+    model: 'claude-3-haiku-20240307'
+  )
+  
+  config.add_provider(:backup2, Prescient::Provider::Ollama,
+    url: 'http://localhost:11434',
+    embedding_model: 'nomic-embed-text',
+    chat_model: 'llama3.1:8b'
+  )
+  
+  # Configure fallback order
+  config.fallback_providers = [:backup1, :backup2]
+end
+
+# Client with fallback enabled (default)
+client = Prescient::Client.new(:primary, enable_fallback: true)
+
+# Client without fallback
+client_no_fallback = Prescient::Client.new(:primary, enable_fallback: false)
+
+# Convenience methods also support fallback
+response = Prescient.generate_response("Hello", provider: :primary, enable_fallback: true)
+```
+
+**Fallback Behavior:**
+- When a provider fails with a persistent error, Prescient automatically tries the next available provider
+- Only available (healthy) providers are tried during fallback
+- If no fallback providers are configured, all available providers are tried as fallbacks
+- Transient errors (rate limits, timeouts) still use retry logic before fallback
+- The fallback process preserves all method arguments and options
+
 ## Usage
 
 ### Quick Start
