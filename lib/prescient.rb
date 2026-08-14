@@ -64,6 +64,9 @@ module Prescient
   # Handles global settings like timeouts and retry behavior, as well as
   # provider registration and instantiation.
   class Configuration
+    # @return [Array<Symbol>] Built-in provider option keys removed from output
+    DEFAULT_SENSITIVE_KEYS = [:api_key, :password, :token, :secret].freeze
+
     # @return [Symbol] The default provider to use when none specified
     attr_accessor :default_provider
 
@@ -79,6 +82,9 @@ module Prescient
     # @return [Array<Symbol>] List of fallback providers to try when primary fails
     attr_accessor :fallback_providers
 
+    # @return [Array<Symbol>] Additional keys removed from provider information
+    attr_reader :sensitive_keys
+
     # @return [Hash] Registered providers configuration
     attr_reader :providers
 
@@ -89,8 +95,18 @@ module Prescient
       @retry_attempts = 3
       @retry_delay = 1.0
       @fallback_providers = []
+      @sensitive_keys = []
       @providers = {}
       @provider_instances = {} # : Hash[Symbol, untyped]
+    end
+
+    # Configure additional keys to remove from provider information.
+    # Built-in sensitive keys are always sanitized.
+    #
+    # @param keys [Array<Symbol, String>] Additional sensitive option keys
+    # @return [Array<Symbol>] Normalized additional keys
+    def sensitive_keys=(keys)
+      @sensitive_keys = Array(keys).map(&:to_sym).uniq
     end
 
     # Register a new AI provider

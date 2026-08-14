@@ -42,6 +42,8 @@ class Prescient::Base
   # @option options [Hash] :prompt_templates Custom prompt templates
   # @option options [Hash] :context_configs Context formatting configurations
   # @option options [Integer] :embedding_dimensions Expected custom embedding size
+  # @option options [Array<Symbol, String>] :context_excluded_fields Additional
+  #   field names excluded from generic embedding text
   def initialize(**options)
     @options = options
     validate_configuration!
@@ -257,9 +259,13 @@ class Prescient::Base
 
   # Extract text values from hash, excluding non-textual fields
   def extract_text_values(item)
-    # Common fields to exclude from embedding text
-    # TODO: configurable fields to exclude aside from the common ones below
-    exclude_fields = ['id', '_id', 'uuid', 'created_at', 'updated_at', 'timestamp', 'version', 'status', 'active']
+    # Common fields to exclude from embedding text. Provider-specific fields can
+    # be added with the :context_excluded_fields option.
+    default_excluded_fields = ['id', '_id', 'uuid', 'created_at', 'updated_at', 'timestamp', 'version', 'status',
+                               'active']
+    configured_fields = Array(@options[:context_excluded_fields]) # : Array[untyped]
+    configured_excluded_fields = configured_fields.map { |field| field.to_s.downcase }
+    exclude_fields = default_excluded_fields | configured_excluded_fields
 
     item.filter_map { |key, value|
       next if exclude_fields.include?(key.to_s.downcase)

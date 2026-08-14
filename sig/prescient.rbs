@@ -147,14 +147,18 @@ module Prescient
   end
 
   class Configuration
+    DEFAULT_SENSITIVE_KEYS: Array[Symbol]
+
     attr_accessor default_provider: Symbol
     attr_accessor timeout: Integer
     attr_accessor retry_attempts: Integer
     attr_accessor retry_delay: Float
     attr_accessor fallback_providers: Array[Symbol]
+    attr_reader sensitive_keys: Array[Symbol]
     attr_reader providers: Hash[Symbol, Hash[Symbol, untyped]]
 
     def initialize: () -> void
+    def sensitive_keys=: (Array[Symbol | String]) -> Array[Symbol]
     def add_provider: (Symbol | String, Class, **untyped) -> void
     def provider: (Symbol | String) -> untyped
     def available_providers: () -> Array[Symbol]

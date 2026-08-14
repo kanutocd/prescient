@@ -24,6 +24,7 @@
 - Added credentialed, provider-selected live smoke tests that remain skipped by default.
 - Restored the RBS/Steep development tasks with a committed Steepfile and curated core API signatures.
 - Expanded Steep coverage to the base abstraction and all provider adapters, including their public operations and HTTP boundaries.
+- Added configurable provider-info sensitive-key sanitization and configurable generic context-field exclusions.
 
 ### Removed
 

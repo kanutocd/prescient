@@ -33,6 +33,15 @@ class CoverageGapTest < PrescientTest
                                              'id' => 7, 'blank' => ' ', 'object' => Object.new)
   end
 
+  def test_base_excludes_configured_embedding_fields
+    provider = Prescient::Base.new(context_excluded_fields: ['internal_note', :tenant_id])
+
+    assert_equal 'Title 42', provider.send(
+      :extract_embedding_text,
+      'title' => 'Title', 'internal_note' => 'private', 'tenant_id' => 'tenant-1', 'count' => 42,
+    )
+  end
+
   def test_base_extracts_configured_embedding_fields
     provider = Prescient::Base.new(
       context_configs: {

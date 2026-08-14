@@ -364,6 +364,14 @@ response = client.generate_response("I need a laptop for work", products)
 - **fields** - Array of field names available for this context type
 - **format** - Template string for displaying context items
 - **embedding_fields** - Specific fields to use when generating embeddings
+- **context_excluded_fields** - Additional field names excluded from generic embedding text; built-in metadata exclusions remain active
+
+```ruby
+config.add_provider(:openai, Prescient::Provider::OpenAI,
+  api_key: ENV['OPENAI_API_KEY'],
+  context_excluded_fields: %w[tenant_id internal_notes]
+)
+```
 
 ### Automatic Context Detection
 
@@ -393,6 +401,18 @@ response = client.generate_response("Analyze this", [
 ```
 
 See `examples/custom_contexts.rb` for complete examples.
+
+### Sensitive Provider Options
+
+`provider_info` always removes the built-in sensitive keys (`api_key`,
+`password`, `token`, and `secret`). Add project-specific keys globally with
+`sensitive_keys`; nested hashes and arrays are sanitized recursively:
+
+```ruby
+Prescient.configure do |config|
+  config.sensitive_keys = %w[workspace_secret private_key]
+end
+```
 
 ## Vector Database Integration (pgvector)
 

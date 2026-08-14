@@ -121,10 +121,23 @@ module Prescient
 
     private
 
-    # TODO: configurable keys to sanitize
     def sanitize_options(options)
-      sensitive_keys = [:api_key, :password, :token, :secret]
-      options.reject { |key, _| sensitive_keys.include?(key.to_sym) }
+      sensitive_keys = Prescient::Configuration::DEFAULT_SENSITIVE_KEYS + Prescient.configuration.sensitive_keys
+
+      case options
+      when Hash
+        sanitized = {} # : Hash[untyped, untyped]
+        options.each do |key, value|
+          next if key.respond_to?(:to_sym) && sensitive_keys.include?(key.to_sym)
+
+          sanitized[key] = sanitize_options(value)
+        end
+        sanitized
+      when Array
+        options.map { |value| sanitize_options(value) }
+      else
+        options
+      end
     end
 
     def with_error_handling

@@ -13,7 +13,14 @@ class ConfigurationTest < PrescientTest
     assert_equal 30, @config.timeout
     assert_equal 3, @config.retry_attempts
     assert_in_delta(1.0, @config.retry_delay)
+    assert_empty(@config.sensitive_keys)
     assert_empty(@config.providers)
+  end
+
+  def test_sensitive_keys_normalizes_custom_keys
+    @config.sensitive_keys = ['credit_card', :private_key, :credit_card]
+
+    assert_equal [:credit_card, :private_key], @config.sensitive_keys
   end
 
   def test_add_provider_adds_provider_configuration

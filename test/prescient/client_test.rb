@@ -160,6 +160,27 @@ class ClientTest < PrescientTest
     assert_equal 'visible-value', result[:options][:normal_option]
   end
 
+  def test_provider_info_sanitizes_nested_and_configured_sensitive_data
+    Prescient.configuration.sensitive_keys = ['workspace_secret', 'api_token']
+    @client.provider.stubs(:available?).returns(true)
+    @client.provider.stubs(:options).returns({
+      workspace_secret: 'hidden',
+      nested:           {
+        api_token: 'hidden',
+        visible:   'shown',
+      },
+      values:           [{ secret: 'hidden', visible: 'shown' }],
+    })
+
+    options = @client.provider_info[:options]
+
+    refute options.key?(:workspace_secret)
+    refute options[:nested].key?(:api_token)
+    assert_equal 'shown', options[:nested][:visible]
+    refute options[:values].first.key?(:secret)
+    assert_equal 'shown', options[:values].first[:visible]
+  end
+
   def test_method_missing_delegates_to_provider
     # Test delegation of methods not explicitly defined
     @client.provider.expects(:custom_method).with('arg1', 'arg2').returns('custom_result')
