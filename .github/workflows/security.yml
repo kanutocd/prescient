@@ -103,15 +103,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
+          persist-credentials: false
           # Fetch full history for secret scanning
           fetch-depth: 0
 
       - name: Run TruffleHog OSS
         uses: trufflesecurity/trufflehog@main
         with:
-          path: ./
-          base: main
-          head: HEAD
-          extra_args: --debug --only-verified
+          # extra_args: --debug --only-verified
+          extra_args: --results=verified,unknown
+
