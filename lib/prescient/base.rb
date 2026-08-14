@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require 'json'
+require 'net/http'
+
 # Base class for all AI provider implementations
 #
 # This abstract base class defines the common interface that all AI providers
@@ -230,12 +233,15 @@ class Prescient::Base
 
   # Minimal default context configuration - users should define their own contexts
   def default_context_configs
+    embedding_fields = [] # : Array[untyped]
+    fields = [] # : Array[untyped]
+
     {
       # Generic fallback configuration - works with any hash structure
       'default' => {
-        fields:           [], # Will be dynamically determined from item keys
+        fields:           fields, # Will be dynamically determined from item keys
         format:           nil, # Will use fallback formatting
-        embedding_fields: [], # Will use all string/text fields
+        embedding_fields: embedding_fields, # Will use all string/text fields
       },
     }
   end
@@ -304,7 +310,7 @@ class Prescient::Base
 
   # Build format data from item fields
   def build_format_data(item, config)
-    format_data = {}
+    format_data = {} # : Hash[Symbol, untyped]
     fields_to_check = config[:fields].any? ? config[:fields] : item.keys.map(&:to_s)
 
     fields_to_check.each do |field|

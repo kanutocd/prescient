@@ -27,7 +27,7 @@ class Prescient::Provider::Ollama < Prescient::Base
                                      input: clean_text(text),
                                    }.to_json)
 
-      embedding = embeddings.is_a?(Array) ? embeddings.first : nil
+      embedding = embeddings.is_a?(Array) ? embeddings.first : nil # : Array[Float]?
       raise Prescient::InvalidResponseError, 'No embedding returned' unless embedding.is_a?(Array)
       unless embedding.length == EMBEDDING_DIMENSIONS
         raise Prescient::InvalidResponseError,

@@ -1,3 +1,6 @@
+module HTTParty
+end
+
 module Prescient
   VERSION: String
 
@@ -23,19 +26,123 @@ module Prescient
   end
 
   class Base
+    attr_reader options: Hash[Symbol, untyped]
+
+    def initialize: (**untyped) -> void
+    def generate_embedding: (String, **untyped) -> Array[Float]
+    def generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
+    def health_check: () -> Hash[Symbol, untyped]
+    def available?: () -> bool
+
+    def validate_configuration!: () -> void
+    def handle_errors: () { () -> untyped } -> untyped
+    def validate_embedding_dimensions: (untyped, Integer) -> Array[untyped]
+    def clean_text: (untyped) -> String
+    def default_prompt_templates: () -> Hash[Symbol, String]
+    def build_prompt: (String, ?Array[untyped]) -> String
+    def default_context_configs: () -> Hash[untyped, untyped]
+    def extract_embedding_text: (untyped, ?String) -> String
+    def extract_text_values: (Hash[untyped, untyped]) -> Array[String]
+    def format_context_item: (untyped) -> String
+
+    private
+
+    def resolve_context_config: (untyped, String?) -> Hash[untyped, untyped]
+    def extract_configured_fields: (Hash[untyped, untyped], Hash[untyped, untyped]) -> Array[untyped]?
+    def format_hash_item: (Hash[untyped, untyped]) -> String
+    def build_format_data: (Hash[untyped, untyped], Hash[untyped, untyped]) -> Hash[Symbol, untyped]
+    def apply_format_template: (String, Hash[Symbol, untyped]) -> String?
+    def detect_context_type: (untyped) -> String
+    def match_context_by_fields: (Hash[untyped, untyped], Hash[untyped, untyped]) -> String
+    def find_best_field_match: (Array[String], Hash[untyped, untyped]) -> String?
+    def calculate_field_match_score: (Array[String], Array[String]) -> Numeric
+    def fallback_format_hash: (Hash[untyped, untyped], ?Hash[Symbol, untyped]) -> String
   end
 
   module Provider
     class Ollama < Base
+      EMBEDDING_DIMENSIONS: Integer
+
+      def self.base_uri: (String) -> untyped
+      def self.default_timeout: (Integer) -> untyped
+      def self.get: (String, **untyped) -> untyped
+      def self.post: (String, **untyped) -> untyped
+
+      def initialize: (**untyped) -> void
+      def generate_embedding: (String, **untyped) -> Array[Float]
+      def generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
+      def health_check: () -> Hash[Symbol, untyped]
+      def available_models: () -> Array[Hash[Symbol, untyped]]
+      def pull_model: (String) -> Hash[Symbol, untyped]
+
+      private
+
+      def validate_configuration!: () -> void
+      def prepare_generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
+      def fetch_and_parse: (String, String, **untyped) -> untyped
+      def validate_response!: (untyped, String) -> void
     end
 
     class Anthropic < Base
+      def self.base_uri: (String) -> untyped
+      def self.default_timeout: (Integer) -> untyped
+      def self.get: (String, **untyped) -> untyped
+      def self.post: (String, **untyped) -> untyped
+
+      def initialize: (**untyped) -> void
+      def generate_embedding: (String, **untyped) -> untyped
+      def generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
+      def health_check: () -> Hash[Symbol, untyped]
+      def list_models: () -> Array[Hash[Symbol, untyped]]
+
+      private
+
+      def validate_configuration!: () -> void
+      def api_headers: () -> Hash[String, String]
+      def validate_response!: (untyped, String) -> void
     end
 
     class OpenAI < Base
+      EMBEDDING_DIMENSIONS: Hash[String, Integer]
+
+      def self.base_uri: (String) -> untyped
+      def self.default_timeout: (Integer) -> untyped
+      def self.get: (String, **untyped) -> untyped
+      def self.post: (String, **untyped) -> untyped
+
+      def initialize: (**untyped) -> void
+      def generate_embedding: (String, **untyped) -> Array[Float]
+      def generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
+      def health_check: () -> Hash[Symbol, untyped]
+      def list_models: () -> Array[Hash[Symbol, untyped]]
+
+      private
+
+      def validate_configuration!: () -> void
+      def validate_response!: (untyped, String) -> void
     end
 
     class HuggingFace < Base
+      FEATURE_EXTRACTION_PATH: String
+      CHAT_COMPLETIONS_PATH: String
+      MODEL_LIST_PATH: String
+      EMBEDDING_DIMENSIONS: Hash[String, Integer]
+
+      def self.base_uri: (String) -> untyped
+      def self.default_timeout: (Integer) -> untyped
+      def self.get: (String, **untyped) -> untyped
+      def self.post: (String, **untyped) -> untyped
+
+      def initialize: (**untyped) -> void
+      def generate_embedding: (String, **untyped) -> Array[Float]
+      def generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
+      def health_check: () -> Hash[Symbol, untyped]
+      def list_models: () -> Array[Hash[Symbol, untyped]]
+
+      private
+
+      def validate_configuration!: () -> void
+      def validate_response!: (untyped, String) -> void
     end
   end
 
