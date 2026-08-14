@@ -227,9 +227,13 @@ required.
 
 `Prescient::API` is a dependency-free Rack-compatible application. Mount it in
 the web server of your choice without making HTTP a requirement for library
-users:
+users. The API and CLI files are loaded lazily; `Prescient::API` autoloads on
+first reference, or you can require it explicitly:
 
 ```ruby
+require 'prescient'
+require 'prescient/api'
+
 run Prescient::API.new(
   authentication: ->(env) { env['HTTP_AUTHORIZATION'] == "Bearer #{ENV['PRESCIENT_API_TOKEN']}" }
 )
@@ -1030,6 +1034,30 @@ puts info[:options]   # => { ... } (excluding sensitive data)
 - Research-friendly
 - Free tier available
 
+### Google Gemini
+
+- Text generation and embeddings
+- Google AI API integration
+- Model discovery through the Gemini models endpoint
+
+### Mistral
+
+- Text generation and embeddings
+- OpenAI-compatible API style
+- Model discovery through the Mistral models endpoint
+
+### DeepSeek
+
+- Text generation
+- OpenAI-compatible API style
+- No embedding support
+
+### xAI
+
+- Text generation
+- OpenAI-compatible API style
+- No embedding support
+
 ## Docker Setup (Recommended for Ollama)
 
 The easiest way to get started with Prescient and Ollama is using Docker Compose:
@@ -1262,10 +1290,10 @@ OPENAI_API_KEY=... \
 bundle exec ruby -Itest test/prescient/live_provider_smoke_test.rb
 ```
 
-Supported provider names are `ollama`, `anthropic`, `openai`, and
-`huggingface`. The corresponding provider environment variables and model
-overrides are honored. These tests are never live unless both opt-in
-variables are set.
+Supported provider names are `ollama`, `anthropic`, `openai`, `huggingface`,
+`gemini`, `mistral`, `deepseek`, and `xai`. The corresponding provider
+environment variables and model overrides are honored. These tests are never
+live unless both opt-in variables are set.
 
 ### RBS and Steep
 

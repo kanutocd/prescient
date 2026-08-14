@@ -109,6 +109,40 @@ Prescient.configure do |config|
       chat_model: ENV.fetch('HUGGINGFACE_CHAT_MODEL', 'google/gemma-2-2b-it')
     )
   end
+
+  # Google Gemini
+  if ENV['GEMINI_API_KEY'].present?
+    config.add_provider(:gemini, Prescient::Provider::Gemini,
+      api_key: ENV['GEMINI_API_KEY'],
+      embedding_model: ENV.fetch('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001'),
+      chat_model: ENV.fetch('GEMINI_CHAT_MODEL', 'gemini-2.5-flash')
+    )
+  end
+
+  # Mistral
+  if ENV['MISTRAL_API_KEY'].present?
+    config.add_provider(:mistral, Prescient::Provider::Mistral,
+      api_key: ENV['MISTRAL_API_KEY'],
+      embedding_model: ENV.fetch('MISTRAL_EMBEDDING_MODEL', 'mistral-embed'),
+      chat_model: ENV.fetch('MISTRAL_CHAT_MODEL', 'mistral-large-latest')
+    )
+  end
+
+  # DeepSeek supports generation, but not embeddings.
+  if ENV['DEEPSEEK_API_KEY'].present?
+    config.add_provider(:deepseek, Prescient::Provider::DeepSeek,
+      api_key: ENV['DEEPSEEK_API_KEY'],
+      chat_model: ENV.fetch('DEEPSEEK_CHAT_MODEL', 'deepseek-v4-flash')
+    )
+  end
+
+  # xAI supports generation, but not embeddings.
+  if ENV['XAI_API_KEY'].present?
+    config.add_provider(:xai, Prescient::Provider::XAI,
+      api_key: ENV['XAI_API_KEY'],
+      chat_model: ENV.fetch('XAI_CHAT_MODEL', 'grok-4.5')
+    )
+  end
 end
 
 # Set default provider for Rails
@@ -198,6 +232,24 @@ ANTHROPIC_MODEL=claude-sonnet-4-20250514
 HUGGINGFACE_API_KEY=your_huggingface_api_key
 HUGGINGFACE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 HUGGINGFACE_CHAT_MODEL=google/gemma-2-2b-it
+
+# Google Gemini
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+GEMINI_CHAT_MODEL=gemini-2.5-flash
+
+# Mistral
+MISTRAL_API_KEY=your_mistral_api_key
+MISTRAL_EMBEDDING_MODEL=mistral-embed
+MISTRAL_CHAT_MODEL=mistral-large-latest
+
+# DeepSeek (generation only)
+DEEPSEEK_API_KEY=your_deepseek_api_key
+DEEPSEEK_CHAT_MODEL=deepseek-v4-flash
+
+# xAI (generation only)
+XAI_API_KEY=your_xai_api_key
+XAI_CHAT_MODEL=grok-4.5
 ```
 
 ### 6. Update Controllers
@@ -279,7 +331,7 @@ class Api::V1::System::HealthController < ApplicationController
     }
 
     # Check backup providers
-    backup_providers = [:openai, :anthropic, :huggingface] - [primary_provider]
+    backup_providers = %i[openai anthropic huggingface gemini mistral deepseek xai] - [primary_provider]
     providers[:backups] = backup_providers.map do |provider|
       {
         name: provider,

@@ -3,6 +3,7 @@
 require 'json'
 require 'optparse'
 require 'yaml'
+require_relative '../prescient'
 
 # Command-line interface for common Prescient operations.
 class Prescient::CLI

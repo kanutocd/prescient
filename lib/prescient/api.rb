@@ -4,6 +4,7 @@ require 'json'
 require 'securerandom'
 require 'stringio'
 require 'uri'
+require_relative '../prescient'
 
 # Dependency-free Rack-compatible HTTP application for Prescient operations.
 #

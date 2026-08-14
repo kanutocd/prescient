@@ -14,8 +14,6 @@ require_relative 'prescient/provider/deepseek'
 require_relative 'prescient/provider/xai'
 require_relative 'prescient/configuration_loader'
 require_relative 'prescient/client'
-require_relative 'prescient/api'
-require_relative 'prescient/cli'
 
 # Main Prescient module for AI provider abstraction
 #
@@ -36,6 +34,9 @@ require_relative 'prescient/cli'
 #   embedding = client.generate_embedding("Some text to embed")
 #   puts embedding.length # => 1536 (for OpenAI text-embedding-3-small)
 module Prescient
+  autoload :API, 'prescient/api'
+  autoload :CLI, 'prescient/cli'
+
   # Configure Prescient with custom settings and providers
   #
   # @example Configure with custom provider
