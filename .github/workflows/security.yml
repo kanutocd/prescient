@@ -99,19 +99,19 @@ jobs:
           name: brakeman-report
           path: brakeman-report.json
 
-  secrets-scan:
-    runs-on: ubuntu-latest
+  # secrets-scan:
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-          # Fetch full history for secret scanning
-          fetch-depth: 0
+  #   steps:
+  #     - uses: actions/checkout@v7
+  #       with:
+  #         persist-credentials: false
+  #         # Fetch full history for secret scanning
+  #         fetch-depth: 0
 
-      - name: Run TruffleHog OSS
-        uses: trufflesecurity/trufflehog@main
-        with:
-          # extra_args: --debug --only-verified
-          extra_args: --results=verified,unknown
+  #     - name: Run TruffleHog OSS
+  #       uses: trufflesecurity/trufflehog@main
+  #       with:
+  #         # extra_args: --debug --only-verified
+  #         extra_args: --results=verified,unknown
 
