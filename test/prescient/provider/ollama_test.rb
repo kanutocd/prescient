@@ -33,9 +33,17 @@ class OllamaProviderTest < PrescientTest
   def test_generate_embedding_success
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns({ 'embedding' => Array.new(768) { |i| i * 0.001 } })
+    mock_response.stubs(:parsed_response).returns({
+      'embeddings' => [Array.new(768) { |i| i * 0.001 }],
+    })
 
-    @provider.class.expects(:post).returns(mock_response)
+    @provider.class.expects(:post).with(
+      '/api/embed',
+      has_entries(
+        headers: { 'Content-Type' => 'application/json' },
+        body:    regexp_matches(/"model":"nomic-embed-text".*"input":"test text"/),
+      ),
+    ).returns(mock_response)
 
     result = @provider.generate_embedding('test text')
 
@@ -43,26 +51,54 @@ class OllamaProviderTest < PrescientTest
     assert_instance_of Float, result.first
   end
 
-  def test_generate_embedding_normalizes_dimensions
-    # Mock response with more dimensions than expected
+  def test_generate_embedding_rejects_short_vectors
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'embedding' => Array.new(1000) { |i| i * 0.1 },
+      'embeddings' => [Array.new(767) { |i| i * 0.1 }],
     })
 
     @provider.class.expects(:post).returns(mock_response)
 
-    result = @provider.generate_embedding('test text')
+    error = assert_raises(Prescient::InvalidResponseError) {
+      @provider.generate_embedding('test text')
+    }
 
-    # Should be normalized to 768 dimensions
-    assert_equal 768, result.length
+    assert_includes error.message, 'expected 768, got 767'
+  end
+
+  def test_generate_embedding_rejects_long_vectors
+    mock_response = mock('response')
+    mock_response.stubs(:success?).returns(true)
+    mock_response.stubs(:parsed_response).returns({
+      'embeddings' => [Array.new(769) { |i| i * 0.1 }],
+    })
+
+    @provider.class.expects(:post).returns(mock_response)
+
+    error = assert_raises(Prescient::InvalidResponseError) {
+      @provider.generate_embedding('test text')
+    }
+
+    assert_includes error.message, 'expected 768, got 769'
   end
 
   def test_generate_embedding_handles_missing_response
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({})
+
+    @provider.class.expects(:post).returns(mock_response)
+
+    assert_raises(Prescient::InvalidResponseError) do
+      @provider.generate_embedding('test text')
+    end
+  end
+
+  def test_generate_embedding_handles_invalid_response_shape
+    mock_response = mock('response')
+    mock_response.stubs(:success?).returns(true)
+    mock_response.stubs(:parsed_response).returns({ 'embeddings' => [0.1, 0.2] })
 
     @provider.class.expects(:post).returns(mock_response)
 
@@ -225,21 +261,6 @@ class OllamaProviderTest < PrescientTest
     cleaned = @provider.send(:clean_text, long_text)
 
     assert_equal 8000, cleaned.length
-  end
-
-  def test_normalize_embedding_helper
-    # Test dimension normalization
-    embedding = [0.1, 0.2, 0.3]
-    result = @provider.send(:normalize_embedding, embedding, 5)
-
-    assert_equal 5, result.length
-    assert_equal [0.1, 0.2, 0.3, 0.0, 0.0], result
-
-    # Test truncation
-    long_embedding = Array.new(1000) { |i| i * 0.1 }
-    result = @provider.send(:normalize_embedding, long_embedding, 768)
-
-    assert_equal 768, result.length
   end
 
   def test_build_prompt_without_context

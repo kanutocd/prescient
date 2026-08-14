@@ -31,7 +31,7 @@ namespace :yard do
     abort("Unable to determine YARD coverage") unless match
 
     coverage = match[1].to_f
-    minimum = 95.0
+    minimum = 99.0
     if coverage < minimum
       message = format(
         "YARD coverage %<coverage>.2f%% is below %<minimum>.2f%%",

@@ -15,17 +15,22 @@ class Prescient::Provider::Ollama < Prescient::Base
 
   def generate_embedding(text, **_options)
     handle_errors do
-      embedding = fetch_and_parse('post', '/api/embeddings',
-                                  root_key: 'embedding',
-                                  headers:  { 'Content-Type' => 'application/json' },
-                                  body:     {
-                                    model:  @options[:embedding_model],
-                                    prompt: clean_text(text),
-                                  }.to_json)
+      embeddings = fetch_and_parse('post', '/api/embed',
+                                   root_key: 'embeddings',
+                                   headers:  { 'Content-Type' => 'application/json' },
+                                   body:     {
+                                     model: @options[:embedding_model],
+                                     input: clean_text(text),
+                                   }.to_json)
 
-      raise Prescient::InvalidResponseError, 'No embedding returned' unless embedding
+      embedding = embeddings.is_a?(Array) ? embeddings.first : nil
+      raise Prescient::InvalidResponseError, 'No embedding returned' unless embedding.is_a?(Array)
+      unless embedding.length == EMBEDDING_DIMENSIONS
+        raise Prescient::InvalidResponseError,
+              "Invalid embedding dimensions: expected #{EMBEDDING_DIMENSIONS}, got #{embedding.length}"
+      end
 
-      normalize_embedding(embedding, EMBEDDING_DIMENSIONS)
+      embedding
     end
   end
 
