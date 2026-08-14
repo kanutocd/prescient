@@ -31,7 +31,7 @@ class VectorSearchExample
     
     # Check if services are available
     unless check_services_available
-      puts "❌ Required services not available. Please start with: docker-compose up -d"
+      puts "❌ Required services not available. Please start with: docker compose up -d"
       return
     end
 

@@ -14,9 +14,9 @@ class Prescient::Provider::Ollama < Prescient::Base
     self.class.default_timeout(@options[:timeout] || 60)
   end
 
-  # Generate an embedding through Ollama's embedding endpoint.
+  # Generate an embedding through Ollama's `/api/embed` endpoint.
   # @param text [String] Text to embed
-  # @return [Array<Float>] Embedding vector
+  # @return [Array<Float>] Embedding vector from the first returned input item
   def generate_embedding(text, **_options)
     handle_errors do
       embeddings = fetch_and_parse('post', '/api/embed',
@@ -67,7 +67,11 @@ class Prescient::Provider::Ollama < Prescient::Base
     end
   end
 
-  # Check whether the configured Ollama models are available.
+  # Check whether the configured Ollama models are available locally.
+  #
+  # `reachable` indicates the Ollama API answered successfully. `ready`
+  # indicates that both configured models are present in the local model list.
+  #
   # @return [Hash] Provider health information
   def health_check
     handle_errors do
@@ -105,7 +109,8 @@ class Prescient::Provider::Ollama < Prescient::Base
   end
 
   # List models currently available from Ollama.
-  # @return [Array<Hash>] Model descriptors
+  # @return [Array<Hash>] Model descriptors including name, size, digest,
+  #   modified_at, and booleans for configured embedding/chat roles
   def available_models
     return @_available_models if defined?(@_available_models)
 

@@ -2,23 +2,27 @@
 
 This guide provides a comprehensive overview of using Prescient with PostgreSQL's pgvector extension for semantic search and similarity matching.
 
+The runnable companion is [`examples/vector_search.rb`](examples/vector_search.rb);
+see the [examples guide](examples/README.md) for setup and the [main README](README.md)
+for the provider API.
+
 ## Quick Start
 
 ### 1. Start Services
 
 ```bash
 # Start PostgreSQL with pgvector and Ollama
-docker-compose up -d postgres ollama
+docker compose up -d postgres ollama
 
 # Wait for services to be ready
-docker-compose logs -f postgres ollama
+docker compose logs -f postgres ollama
 ```
 
 ### 2. Initialize Models
 
 ```bash
 # Pull required Ollama models
-docker-compose up ollama-init
+docker compose run --rm ollama-init
 
 # Or manually:
 ./scripts/setup-ollama-models.sh

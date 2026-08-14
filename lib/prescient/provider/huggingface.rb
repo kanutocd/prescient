@@ -2,7 +2,7 @@
 
 require 'httparty'
 
-# Hugging Face Inference API provider adapter.
+# Hugging Face router-backed Inference Providers API adapter.
 class Prescient::Provider::HuggingFace < Prescient::Base
   include HTTParty
 
@@ -105,6 +105,12 @@ class Prescient::Provider::HuggingFace < Prescient::Base
   end
 
   # Check availability of the configured embedding and text models.
+  #
+  # The embedding model is checked against the model metadata API on
+  # `huggingface.co`, while the chat model is checked against the router's
+  # OpenAI-compatible `/v1/models` listing. `ready` requires both checks to
+  # succeed.
+  #
   # @return [Hash] Provider health information
   def health_check
     handle_errors do
@@ -144,6 +150,10 @@ class Prescient::Provider::HuggingFace < Prescient::Base
   end
 
   # Return the configured Hugging Face models.
+  #
+  # This method does not query the Hugging Face APIs. It reflects the current
+  # adapter configuration only.
+  #
   # @return [Array<Hash>] Model descriptors
   def list_models
     # HuggingFace doesn't provide a simple API to list all models

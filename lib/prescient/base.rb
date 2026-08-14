@@ -10,7 +10,8 @@ require 'net/http'
 # formatting, prompt building, and error handling.
 #
 # @abstract Subclass and implement {#generate_embedding}, {#generate_response},
-#   {#health_check}, and {#validate_configuration!}
+#   {#health_check}, and any configuration validation required by
+#   {#validate_configuration!}
 #
 # @example Creating a custom provider
 #   class MyProvider < Prescient::Base
@@ -27,8 +28,6 @@ require 'net/http'
 #     end
 #   end
 #
-# @author Claude Code
-# @since 1.0.0
 class Prescient::Base
   # @return [Hash] Configuration options for this provider instance
   attr_reader :options
@@ -86,7 +85,8 @@ class Prescient::Base
   # This method must be implemented by subclasses to provide health check
   # functionality.
   #
-  # @return [Hash] Health status with :status, :provider keys and optional details
+  # @return [Hash] Health status with at least :status and :provider keys,
+  #   and typically :reachable and :ready for modern adapters
   # @raise [NotImplementedError] If not implemented by subclass
   # @abstract
   def health_check
@@ -95,7 +95,11 @@ class Prescient::Base
 
   # Check if the provider is currently available
   #
-  # @return [Boolean] true if the provider is reachable
+  # Returns `true` when the health check reports `reachable: true`.
+  # For legacy adapters that only return a status string, `status == "healthy"`
+  # is also treated as available.
+  #
+  # @return [Boolean] true if the provider is currently reachable
   def available?
     health = health_check
     health.key?(:reachable) ? health[:reachable] == true : health[:status] == 'healthy'
@@ -147,8 +151,8 @@ class Prescient::Base
   # Embedding dimensions are part of the vector-storage contract. Vectors are
   # never padded or truncated because either operation changes their meaning.
   #
-  # @param embedding [Array<Float>] The embedding vector to normalize
-  # @param target_dimensions [Integer] The desired number of dimensions
+  # @param embedding [Array<Float>] The embedding vector to validate
+  # @param target_dimensions [Integer] The required number of dimensions
   # @return [Array<Float>] The original embedding when dimensions are valid
   # @raise [Prescient::InvalidResponseError] If the vector is malformed or has
   #   an unexpected dimension
@@ -163,8 +167,8 @@ class Prescient::Base
 
   # Clean and preprocess text for AI processing
   #
-  # Removes excess whitespace, normalizes spacing, and enforces length
-  # limits suitable for most AI models.
+  # Removes excess whitespace, normalizes spacing, and truncates to the
+  # library's current 8,000-character input ceiling.
   #
   # @param text [String, nil] The text to clean
   # @return [String] Cleaned text, empty string if input was nil/empty

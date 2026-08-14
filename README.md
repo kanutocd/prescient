@@ -2,6 +2,10 @@
 
 Prescient provides a unified interface for AI providers including Ollama (local), Anthropic Claude, OpenAI GPT, and HuggingFace models. Built for prescient applications that need AI predictions with provider switching, error handling, and fallback mechanisms.
 
+For focused guidance, see the [examples guide](examples/README.md),
+[Rails integration guide](INTEGRATION_GUIDE.md), and
+[pgvector guide](VECTOR_SEARCH_GUIDE.md).
+
 ## Features
 
 - **Unified Interface**: Single API for multiple AI providers
@@ -16,7 +20,7 @@ Prescient provides a unified interface for AI providers including Ollama (local)
 
 ### Ollama (Local)
 
-- **Models**: Any Ollama-compatible model (llama3.1, nomic-embed-text, etc.)
+- **Models**: Any Ollama-compatible model (llama3.2, nomic-embed-text, etc.)
 - **Capabilities**: Embeddings, Text Generation, Model Management
 - **Use Case**: Privacy-focused, local deployments
 
@@ -96,20 +100,20 @@ Prescient.configure do |config|
   config.retry_delay = 1.0
 
   # Add custom Ollama configuration
-  config.add_provider(:ollama, Prescient::Ollama::Provider,
+  config.add_provider(:ollama, Prescient::Provider::Ollama,
     url: 'http://localhost:11434',
     embedding_model: 'nomic-embed-text',
     chat_model: 'llama3.2:3b'
   )
 
   # Add Anthropic
-  config.add_provider(:anthropic, Prescient::Anthropic::Provider,
+  config.add_provider(:anthropic, Prescient::Provider::Anthropic,
     api_key: ENV['ANTHROPIC_API_KEY'],
     model: 'claude-sonnet-4-20250514'
   )
 
   # Add OpenAI
-  config.add_provider(:openai, Prescient::OpenAI::Provider,
+  config.add_provider(:openai, Prescient::Provider::OpenAI,
     api_key: ENV['OPENAI_API_KEY'],
     embedding_model: 'text-embedding-3-small',
     chat_model: 'gpt-4.1-mini'
@@ -241,10 +245,12 @@ end
 
 ```ruby
 # Check all providers
-[:ollama, :anthropic, :openai, :huggingface].each do |provider|
+Prescient.configuration.providers.keys.each do |provider|
   health = Prescient.health_check(provider: provider)
   puts "#{provider}: #{health[:status]}"
   puts "Ready: #{health[:ready]}" if health[:ready]
+rescue Prescient::Error => e
+  puts "#{provider}: unavailable (#{e.message})"
 end
 ```
 
@@ -331,12 +337,12 @@ Prescient.configure do |config|
     context_configs: {
       'product' => {
         fields: %w[name description price category brand],
-        format: '%{ name } by %{ brand }: %{ description } - $%{ price } (%{ category })',
+        format: '%{name} by %{brand}: %{description} - $%{price} (%{category})',
         embedding_fields: %w[name description category brand]
       },
       'review' => {
         fields: %w[product_name rating review_text reviewer_name],
-        format: '%{ product_name } - %{ rating }/5 stars: "%{ review_text }"',
+        format: '%{product_name} - %{rating}/5 stars: "%{review_text}"',
         embedding_fields: %w[product_name review_text]
       }
     }
@@ -393,7 +399,7 @@ The system works perfectly without any context configuration - it will:
 
 ```ruby
 # No context_configs needed - works with any data!
-client = Prescient.client(:default)
+client = Prescient.client
 response = client.generate_response("Analyze this", [
   { 'title' => 'Issue', 'content' => 'Server down', 'created_at' => '2024-01-01' },
   { 'name' => 'Alert', 'message' => 'High CPU usage', 'timestamp' => 1234567 }
@@ -424,7 +430,7 @@ The included `docker-compose.yml` provides a complete setup with PostgreSQL + pg
 
 ```bash
 # Start PostgreSQL with pgvector
-docker-compose up -d postgres
+docker compose up -d postgres
 
 # The database will automatically:
 # - Install pgvector extension
@@ -609,7 +615,7 @@ Run the complete vector search example:
 
 ```bash
 # Start services
-docker-compose up -d postgres ollama
+docker compose up -d postgres ollama
 
 # Run example
 DB_HOST=localhost ruby examples/vector_search.rb
@@ -627,7 +633,7 @@ The example demonstrates:
 ### Custom Provider Implementation
 
 ```ruby
-class MyCustomProvider < Prescient::BaseProvider
+class MyCustomProvider < Prescient::Base
   def generate_embedding(text, **options)
     # Your implementation
   end
@@ -663,7 +669,7 @@ client = Prescient.client(:ollama)
 info = client.provider_info
 
 puts info[:name]      # => :ollama
-puts info[:class]     # => "Prescient::Ollama::Provider"
+puts info[:class]     # => "Ollama"
 puts info[:available] # => true
 puts info[:options]   # => { ... } (excluding sensitive data)
 ```
@@ -672,7 +678,7 @@ puts info[:options]   # => { ... } (excluding sensitive data)
 
 ### Ollama
 
-- Model management: `pull_model`, `list_models`
+- Model management: `pull_model`, `available_models`
 - Local deployment support
 - No API costs
 
@@ -739,14 +745,14 @@ Before starting, ensure your system meets the minimum requirements for running O
 1. **Start Ollama service:**
 
    ```bash
-   docker-compose up -d ollama
+   docker compose up -d ollama
    ```
 
 2. **Pull required models:**
 
    ```bash
    # Automatic setup
-   docker-compose up ollama-init
+   docker compose run --rm ollama-init
 
    # Or manual setup
    ./scripts/setup-ollama-models.sh
@@ -855,7 +861,7 @@ free -h
 # Settings > Resources > Memory: 8GB+
 
 # Use smaller models if hardware limited
-OLLAMA_CHAT_MODEL=llama3.1:7b ruby examples/custom_contexts.rb
+OLLAMA_CHAT_MODEL=llama3.2:3b ruby examples/custom_contexts.rb
 ```
 
 **Slow Model Loading:**
@@ -908,7 +914,7 @@ time curl -X POST http://localhost:11434/api/generate \
 The gem includes comprehensive test coverage:
 
 ```bash
-bundle exec rspec
+bundle exec rake test
 ```
 
 ## Development
@@ -969,34 +975,3 @@ bundle exec rake install
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Roadmap
-
-### Version 0.2.0 (Planned)
-
-- **MariaDB Vector Support**: Integration with MariaDB using external vector databases
-- **Hybrid Database Architecture**: Support for MariaDB + Milvus/Qdrant combinations
-- **Vector Database Adapters**: Pluggable adapters for different vector storage backends
-- **Enhanced Chunking Strategies**: Smart document splitting with multiple algorithms
-- **Search Result Ranking**: Advanced scoring and re-ranking capabilities
-
-### Version 0.3.0 (Future)
-
-- **Streaming Responses**: Real-time response streaming for chat applications
-- **Multi-Model Ensembles**: Combine responses from multiple AI providers
-- **Advanced Analytics**: Search performance insights and usage analytics
-- **Cloud Provider Integration**: Direct support for Pinecone, Weaviate, etc.
-
-## Changelog
-
-### Version 0.1.0
-
-- Initial release
-- Support for Ollama, Anthropic, OpenAI, and HuggingFace
-- Unified interface for embeddings and text generation
-- Comprehensive error handling and retry logic
-- Health monitoring capabilities
-- PostgreSQL pgvector integration with complete Docker setup
-- Vector similarity search with multiple distance functions
-- Document chunking and metadata filtering
-- Performance optimization guides and troubleshooting

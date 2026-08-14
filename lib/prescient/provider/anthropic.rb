@@ -13,6 +13,9 @@ class Prescient::Provider::Anthropic < Prescient::Base
     self.class.default_timeout(@options[:timeout] || 60)
   end
 
+  # Anthropic does not provide embeddings through this adapter.
+  #
+  # @raise [Prescient::Error] Always, because Anthropic embeddings are not supported
   def generate_embedding(_text, **_options)
     # Anthropic doesn't provide embedding API, raise error
     raise Prescient::Error,
@@ -62,7 +65,11 @@ class Prescient::Provider::Anthropic < Prescient::Base
     end
   end
 
-  # Check Anthropic API availability using the non-generating models endpoint.
+  # Check Anthropic API availability using the non-generating `/v1/models` endpoint.
+  #
+  # `reachable` indicates the API answered successfully. `ready` indicates that
+  # the configured model appears in the returned model list.
+  #
   # @return [Hash] Provider health information
   def health_check
     handle_errors do

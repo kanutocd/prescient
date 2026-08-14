@@ -1,6 +1,9 @@
 # AI Providers Integration Guide
 
-This guide explains how to integrate the AI Providers gem into your existing Rails AI application.
+This guide explains how to integrate the Prescient gem into an existing Rails AI application.
+
+For the canonical public API and runnable scripts, see the [README](README.md)
+and [examples guide](examples/README.md).
 
 ## Integration Steps
 
@@ -10,7 +13,7 @@ This guide explains how to integrate the AI Providers gem into your existing Rai
 # Add to your Gemfile
 gem 'prescient', path: './prescient_gem'  # Local development
 # OR when published:
-# gem 'prescient', '~> 0.1.0'
+# gem 'prescient', '~> 0.2.0'
 ```
 
 ### 2. Replace Existing AI Service
@@ -30,7 +33,7 @@ class OllamaService
 end
 ```
 
-**After (Using AI Providers Gem):**
+**After (Using Prescient):**
 
 ```ruby
 # app/services/ai_service.rb
@@ -76,7 +79,7 @@ Prescient.configure do |config|
   config.retry_delay = 1.0
 
   # Ollama (Local/Development)
-  config.add_provider(:ollama, Prescient::Ollama::Provider,
+  config.add_provider(:ollama, Prescient::Provider::Ollama,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: ENV.fetch('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text'),
     chat_model: ENV.fetch('OLLAMA_CHAT_MODEL', 'llama3.2:3b'),
@@ -85,7 +88,7 @@ Prescient.configure do |config|
 
   # OpenAI (Production)
   if ENV['OPENAI_API_KEY'].present?
-    config.add_provider(:openai, Prescient::OpenAI::Provider,
+    config.add_provider(:openai, Prescient::Provider::OpenAI,
       api_key: ENV['OPENAI_API_KEY'],
       embedding_model: ENV.fetch('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
       chat_model: ENV.fetch('OPENAI_CHAT_MODEL', 'gpt-4.1-mini')
@@ -94,7 +97,7 @@ Prescient.configure do |config|
 
   # Anthropic (Alternative)
   if ENV['ANTHROPIC_API_KEY'].present?
-    config.add_provider(:anthropic, Prescient::Anthropic::Provider,
+    config.add_provider(:anthropic, Prescient::Provider::Anthropic,
       api_key: ENV['ANTHROPIC_API_KEY'],
       model: ENV.fetch('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514')
     )
@@ -102,7 +105,7 @@ Prescient.configure do |config|
 
   # HuggingFace (Research/Open Source)
   if ENV['HUGGINGFACE_API_KEY'].present?
-    config.add_provider(:huggingface, Prescient::HuggingFace::Provider,
+    config.add_provider(:huggingface, Prescient::Provider::HuggingFace,
       api_key: ENV['HUGGINGFACE_API_KEY'],
       embedding_model: ENV.fetch('HUGGINGFACE_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2'),
       chat_model: ENV.fetch('HUGGINGFACE_CHAT_MODEL', 'google/gemma-2-2b-it')
@@ -243,7 +246,7 @@ end
 1. **Phase 1: Side-by-side deployment**
 
    - Keep existing OllamaService
-   - Add AI Providers gem alongside
+   - Add Prescient alongside
    - Test thoroughly in development
 
 2. **Phase 2: Gradual migration**
@@ -260,11 +263,11 @@ end
 ### 8. Testing Updates
 
 ```ruby
-# spec/services/ai_service_spec.rb
-RSpec.describe AIService do
-  before do
+# test/services/ai_service_test.rb
+class AIServiceTest < ActiveSupport::TestCase
+  setup do
     Prescient.configure do |config|
-      config.add_provider(:test, Prescient::Ollama::Provider,
+      config.add_provider(:test, Prescient::Provider::Ollama,
         url: 'http://localhost:11434',
         embedding_model: 'test-embed',
         chat_model: 'test-chat'
@@ -273,15 +276,10 @@ RSpec.describe AIService do
     end
   end
 
-  describe '.generate_embedding' do
-    it 'returns embedding vector' do
-      # Mock the provider response
-      allow_any_instance_of(Prescient::Ollama::Provider)
-        .to receive(:generate_embedding)
-        .and_return([0.1, 0.2, 0.3])
-
-      result = described_class.generate_embedding('test text')
-      expect(result).to eq([0.1, 0.2, 0.3])
+  test 'generate_embedding returns an embedding vector' do
+    Prescient.stub(:generate_embedding, [0.1, 0.2, 0.3]) do
+      result = Prescient.generate_embedding('test text', provider: :test, enable_fallback: false)
+      assert_equal [0.1, 0.2, 0.3], result
     end
   end
 end

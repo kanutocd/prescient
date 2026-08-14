@@ -1,8 +1,6 @@
 # Docker Compose configuration for running Ollama with Prescient gem
 # This provides a local AI environment for development and testing
 
-version: '3.8'
-
 services:
   ollama:
     image: ollama/ollama:latest

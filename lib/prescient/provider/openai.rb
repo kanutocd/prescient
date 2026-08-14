@@ -97,7 +97,11 @@ class Prescient::Provider::OpenAI < Prescient::Base
     end
   end
 
-  # Check OpenAI model availability.
+  # Check OpenAI model availability via `/v1/models`.
+  #
+  # `reachable` indicates the API answered successfully. `ready` indicates that
+  # both configured models appear in the returned model list.
+  #
   # @return [Hash] Provider health information
   def health_check
     handle_errors do
@@ -149,6 +153,7 @@ class Prescient::Provider::OpenAI < Prescient::Base
   end
 
   # List models available to the configured OpenAI account.
+  #
   # @return [Array<Hash>] Model descriptors
   def list_models
     handle_errors do

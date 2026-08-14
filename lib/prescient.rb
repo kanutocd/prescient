@@ -12,7 +12,7 @@ require_relative 'prescient/client'
 # Main Prescient module for AI provider abstraction
 #
 # Prescient provides a unified interface for working with multiple AI providers
-# including Ollama, OpenAI, Anthropic, and HuggingFace. It supports both
+# including Ollama, OpenAI, Anthropic, and Hugging Face. It supports both
 # embedding generation and text completion with configurable context handling.
 #
 # @example Basic usage
@@ -123,7 +123,7 @@ module Prescient
     # @example Add OpenAI provider
     #   config.add_provider(:openai, Prescient::Provider::OpenAI,
     #                       api_key: 'sk-...',
-    #                       chat_model: 'gpt-4')
+    #                       chat_model: 'gpt-4.1-mini')
     def add_provider(name, provider_class, **options)
       provider_name = name.to_sym
       @providers[provider_name] = {
@@ -146,9 +146,12 @@ module Prescient
       @provider_instances[provider_name] ||= provider_config[:class].new(**provider_options)
     end
 
-    # Get list of available providers (those that are configured and healthy)
+    # Get list of providers that currently pass {Prescient::Base#available?}.
     #
-    # @return [Array<Symbol>] List of available provider names
+    # Providers are included when their health check reports `reachable: true`,
+    # or, for legacy adapters, `status == "healthy"`.
+    #
+    # @return [Array<Symbol>] List of reachable provider names
     def available_providers
       @providers.keys.select do |name|
         provider(name)&.available?

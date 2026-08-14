@@ -16,13 +16,11 @@ module Prescient
   #   client = Prescient::Client.new  # Uses configured default
   #   puts client.provider_name       # => :ollama (or configured default)
   #
-  # @author Claude Code
-  # @since 1.0.0
   class Client
     # @return [Symbol] The name of the provider being used
     attr_reader :provider_name
 
-    # @return [Base] The underlying provider instance
+    # @return [Prescient::Base] The underlying provider instance
     attr_reader :provider
 
     # Initialize a new client with the specified provider
@@ -84,14 +82,14 @@ module Prescient
 
     # Check the health status of the provider
     #
-    # @return [Hash] Health status information
+    # @return [Hash] Health status information from the selected provider
     def health_check
       @provider.health_check
     end
 
     # Check if the provider is currently available
     #
-    # @return [Boolean] true if provider is healthy and available
+    # @return [Boolean] true if the provider currently passes its availability check
     def available?
       @provider.available?
     end
@@ -101,7 +99,8 @@ module Prescient
     # Returns details about the provider including its availability
     # and configuration options (with sensitive data removed).
     #
-    # @return [Hash] Provider information including :name, :class, :available, :options
+    # @return [Hash] Provider information including :name, :class, :available,
+    #   and recursively sanitized :options
     def provider_info
       {
         name:      @provider_name,
@@ -111,10 +110,19 @@ module Prescient
       }
     end
 
+    # Delegate unknown methods to the underlying provider instance.
+    #
+    # @private
+    # @param method_name [Symbol]
+    # @return [Object]
     def method_missing(method_name, ...)
       @provider.respond_to?(method_name) ? @provider.send(method_name, ...) : super
     end
 
+    # @private
+    # @param method_name [Symbol]
+    # @param include_private [Boolean]
+    # @return [Boolean]
     def respond_to_missing?(method_name, include_private = false)
       @provider.respond_to?(method_name, include_private) || super
     end
@@ -241,7 +249,8 @@ module Prescient
   # @param context_items [Array<Hash, String>] Optional context items
   # @param provider [Symbol, nil] Provider to use
   # @param enable_fallback [Boolean] Whether provider fallback is enabled
-  # @return [Hash] Normalized provider response
+  # @return [Hash] Normalized provider response with :response, :model, :provider
+  #   and optional metadata
   def self.generate_response(prompt, context_items = [], provider: nil, enable_fallback: true, **options)
     client(provider, enable_fallback: enable_fallback).generate_response(prompt, context_items, **options)
   end
