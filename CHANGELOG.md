@@ -13,6 +13,8 @@
 - Added an optional `rack_example` bundle group with Rack, Rackup, and Puma for
   running the example application without adding web-server dependencies to
   the library.
+- Added a non-root, healthchecked Docker image and Compose example for the REST
+  API, with optional GHCR publication on version tags.
 
 ## [0.5.0] - 2025-08-14
 

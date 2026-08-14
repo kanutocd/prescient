@@ -11,9 +11,7 @@ and [examples guide](examples/README.md).
 
 ```ruby
 # Add to your Gemfile
-gem 'prescient', path: './prescient_gem'  # Local development
-# OR when published:
-# gem 'prescient', '~> 0.5.0'
+gem 'prescient', '~> 0.5.0'
 ```
 
 ### 2. Replace Existing AI Service

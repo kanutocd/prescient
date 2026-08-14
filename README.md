@@ -253,6 +253,28 @@ Responses include:
 - a request ID
 - a generic JSON error envelope that never exposes raw provider response bodies.
 
+## Docker
+
+Build and run the REST API image as a non-root container:
+
+```bash
+docker build -t prescient:local .
+docker run --rm -p 9292:9292 \
+  -e PRESCIENT_API_TOKEN=change-me \
+  prescient:local
+```
+
+The image exposes port `9292`, includes a `/healthz` healthcheck, supports a
+read-only filesystem, and does not bundle PostgreSQL, Redis, or a worker. The
+Compose example provides the same setup:
+
+```bash
+PRESCIENT_API_TOKEN=change-me docker compose -f docker-compose.api.yml up --build
+```
+
+Tagged releases publish to GHCR as:
+`ghcr.io/kanutocd/prescient:<version>`.
+
 ## Configuration
 
 ### Environment Variables
