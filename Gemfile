@@ -21,3 +21,9 @@ gem "steep", "~> 1.10"
 # Optional dependencies for vector database integration
 # PostgreSQL adapter for pgvector integration
 gem "pg", "~> 1.6"
+
+group :rack_example do
+  gem "rack", "~> 3.2"
+  gem "rackup", "~> 2.3"
+  gem "puma", "~> 8.0"
+end

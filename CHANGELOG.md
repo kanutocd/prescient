@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Added
+
+- Added a dependency-free Rack-compatible REST API with generation, embeddings,
+  bounded batch embeddings, provider/model discovery, capabilities, health,
+  liveness, readiness, version, request IDs, authentication hooks, and JSON
+  error envelopes.
+- Added a small Rack example that lists the REST API endpoints and delegates
+  requests to `Prescient::API`.
+- Added an optional `rack_example` bundle group with Rack, Rackup, and Puma for
+  running the example application without adding web-server dependencies to
+  the library.
+
 ## [0.5.0] - 2025-08-14
 
 ### Added

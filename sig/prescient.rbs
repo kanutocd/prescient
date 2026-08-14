@@ -298,6 +298,16 @@ module Prescient
     def run: () -> Integer
   end
 
+  class API
+    DEFAULT_MAX_BODY_BYTES: Integer
+    MAX_BATCH_SIZE: Integer
+    API_VERSION: String
+    ROUTES: Hash[Array[String], Symbol]
+
+    def initialize: (?authentication: untyped, ?max_body_bytes: Integer) -> void
+    def call: (Hash[String, untyped]) -> [Integer, Hash[String, String], Array[String]]
+  end
+
   class ConfigurationLoader
     CONFIGURATION_VERSION: Integer
     TOP_LEVEL_KEYS: Array[String]

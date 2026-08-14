@@ -17,6 +17,23 @@ bundle install
   and embedding field selection.
 - `vector_search.rb` — `Prescient::Pgvector::Store` PostgreSQL/pgvector storage
   and similarity search.
+- `rest_api.ru` — a tiny Rack-compatible application that mounts
+  `Prescient::API` and lists its endpoints at `/`.
+
+Run the REST API example with a Rack server such as `rackup`:
+
+```bash
+BUNDLE_WITH=rack_example bundle install
+PRESCIENT_API_TOKEN=change-me BUNDLE_WITH=rack_example \
+  bundle exec rackup -s puma examples/rest_api.ru
+curl http://localhost:9292/
+```
+
+Running `bundle exec ruby examples/rest_api.ru` directly prints the same
+endpoint catalog without starting a server.
+
+The example does not add Rack as a Prescient runtime dependency; it only uses
+the Rack-compatible `call` interface provided by `Prescient::API`.
 
 The first three examples use Ollama by default. Start Ollama and pull the
 current local models before running them:

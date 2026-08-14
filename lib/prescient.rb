@@ -14,6 +14,7 @@ require_relative 'prescient/provider/deepseek'
 require_relative 'prescient/provider/xai'
 require_relative 'prescient/configuration_loader'
 require_relative 'prescient/client'
+require_relative 'prescient/api'
 require_relative 'prescient/cli'
 
 # Main Prescient module for AI provider abstraction

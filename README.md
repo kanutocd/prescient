@@ -223,6 +223,36 @@ The generated file points YAML language servers at the latest schema on the
 main branch. Pin the schema URL to a release tag when reproducible tooling is
 required.
 
+## REST API
+
+`Prescient::API` is a dependency-free Rack-compatible application. Mount it in
+the web server of your choice without making HTTP a requirement for library
+users:
+
+```ruby
+run Prescient::API.new(
+  authentication: ->(env) { env['HTTP_AUTHORIZATION'] == "Bearer #{ENV['PRESCIENT_API_TOKEN']}" }
+)
+```
+
+Available endpoints include:
+
+- **`POST /v1/generate`**
+- **`POST /v1/embeddings`**
+- **`POST /v1/embeddings/batch`**
+- **`GET /v1/providers`**
+- **`GET /v1/models`**
+- **`GET /v1/capabilities`**
+- **`GET /v1/health`**
+- **`GET /v1/version`**
+- **`GET /healthz`**
+- **`GET /readyz`**
+
+Responses include:
+
+- a request ID
+- a generic JSON error envelope that never exposes raw provider response bodies.
+
 ## Configuration
 
 ### Environment Variables
