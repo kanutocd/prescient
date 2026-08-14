@@ -140,18 +140,17 @@ class AnthropicProviderTest < PrescientTest
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'content' => [{ 'text' => 'Hello' }],
+      'data' => [{ 'id' => 'claude-3-haiku-20240307' }],
     })
 
-    @provider.class.expects(:post).with(
-      '/v1/messages',
+    @provider.class.expects(:get).with(
+      '/v1/models',
       has_entries(
         headers: {
           'Content-Type'      => 'application/json',
           'x-api-key'         => 'test-api-key',
           'anthropic-version' => '2023-06-01',
         },
-        body:    regexp_matches(/"max_tokens":10.*"content":"Test"/),
       ),
     ).returns(mock_response)
 
@@ -159,7 +158,7 @@ class AnthropicProviderTest < PrescientTest
 
     assert_equal 'healthy', result[:status]
     assert_equal 'anthropic', result[:provider]
-    assert_equal 'claude-3-haiku-20240307', result[:model]
+    assert_equal 'claude-3-haiku-20240307', result[:model][:name]
     assert result[:ready]
   end
 
@@ -169,7 +168,7 @@ class AnthropicProviderTest < PrescientTest
     mock_response.stubs(:code).returns(401)
     mock_response.stubs(:message).returns('Unauthorized')
 
-    @provider.class.expects(:post).returns(mock_response)
+    @provider.class.expects(:get).returns(mock_response)
 
     result = @provider.health_check
 
@@ -181,7 +180,7 @@ class AnthropicProviderTest < PrescientTest
   end
 
   def test_health_check_handles_connection_errors
-    @provider.class.expects(:post).raises(Prescient::ConnectionError.new('Connection failed'))
+    @provider.class.expects(:get).raises(Prescient::ConnectionError.new('Connection failed'))
 
     result = @provider.health_check
 
@@ -193,7 +192,7 @@ class AnthropicProviderTest < PrescientTest
   end
 
   def test_health_check_handles_provider_errors
-    @provider.class.expects(:post).raises(Prescient::AuthenticationError.new('Invalid key'))
+    @provider.class.expects(:get).raises(Prescient::AuthenticationError.new('Invalid key'))
 
     result = @provider.health_check
 
@@ -203,26 +202,27 @@ class AnthropicProviderTest < PrescientTest
   end
 
   def test_list_models
-    # Anthropic doesn't provide a models API, so it returns static list
+    mock_response = mock('response')
+    mock_response.stubs(:success?).returns(true)
+    mock_response.stubs(:parsed_response).returns({
+      'data' => [{
+        'id'           => 'claude-3-haiku-20240307',
+        'display_name' => 'Claude 3 Haiku',
+        'max_tokens'   => 4096,
+      }],
+    })
+    @provider.class.expects(:get).returns(mock_response)
+
     result = @provider.list_models
 
     assert_instance_of Array, result
-    assert_operator result.length, :>=, 3
+    assert_equal 1, result.length
 
-    haiku_model = result.find { |m| m[:name] == 'claude-3-5-haiku-20241022' }
+    haiku_model = result.first
 
     assert haiku_model
+    assert_equal 'claude-3-haiku-20240307', haiku_model[:name]
     assert_equal 'text', haiku_model[:type]
-
-    sonnet_model = result.find { |m| m[:name] == 'claude-sonnet-4-20250514' }
-
-    assert sonnet_model
-    assert_equal 'text', sonnet_model[:type]
-
-    opus_model = result.find { |m| m[:name] == 'claude-opus-4-20250514' }
-
-    assert opus_model
-    assert_equal 'text', opus_model[:type]
   end
 
   def test_error_handling_for_different_status_codes

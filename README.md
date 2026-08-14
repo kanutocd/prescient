@@ -666,6 +666,7 @@ puts info[:options]   # => { ... } (excluding sensitive data)
 - Multiple embedding model sizes
 - Latest GPT models
 - Reliable performance
+- Uses the Chat Completions endpoint for the stable normalized response contract; the newer Responses API remains a future compatibility extension.
 
 ### HuggingFace
 

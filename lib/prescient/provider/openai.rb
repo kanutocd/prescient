@@ -43,8 +43,13 @@ class Prescient::Provider::OpenAI < Prescient::Base
       embedding_data = response.parsed_response.dig('data', 0, 'embedding')
       raise Prescient::InvalidResponseError, 'No embedding returned' unless embedding_data
 
-      expected_dimensions = EMBEDDING_DIMENSIONS[@options[:embedding_model]] || 1536
-      normalize_embedding(embedding_data, expected_dimensions)
+      expected_dimensions = EMBEDDING_DIMENSIONS[@options[:embedding_model]] || @options[:embedding_dimensions]
+      unless expected_dimensions
+        raise Prescient::Error,
+              "Embedding dimensions are required for model #{@options[:embedding_model]}"
+      end
+
+      validate_embedding_dimensions(embedding_data, expected_dimensions)
     end
   end
 
@@ -109,6 +114,7 @@ class Prescient::Provider::OpenAI < Prescient::Base
         {
           status:           'healthy',
           provider:         'openai',
+          reachable:        true,
           models_available: models.map { |m| m['id'] },
           embedding_model:  {
             name:      @options[:embedding_model],
@@ -122,21 +128,23 @@ class Prescient::Provider::OpenAI < Prescient::Base
         }
       else
         {
-          status:   'unhealthy',
-          provider: 'openai',
-          error:    "HTTP #{response.code}",
-          message:  response.message,
-          ready:    false,
+          status:    'unhealthy',
+          provider:  'openai',
+          reachable: true,
+          error:     "HTTP #{response.code}",
+          message:   response.message,
+          ready:     false,
         }
       end
     end
   rescue Prescient::Error => e
     {
-      status:   'unavailable',
-      provider: 'openai',
-      error:    e.class.name,
-      message:  e.message,
-      ready:    false,
+      status:    'unavailable',
+      provider:  'openai',
+      reachable: false,
+      error:     e.class.name,
+      message:   e.message,
+      ready:     false,
     }
   end
 

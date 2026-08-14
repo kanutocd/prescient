@@ -16,6 +16,10 @@ class Prescient::Provider::HuggingFace < Prescient::Base
   # @return [String] Chat-completions endpoint path
   CHAT_COMPLETIONS_PATH = '/v1/chat/completions'
 
+  # OpenAI-compatible router path for listing available chat models.
+  # @return [String] Model-list endpoint path
+  MODEL_LIST_PATH = '/v1/models'
+
   # Known embedding dimensions for commonly used models.
   EMBEDDING_DIMENSIONS = {
     'sentence-transformers/all-MiniLM-L6-v2'     => 384,
@@ -50,8 +54,13 @@ class Prescient::Provider::HuggingFace < Prescient::Base
 
       raise Prescient::InvalidResponseError, 'No embedding returned' unless embedding_data.is_a?(Array)
 
-      expected_dimensions = EMBEDDING_DIMENSIONS[@options[:embedding_model]] || 384
-      normalize_embedding(embedding_data, expected_dimensions)
+      expected_dimensions = EMBEDDING_DIMENSIONS[@options[:embedding_model]] || @options[:embedding_dimensions]
+      unless expected_dimensions
+        raise Prescient::Error,
+              "Embedding dimensions are required for model #{@options[:embedding_model]}"
+      end
+
+      validate_embedding_dimensions(embedding_data, expected_dimensions)
     end
   end
 
@@ -99,30 +108,19 @@ class Prescient::Provider::HuggingFace < Prescient::Base
   # @return [Hash] Provider health information
   def health_check
     handle_errors do
-      # Test embedding model
-      embedding_response = self.class.post(FEATURE_EXTRACTION_PATH % { model: @options[:embedding_model] },
-                                           headers: {
-                                             'Authorization' => "Bearer #{@options[:api_key]}",
-                                           },
-                                           body:    { inputs: 'test' }.to_json)
-
-      # Test chat model
-      chat_response = self.class.post(CHAT_COMPLETIONS_PATH,
-                                      headers: {
-                                        'Authorization' => "Bearer #{@options[:api_key]}",
-                                      },
-                                      body:    {
-                                        model:      @options[:chat_model],
-                                        messages:   [{ role: 'user', content: 'test' }],
-                                        max_tokens: 5,
-                                      }.to_json)
+      embedding_response = self.class.get("https://huggingface.co/api/models/#{@options[:embedding_model]}",
+                                          headers: { 'Authorization' => "Bearer #{@options[:api_key]}" })
+      chat_response = self.class.get(MODEL_LIST_PATH,
+                                     headers: { 'Authorization' => "Bearer #{@options[:api_key]}" })
 
       embedding_healthy = embedding_response.success?
-      chat_healthy = chat_response.success?
+      chat_models = chat_response.parsed_response['data'] || []
+      chat_healthy = chat_response.success? && chat_models.any? { |model| model['id'] == @options[:chat_model] }
 
       {
         status:          embedding_healthy && chat_healthy ? 'healthy' : 'partial',
         provider:        'huggingface',
+        reachable:       true,
         embedding_model: {
           name:      @options[:embedding_model],
           available: embedding_healthy,
@@ -136,11 +134,12 @@ class Prescient::Provider::HuggingFace < Prescient::Base
     end
   rescue Prescient::Error => e
     {
-      status:   'unavailable',
-      provider: 'huggingface',
-      error:    e.class.name,
-      message:  e.message,
-      ready:    false,
+      status:    'unavailable',
+      provider:  'huggingface',
+      reachable: false,
+      error:     e.class.name,
+      message:   e.message,
+      ready:     false,
     }
   end
 

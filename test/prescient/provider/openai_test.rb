@@ -62,7 +62,7 @@ class OpenAIProviderTest < PrescientTest
     assert_instance_of Float, result.first
   end
 
-  def test_generate_embedding_normalizes_dimensions
+  def test_generate_embedding_rejects_invalid_dimensions
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
@@ -73,11 +73,19 @@ class OpenAIProviderTest < PrescientTest
 
     @provider.class.expects(:post).returns(mock_response)
 
-    result = @provider.generate_embedding('test text')
+    assert_raises(Prescient::InvalidResponseError) do
+      @provider.generate_embedding('test text')
+    end
+  end
 
-    # Should be normalized to 1536 dimensions
-    assert_equal 1536, result.length
-    assert_equal [0.1, 0.2, 0.3] + Array.new(1533, 0.0), result
+  def test_generate_embedding_requires_dimensions_for_unknown_models
+    provider = Prescient::Provider::OpenAI.new(
+      api_key: 'test-api-key', embedding_model: 'custom-embedding', chat_model: 'gpt-3.5-turbo',
+    )
+    response = stub(success?: true, parsed_response: { 'data' => [{ 'embedding' => [0.1] }] })
+    provider.class.expects(:post).returns(response)
+
+    assert_raises(Prescient::Error) { provider.generate_embedding('test text') }
   end
 
   def test_generate_embedding_handles_missing_data
@@ -317,7 +325,7 @@ class OpenAIProviderTest < PrescientTest
       has_entries(
         body: regexp_matches(/"input":"test text"/),
       ),
-    ).returns(stub(success?: true, parsed_response: { 'data' => [{ 'embedding' => [0.1] }] }))
+    ).returns(stub(success?: true, parsed_response: { 'data' => [{ 'embedding' => Array.new(1536, 0.1) }] }))
 
     @provider.generate_embedding("  test   text  \n")
   end

@@ -73,18 +73,26 @@ class HuggingFaceProviderTest < PrescientTest
     assert_equal 384, result.length
   end
 
-  def test_generate_embedding_normalizes_dimensions
+  def test_generate_embedding_rejects_invalid_dimensions
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns([[0.1, 0.2, 0.3]]) # Too few dimensions
 
     @provider.class.expects(:post).returns(mock_response)
 
-    result = @provider.generate_embedding('test text')
+    assert_raises(Prescient::InvalidResponseError) do
+      @provider.generate_embedding('test text')
+    end
+  end
 
-    # Should be normalized to 384 dimensions (default for unknown models)
-    assert_equal 384, result.length
-    assert_equal [0.1, 0.2, 0.3] + Array.new(381, 0.0), result
+  def test_generate_embedding_requires_dimensions_for_unknown_models
+    provider = Prescient::Provider::HuggingFace.new(
+      api_key: 'test-api-key', embedding_model: 'custom/embedding', chat_model: 'custom/chat',
+    )
+    response = stub(success?: true, parsed_response: [[0.1]])
+    provider.class.expects(:post).returns(response)
+
+    assert_raises(Prescient::Error) { provider.generate_embedding('test text') }
   end
 
   def test_generate_embedding_handles_invalid_response
@@ -102,7 +110,7 @@ class HuggingFaceProviderTest < PrescientTest
   def test_generate_embedding_uses_feature_extraction_payload
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns([[0.1, 0.2, 0.3]])
+    mock_response.stubs(:parsed_response).returns([Array.new(384, 0.1)])
 
     @provider.class.expects(:post).with(
       anything,
@@ -236,17 +244,17 @@ class HuggingFaceProviderTest < PrescientTest
     # Mock chat model health check
     chat_response = mock('chat_response')
     chat_response.stubs(:success?).returns(true)
+    chat_response.stubs(:parsed_response).returns({ 'data' => [{ 'id' => 'microsoft/DialoGPT-medium' }] })
 
-    @provider.class.expects(:post).with(
-      '/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction',
+    @provider.class.expects(:get).with(
+      'https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2',
       has_entries(
         headers: { 'Authorization' => 'Bearer test-api-key' },
-        body:    '{"inputs":"test"}',
       ),
     ).returns(embedding_response)
 
-    @provider.class.expects(:post).with(
-      '/v1/chat/completions',
+    @provider.class.expects(:get).with(
+      '/v1/models',
       has_entries(
         headers: { 'Authorization' => 'Bearer test-api-key' },
       ),
@@ -268,8 +276,9 @@ class HuggingFaceProviderTest < PrescientTest
 
     chat_response = mock('chat_response')
     chat_response.stubs(:success?).returns(false)
+    chat_response.stubs(:parsed_response).returns({ 'data' => [] })
 
-    @provider.class.expects(:post).twice.returns(embedding_response, chat_response)
+    @provider.class.expects(:get).twice.returns(embedding_response, chat_response)
 
     result = @provider.health_check
 
@@ -280,7 +289,7 @@ class HuggingFaceProviderTest < PrescientTest
   end
 
   def test_health_check_handles_connection_errors
-    @provider.class.expects(:post).raises(Prescient::ConnectionError.new('Connection failed'))
+    @provider.class.expects(:get).raises(Prescient::ConnectionError.new('Connection failed'))
 
     result = @provider.health_check
 
@@ -292,7 +301,7 @@ class HuggingFaceProviderTest < PrescientTest
   end
 
   def test_health_check_handles_provider_errors
-    @provider.class.expects(:post).raises(Prescient::AuthenticationError.new('Invalid key'))
+    @provider.class.expects(:get).raises(Prescient::AuthenticationError.new('Invalid key'))
 
     result = @provider.health_check
 
@@ -386,7 +395,7 @@ class HuggingFaceProviderTest < PrescientTest
   def test_clean_text_preprocessing
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns([[0.1, 0.2, 0.3]])
+    mock_response.stubs(:parsed_response).returns([Array.new(384, 0.1)])
 
     @provider.class.expects(:post).with(
       anything,

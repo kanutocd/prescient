@@ -62,64 +62,59 @@ class Prescient::Provider::Anthropic < Prescient::Base
     end
   end
 
-  # Check Anthropic API availability with a minimal message request.
+  # Check Anthropic API availability using the non-generating models endpoint.
   # @return [Hash] Provider health information
   def health_check
     handle_errors do
-      # Test with a simple message
-      response = self.class.post('/v1/messages',
-                                 headers: {
-                                   'Content-Type'      => 'application/json',
-                                   'x-api-key'         => @options[:api_key],
-                                   'anthropic-version' => '2023-06-01',
-                                 },
-                                 body:    {
-                                   model:      @options[:model],
-                                   max_tokens: 10,
-                                   messages:   [
-                                     {
-                                       role:    'user',
-                                       content: 'Test',
-                                     },
-                                   ],
-                                 }.to_json)
+      response = self.class.get('/v1/models', headers: api_headers)
 
       if response.success?
+        models = response.parsed_response['data'] || []
+        model_available = models.any? { |model| model['id'] == @options[:model] }
         {
-          status:   'healthy',
-          provider: 'anthropic',
-          model:    @options[:model],
-          ready:    true,
+          status:           'healthy',
+          provider:         'anthropic',
+          reachable:        true,
+          models_available: models.map { |model| model['id'] },
+          model:            { name: @options[:model], available: model_available },
+          ready:            model_available,
         }
       else
         {
-          status:   'unhealthy',
-          provider: 'anthropic',
-          error:    "HTTP #{response.code}",
-          message:  response.message,
-          ready:    false,
+          status: 'unhealthy', provider: 'anthropic', reachable: true,
+          error: "HTTP #{response.code}", message: response.message, ready: false
         }
       end
     end
   rescue Prescient::Error => e
     {
-      status:   'unavailable',
-      provider: 'anthropic',
-      error:    e.class.name,
-      message:  e.message,
-      ready:    false,
+      status:    'unavailable',
+      provider:  'anthropic',
+      reachable: false,
+      error:     e.class.name,
+      message:   e.message,
+      ready:     false,
     }
   end
 
-  # Return the Anthropic models known by this adapter.
+  # Return models available to the configured Anthropic account.
   # @return [Array<Hash>] Model descriptors
   def list_models
-    # Anthropic doesn't provide a models list API
-    [
-      { name: 'claude-sonnet-4-20250514', type: 'text' },
-      { name: 'claude-3-5-haiku-20241022', type: 'text' },
-      { name: 'claude-opus-4-20250514', type: 'text' },
-    ]
+    handle_errors do
+      response = self.class.get('/v1/models', headers: api_headers)
+      validate_response!(response, 'model listing')
+
+      (response.parsed_response['data'] || []).map do |model|
+        {
+          name:             model['id'],
+          type:             'text',
+          display_name:     model['display_name'],
+          created_at:       model['created_at'],
+          max_input_tokens: model['max_input_tokens'],
+          max_tokens:       model['max_tokens'],
+        }.compact
+      end
+    end
   end
 
   protected
@@ -134,6 +129,14 @@ class Prescient::Provider::Anthropic < Prescient::Base
   end
 
   private
+
+  def api_headers
+    {
+      'Content-Type'      => 'application/json',
+      'x-api-key'         => @options[:api_key],
+      'anthropic-version' => '2023-06-01',
+    }
+  end
 
   def validate_response!(response, operation)
     return if response.success?

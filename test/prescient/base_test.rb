@@ -31,13 +31,13 @@ class BaseTest < PrescientTest
   end
 
   def test_available_returns_true_when_health_check_status_is_healthy
-    @provider.stubs(:health_check).returns({ status: 'healthy' })
+    @provider.stubs(:health_check).returns({ status: 'healthy', reachable: true })
 
     assert_predicate @provider, :available?
   end
 
   def test_available_returns_false_when_health_check_status_is_not_healthy
-    @provider.stubs(:health_check).returns({ status: 'unhealthy' })
+    @provider.stubs(:health_check).returns({ status: 'unhealthy', reachable: false })
 
     refute_predicate @provider, :available?
   end
@@ -48,37 +48,43 @@ class BaseTest < PrescientTest
     refute_predicate @provider, :available?
   end
 
-  def test_normalize_embedding_returns_nil_for_nil_embedding
-    result = @provider.send(:normalize_embedding, nil, 5)
+  def test_validate_embedding_dimensions_rejects_non_array_embeddings
+    error = assert_raises(Prescient::InvalidResponseError) {
+      @provider.send(:validate_embedding_dimensions, nil, 5)
+    }
 
-    assert_nil result
+    assert_equal 'Embedding response is not an array', error.message
   end
 
-  def test_normalize_embedding_returns_nil_for_non_array_embedding
-    result = @provider.send(:normalize_embedding, 'not_array', 5)
-
-    assert_nil result
+  def test_validate_embedding_dimensions_rejects_non_array_values
+    assert_raises(Prescient::InvalidResponseError) do
+      @provider.send(:validate_embedding_dimensions, 'not_array', 5)
+    end
   end
 
-  def test_normalize_embedding_returns_embedding_unchanged_when_length_matches_target
+  def test_validate_embedding_dimensions_returns_exact_vector_unchanged
     embedding = [1, 2, 3, 4, 5]
-    result = @provider.send(:normalize_embedding, embedding, 5)
+    result = @provider.send(:validate_embedding_dimensions, embedding, 5)
 
-    assert_equal [1, 2, 3, 4, 5], result
+    assert_same embedding, result
   end
 
-  def test_normalize_embedding_truncates_embedding_when_longer_than_target
+  def test_validate_embedding_dimensions_rejects_longer_vectors
     embedding = [1, 2, 3, 4, 5, 6, 7]
-    result = @provider.send(:normalize_embedding, embedding, 5)
+    error = assert_raises(Prescient::InvalidResponseError) {
+      @provider.send(:validate_embedding_dimensions, embedding, 5)
+    }
 
-    assert_equal [1, 2, 3, 4, 5], result
+    assert_equal 'Invalid embedding dimensions: expected 5, got 7', error.message
   end
 
-  def test_normalize_embedding_pads_embedding_with_zeros_when_shorter_than_target
+  def test_validate_embedding_dimensions_rejects_shorter_vectors
     embedding = [1, 2, 3]
-    result = @provider.send(:normalize_embedding, embedding, 5)
+    error = assert_raises(Prescient::InvalidResponseError) {
+      @provider.send(:validate_embedding_dimensions, embedding, 5)
+    }
 
-    assert_equal [1, 2, 3, 0.0, 0.0], result
+    assert_equal 'Invalid embedding dimensions: expected 5, got 3', error.message
   end
 
   def test_clean_text_returns_empty_string_for_blank_text

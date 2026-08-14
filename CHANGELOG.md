@@ -16,15 +16,13 @@
 - Reused registered provider instances and removed redundant health checks during fallback discovery.
 - Updated default chat model names and README examples for current Ollama, Anthropic, OpenAI, and Hugging Face model selections.
 - Updated Hugging Face inference to use the current router feature-extraction and OpenAI-compatible chat-completion APIs.
+- Standardized provider reachability in health results and removed embedding padding/truncation across OpenAI and Hugging Face.
+- Updated Anthropic model listing and health checks to use its `/v1/models` catalog endpoint.
+- Retained OpenAI Chat Completions for the current normalized public response contract; Responses API migration remains a separately scoped compatibility change.
+- Raised YARD API documentation coverage enforcement to 99% or higher and modernized gem development metadata.
+- Compacted GitHub Actions into focused CI, Pages, release, and security workflows.
 - Added credentialed, provider-selected live smoke tests that remain skipped by default.
 - Restored the RBS/Steep development tasks with a committed Steepfile and curated core API signatures.
-
-### Removed
-
-- Removed the nonfunctional Steep/RBS check from the development quality harness.
-- Raised YARD API documentation coverage enforcement to 99% or higher.
-- Modernized gem development dependencies, packaging metadata, YARD configuration, and Ruby CI support.
-- Compacted GitHub Actions into focused CI, Pages, release, and security workflows.
 
 ### Removed
 

@@ -240,6 +240,17 @@ class ClientTest < PrescientTest
     end
   end
 
+  def test_fallback_skips_missing_provider_instances
+    @client.stubs(:providers_to_try).returns([:missing])
+    @client.stubs(:provider_for).returns(nil)
+
+    error = assert_raises(Prescient::Error) {
+      @client.send(:with_fallback_handling, :generate_response, 'test')
+    }
+
+    assert_equal 'No available providers for generate_response', error.message
+  end
+
   # Test provider class for testing
   class TestProvider < Prescient::Base
     def generate_embedding(_text, **_options)

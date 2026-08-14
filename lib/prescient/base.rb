@@ -38,6 +38,7 @@ class Prescient::Base
   # @option options [Integer] :timeout Request timeout in seconds
   # @option options [Hash] :prompt_templates Custom prompt templates
   # @option options [Hash] :context_configs Context formatting configurations
+  # @option options [Integer] :embedding_dimensions Expected custom embedding size
   def initialize(**options)
     @options = options
     validate_configuration!
@@ -89,9 +90,10 @@ class Prescient::Base
 
   # Check if the provider is currently available
   #
-  # @return [Boolean] true if provider is healthy and available
+  # @return [Boolean] true if the provider is reachable
   def available?
-    health_check[:status] == 'healthy'
+    health = health_check
+    health.key?(:reachable) ? health[:reachable] == true : health[:status] == 'healthy'
   rescue StandardError
     false
   end
@@ -135,19 +137,23 @@ class Prescient::Base
     raise Prescient::Error, "Unexpected error: #{e.message}"
   end
 
-  # Normalize embedding dimensions to match expected size
+  # Validate embedding dimensions against the configured model dimension.
   #
-  # Ensures embedding vectors have consistent dimensions by truncating
-  # longer vectors or padding shorter ones with zeros.
+  # Embedding dimensions are part of the vector-storage contract. Vectors are
+  # never padded or truncated because either operation changes their meaning.
   #
   # @param embedding [Array<Float>] The embedding vector to normalize
   # @param target_dimensions [Integer] The desired number of dimensions
-  # @return [Array<Float>, nil] Normalized embedding or nil if input invalid
-  def normalize_embedding(embedding, target_dimensions)
-    return nil unless embedding.is_a?(Array)
-    return embedding.first(target_dimensions) if embedding.length >= target_dimensions
+  # @return [Array<Float>] The original embedding when dimensions are valid
+  # @raise [Prescient::InvalidResponseError] If the vector is malformed or has
+  #   an unexpected dimension
+  def validate_embedding_dimensions(embedding, target_dimensions)
+    raise Prescient::InvalidResponseError, 'Embedding response is not an array' unless embedding.is_a?(Array)
 
-    embedding + Array.new(target_dimensions - embedding.length, 0.0)
+    return embedding if embedding.length == target_dimensions
+
+    raise Prescient::InvalidResponseError,
+          "Invalid embedding dimensions: expected #{target_dimensions}, got #{embedding.length}"
   end
 
   # Clean and preprocess text for AI processing

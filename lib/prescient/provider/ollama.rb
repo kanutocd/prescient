@@ -78,6 +78,7 @@ class Prescient::Provider::Ollama < Prescient::Base
       {
         status:           'healthy',
         provider:         'ollama',
+        reachable:        true,
         url:              @options[:url],
         models_available: models.map { |m| m[:name] },
         embedding_model:  {
@@ -93,12 +94,13 @@ class Prescient::Provider::Ollama < Prescient::Base
     end
   rescue Prescient::Error => e
     {
-      status:   'unavailable',
-      provider: 'ollama',
-      error:    e.class.name,
-      message:  e.message,
-      url:      @options[:url],
-      ready:    false,
+      status:    'unavailable',
+      provider:  'ollama',
+      reachable: false,
+      error:     e.class.name,
+      message:   e.message,
+      url:       @options[:url],
+      ready:     false,
     }
   end
 

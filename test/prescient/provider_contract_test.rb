@@ -1,0 +1,67 @@
+# frozen_string_literal: true
+
+require 'test_helper'
+
+class ProviderContractTest < PrescientTest
+  PROVIDER_CLASSES = {
+    ollama:      Prescient::Provider::Ollama,
+    anthropic:   Prescient::Provider::Anthropic,
+    openai:      Prescient::Provider::OpenAI,
+    huggingface: Prescient::Provider::HuggingFace,
+  }.freeze
+
+  PROVIDER_CONFIGS = {
+    ollama:      {
+      url:             'http://localhost:11434',
+      embedding_model: 'nomic-embed-text',
+      chat_model:      'llama3.2:3b',
+    },
+    anthropic:   {
+      api_key: 'test-api-key',
+      model:   'claude-3-haiku-20240307',
+    },
+    openai:      {
+      api_key:         'test-api-key',
+      embedding_model: 'text-embedding-3-small',
+      chat_model:      'gpt-4.1-mini',
+    },
+    huggingface: {
+      api_key:         'test-api-key',
+      embedding_model: 'sentence-transformers/all-MiniLM-L6-v2',
+      chat_model:      'google/gemma-2-2b-it',
+    },
+  }.freeze
+
+  def test_all_providers_expose_the_common_contract
+    PROVIDER_CONFIGS.each do |name, options|
+      provider = PROVIDER_CLASSES.fetch(name).new(**options)
+
+      assert_respond_to provider, :generate_embedding
+      assert_respond_to provider, :generate_response
+      assert_respond_to provider, :health_check
+      assert_respond_to provider, :available?
+    end
+  end
+
+  def test_available_uses_reachability_for_every_provider
+    PROVIDER_CONFIGS.each do |name, options|
+      provider = PROVIDER_CLASSES.fetch(name).new(**options)
+      provider.stubs(:health_check).returns(
+        { status: 'unhealthy', provider: name.to_s, reachable: true, ready: false },
+      )
+
+      assert_predicate provider, :available?, "#{name} should be available when reachable"
+    end
+  end
+
+  def test_unreachable_provider_is_not_available_even_with_healthy_status
+    PROVIDER_CONFIGS.each do |name, options|
+      provider = PROVIDER_CLASSES.fetch(name).new(**options)
+      provider.stubs(:health_check).returns(
+        { status: 'healthy', provider: name.to_s, reachable: false, ready: false },
+      )
+
+      refute_predicate provider, :available?, "#{name} should be unavailable when unreachable"
+    end
+  end
+end
