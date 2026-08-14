@@ -16,6 +16,7 @@ class Prescient::ConfigurationLoader
     'fallback_providers',
     'fallback_providers_env',
     'providers',
+    'tools',
     'retry_attempts',
     'retry_attempts_env',
     'retry_delay',
@@ -39,6 +40,11 @@ class Prescient::ConfigurationLoader
     'xai'         => Prescient::Provider::XAI,
   }.freeze
 
+  # Tool names mapped to lazily resolved adapter constants.
+  TOOL_TYPES = {
+    'searxng' => :SearXNG,
+  }.freeze
+
   # Provider-specific keys shared by all supported adapters.
   COMMON_PROVIDER_KEYS = [
     'api_key',
@@ -55,6 +61,22 @@ class Prescient::ConfigurationLoader
     'model_env',
     'prompt_templates',
     'prompt_templates_env',
+    'timeout',
+    'timeout_env',
+    'url',
+    'url_env',
+  ].freeze
+
+  # Tool-specific keys accepted by all configured adapters.
+  COMMON_TOOL_KEYS = [
+    'categories',
+    'categories_env',
+    'language',
+    'language_env',
+    'max_response_bytes',
+    'max_response_bytes_env',
+    'max_results',
+    'max_results_env',
     'timeout',
     'timeout_env',
     'url',
@@ -147,6 +169,7 @@ class Prescient::ConfigurationLoader
 
     apply_scalar_settings(configuration, normalized, source:)
     apply_provider_settings(configuration, normalized, source:)
+    apply_tool_settings(configuration, normalized, source:)
     configuration
   end
 
@@ -234,6 +257,24 @@ class Prescient::ConfigurationLoader
     end
   end
 
+  def apply_tool_settings(configuration, data, source:)
+    return unless key_present?(data, :tools)
+
+    tools = data[:tools]
+    unless tools.is_a?(Hash)
+      raise Prescient::Error, "Configuration#{" in #{source}" if source} tools must be a mapping"
+    end
+
+    tools.each do |name, tool_data|
+      tool_name = name.to_sym
+      tool_settings = normalize_keys(tool_data)
+      validate_tool!(tool_name, tool_settings, source:)
+
+      tool_options = resolve_tool_options(tool_settings, source:)
+      configuration.add_tool(tool_name, tool_class_for(tool_settings.fetch(:type).to_s), **tool_options)
+    end
+  end
+
   def validate_provider!(name, provider_data, source:)
     validate_provider_shape!(name, provider_data, source:)
     validate_provider_type!(name, provider_data, source:)
@@ -280,6 +321,34 @@ class Prescient::ConfigurationLoader
     raise Prescient::Error, message
   end
 
+  def validate_tool!(name, tool_data, source:)
+    validate_tool_shape!(name, tool_data, source:)
+    validate_tool_type!(name, tool_data, source:)
+    validate_tool_keys!(name, tool_data, source:)
+  end
+
+  def validate_tool_shape!(name, tool_data, source:)
+    return if tool_data.is_a?(Hash)
+
+    raise Prescient::Error, "Tool #{name.inspect}#{" in #{source}" if source} must be a mapping"
+  end
+
+  def validate_tool_type!(name, tool_data, source:)
+    return if tool_data.key?(:type)
+
+    raise Prescient::Error, "Tool #{name}#{" in #{source}" if source} must define type"
+  end
+
+  def validate_tool_keys!(name, tool_data, source:)
+    unknown_keys = tool_data.keys.map(&:to_s) - (['type'] + COMMON_TOOL_KEYS)
+    return if unknown_keys.empty?
+
+    raise Prescient::Error,
+          "Unknown tool configuration key#{'s' if unknown_keys.length > 1} for #{name}: " \
+          "#{unknown_keys.join(', ')}" \
+          "#{" in #{source}" if source}"
+  end
+
   def resolve_provider_options(provider_data, source:)
     provider_type = provider_data[:type].to_s
     provider_class = PROVIDER_TYPES[provider_type]
@@ -291,6 +360,47 @@ class Prescient::ConfigurationLoader
     provider_data.each_with_object({}) do |(key, value), options|
       option = resolve_provider_option(provider_data, key, value, source:)
       options[option.first] = option.last if option
+    end
+  end
+
+  def resolve_tool_options(tool_data, source:)
+    tool_type = tool_data[:type].to_s
+    tool_class = tool_class_for(tool_type)
+    unless tool_class
+      raise Prescient::Error,
+            "Unknown tool type #{tool_type.inspect}#{" in #{source}" if source}"
+    end
+
+    tool_data.each_with_object({}) do |(key, value), options|
+      option = resolve_tool_option(tool_data, key, value, source:)
+      options[option.first] = option.last if option
+    end
+  end
+
+  # Resolve a configured tool adapter only when configuration uses it.
+  # @param tool_type [String] Configured tool type
+  # @return [Class, nil] Tool adapter class
+  def tool_class_for(tool_type)
+    tool_name = TOOL_TYPES[tool_type]
+    return unless tool_name
+
+    Prescient::Tool.const_get(tool_name, false)
+  end
+
+  def resolve_tool_option(tool_data, key, value, source:)
+    return if key == :type
+    return if key.to_s.end_with?('_env') && value.nil?
+
+    if key.to_s.end_with?('_env')
+      base_key = key.to_s.delete_suffix('_env').to_sym
+      if tool_data.key?(base_key)
+        raise Prescient::Error,
+              "Tool configuration cannot combine #{base_key} and #{key}"
+      end
+
+      [base_key, resolve_env_value(value, source:)]
+    else
+      [key, coerce_tool_option(key, resolve_value(value, source:))]
     end
   end
 
@@ -420,6 +530,17 @@ class Prescient::ConfigurationLoader
       coerce_integer(value, 'embedding_dimensions')
     when :timeout
       coerce_integer(value, 'timeout')
+    else
+      value
+    end
+  end
+
+  def coerce_tool_option(key, value)
+    case key.to_sym
+    when :max_results, :max_response_bytes
+      coerce_integer(value, key.to_s)
+    when :timeout
+      coerce_float(value, 'timeout')
     else
       value
     end

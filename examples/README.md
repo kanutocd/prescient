@@ -19,6 +19,7 @@ bundle install
   and similarity search.
 - `rest_api.ru` — a tiny Rack-compatible application that mounts
   `Prescient::API` and lists its endpoints at `/`.
+- `web_search.rb` — explicit SearXNG tool invocation with normalized JSON output.
 
 Run the REST API example with a Rack server such as `rackup`:
 
@@ -56,6 +57,13 @@ Cloud-provider examples require the corresponding credentials and provider
 configuration. The scripts are demonstrations rather than isolated test
 fixtures; they may make real provider requests when the configured service is
 available.
+
+The web-search example requires a reachable SearXNG instance:
+
+```bash
+docker compose up -d searxng
+SEARXNG_URL=http://localhost:8080 bundle exec ruby examples/web_search.rb "Ruby HTTP clients"
+```
 
 See the [main README](../README.md) for configuration, fallback behavior,
 prompt templates, context exclusions, embeddings, and the public API. Rails

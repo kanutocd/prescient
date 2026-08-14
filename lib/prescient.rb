@@ -2,6 +2,7 @@
 
 require_relative 'prescient/version'
 require_relative 'prescient/errors'
+Prescient.autoload :Tool, 'prescient/tool'
 require_relative 'prescient/pgvector'
 require_relative 'prescient/base'
 require_relative 'prescient/provider/ollama'
@@ -34,6 +35,7 @@ require_relative 'prescient/client'
 #   embedding = client.generate_embedding("Some text to embed")
 #   puts embedding.length # => 1536 (for OpenAI text-embedding-3-small)
 module Prescient
+  autoload :Tool, 'prescient/tool'
   autoload :API, 'prescient/api'
   autoload :CLI, 'prescient/cli'
 
@@ -59,6 +61,13 @@ module Prescient
   # @return [Configuration] The current configuration
   def self.configuration
     @_configuration ||= Configuration.new
+  end
+
+  # Look up a configured external tool.
+  # @param name [Symbol, String] Tool name
+  # @return [Prescient::Tool::Base, nil] Configured tool instance
+  def self.tool(name)
+    configuration.tool(name)
   end
 
   # Reset configuration to defaults
@@ -119,6 +128,9 @@ module Prescient
     # @return [Hash] Registered providers configuration
     attr_reader :providers
 
+    # @return [Hash] Registered tools configuration
+    attr_reader :tools
+
     # Initialize configuration with default values
     def initialize
       @default_provider = :ollama
@@ -129,6 +141,8 @@ module Prescient
       @sensitive_keys = []
       @providers = {}
       @provider_instances = {} # : Hash[Symbol, untyped]
+      @tools = {}
+      @tool_instances = {} # : Hash[Symbol, untyped]
     end
 
     # Configure additional keys to remove from provider information.
@@ -175,6 +189,32 @@ module Prescient
 
       provider_options = provider_config[:options] # : Hash[Symbol, untyped]
       @provider_instances[provider_name] ||= provider_config[:class].new(**provider_options)
+    end
+
+    # Register an external tool.
+    # @param name [Symbol] Unique identifier for the tool
+    # @param tool_class [Class] Tool adapter class
+    # @param options [Hash] Tool-specific configuration options
+    # @return [void]
+    def add_tool(name, tool_class, **options)
+      tool_name = name.to_sym
+      @tools[tool_name] = {
+        class:   tool_class,
+        options: options,
+      }
+      @tool_instances.delete(tool_name)
+    end
+
+    # Instantiate a tool by name.
+    # @param name [Symbol, String] Tool name
+    # @return [Prescient::Tool::Base, nil] Tool instance or nil
+    def tool(name)
+      tool_name = name.to_sym
+      tool_config = @tools[tool_name]
+      return nil unless tool_config
+
+      tool_options = tool_config[:options] # : Hash[Symbol, untyped]
+      @tool_instances[tool_name] ||= tool_config[:class].new(**tool_options)
     end
 
     # Get list of providers that currently pass {Prescient::Base#available?}.

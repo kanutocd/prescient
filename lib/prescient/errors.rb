@@ -37,6 +37,18 @@ module Prescient
   # Raised when an AI provider reports a transient service-side failure
   class ProviderError < Error; end
 
+  # Base error class for external tool failures.
+  class ToolError < Error; end
+
+  # Raised when an external tool is configured incorrectly.
+  class ToolConfigurationError < ToolError; end
+
+  # Raised when an external tool cannot be reached.
+  class ToolConnectionError < ToolError; end
+
+  # Raised when an external tool returns an invalid response.
+  class ToolInvalidResponseError < ToolError; end
+
   # Container module for AI provider implementations
   #
   # All provider classes should be defined within this module and inherit

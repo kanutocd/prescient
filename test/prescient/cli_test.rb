@@ -42,12 +42,21 @@ class CLITest < PrescientTest
     end
   end
 
+  class CLITool < Prescient::Tool::Base
+    def search(query, limit: nil)
+      snippet = query == 'no snippet' ? '' : 'Snippet'
+      results = [{ title: 'Result', url: 'https://example.test', snippet: snippet }]
+      { tool: 'web_search', query: query, source: 'test', results: results.first(limit || 1) }
+    end
+  end
+
   def setup
     super
     Prescient.configure do |config|
       config.default_provider = :test
       config.add_provider(:test, CLIProvider, chat_model: 'configured-model')
       config.add_provider(:offline, CLIProvider, reachable: false, status: 'unavailable')
+      config.add_tool(:web_search, CLITool)
     end
   end
 
@@ -94,7 +103,7 @@ class CLITest < PrescientTest
   # rubocop:enable Minitest/MultipleAssertions
 
   def test_each_command_supports_help
-    ['health', 'generate', 'embed'].each do |command|
+    ['health', 'generate', 'embed', 'search'].each do |command|
       status, output, _errors = run_cli([command, '--help'])
 
       assert_equal 0, status
@@ -255,6 +264,50 @@ class CLITest < PrescientTest
     assert_includes output, 'no_context_template:'
     assert_includes output, 'type: deepseek'
     assert_includes output, 'prescient config validate'
+  end
+
+  def test_search_supports_json_text_and_limit
+    status, output, _errors = run_cli(['search', '--format', 'json', '--limit', '1', 'Ruby tools'])
+
+    assert_equal 0, status
+
+    result = JSON.parse(output)
+
+    assert_equal 'Ruby tools', result['query']
+    assert_equal 'test', result['source']
+
+    status, output, _errors = run_cli(['search', 'Ruby tools'])
+
+    assert_equal 0, status
+    assert_includes output, 'https://example.test'
+    assert_includes output, 'Snippet'
+
+    status, output, _errors = run_cli(['search', 'no snippet'])
+
+    assert_equal 0, status
+    refute_includes output, 'Snippet'
+  end
+
+  def test_search_rejects_missing_tool
+    Prescient.configuration.tools.clear
+
+    status, _output, errors = run_cli(['search', 'Ruby tools'])
+
+    assert_equal 2, status
+    assert_includes errors, 'tool not configured'
+  end
+
+  def test_configuration_example_help_and_invalid_prompt_template_file
+    status, output, _errors = run_cli(['config', 'example', '--help'])
+
+    assert_equal 0, status
+    assert_includes output, 'Generate an annotated YAML configuration example'
+
+    path = write_configuration('- invalid\n')
+    status, _output, errors = run_cli(['generate', '--prompt-templates-file', path, 'hello'])
+
+    assert_equal 2, status
+    assert_includes errors, 'must contain a mapping'
   end
 
   def test_cli_loads_configuration_from_yaml_file

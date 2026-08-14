@@ -2,11 +2,12 @@
 
 [![Gem Version](https://img.shields.io/gem/v/prescient?logo=rubygems&logoColor=white)](https://rubygems.org/gems/prescient)
 [![Requires Ruby 3.1+](https://img.shields.io/badge/Requires-Ruby%203.1%2B-CC342D?logo=ruby&logoColor=white)](https://www.ruby-lang.org/)
+[![Docker](https://img.shields.io/badge/Docker-GHCR-2496ED?logo=docker&logoColor=white)](https://github.com/kanutocd/prescient/pkgs/container/prescient)
 [![CI](https://github.com/kanutocd/prescient/actions/workflows/ci.yml/badge.svg)](https://github.com/kanutocd/prescient/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/kanutocd/prescient/security.yml?branch=main&event=push&label=Security)](https://github.com/kanutocd/prescient/actions/workflows/security.yml)
 [![License](https://img.shields.io/badge/License-MIT-22C55E)](LICENSE.txt)
 
-Prescient is a boring AI provider abstraction for Ruby. Configure your AI providers once, then use the same interface regardless of whether the request is handled by OpenAI, Anthropic, Ollama, Hugging Face, Google Gemini, Mistral, DeepSeek, or xAI. Prescient handles provider selection, retries, health checks, and fallback.
+Prescient is a boring AI provider gateway for Ruby. Configure your AI providers once, then use them through a consistent Ruby API, CLI, or REST API. Prescient handles provider selection, retries, health checks, and fallback across configured providers, including OpenAI, Anthropic, Ollama, Hugging Face, Google Gemini, Mistral, DeepSeek, and xAI.
 
 For focused guidance, see the **[examples guide](https://github.com/kanutocd/prescient/tree/main/examples)**,
 **[Rails integration guide](https://github.com/kanutocd/prescient/blob/main/INTEGRATION_GUIDE.md)**, and
@@ -14,13 +15,15 @@ For focused guidance, see the **[examples guide](https://github.com/kanutocd/pre
 
 ## Features
 
-- **Unified Interface**: Single API for multiple AI providers
-- **Local and Cloud Support**: Ollama for local/private deployments, cloud APIs for scale
-- **Embedding Generation**: Vector embeddings for semantic search and AI applications
-- **Text Completion**: Chat completions with context support
-- **Error Handling**: Robust error handling with automatic retries
-- **Health Monitoring**: Built-in health checks for all providers
-- **Flexible Configuration**: YAML, environment variable, and programmatic configuration
+- **Provider abstraction** — One consistent interface across supported AI providers
+- **Multiple interfaces** — Ruby API, CLI, and Rack-compatible REST API
+- **Text and embeddings** — Generate responses and embeddings with provider/model selection
+- **Reliability controls** — Retries, health checks, and fallback across configured providers
+- **Declarative configuration** — Versioned YAML, environment references, and JSON Schema validation
+- **Prompt and context customization** — Configurable prompt templates and context formatting
+- **External tools** — Explicit, normalized web-search integration with SearXNG
+- **Local and cloud support** — Ollama alongside hosted providers
+- **Optional integrations** — Docker deployment and pgvector support without making either mandatory
 
 ## Supported Providers
 
@@ -347,24 +350,40 @@ YAML values, then built-in defaults. Use `prescient config validate` to check a
 configuration before running an operation, or `prescient config example` to
 generate an annotated starter file.
 
-Prompt templates can also be configured per provider. Use the YAML mapping for
-multiline templates, or pass a template file to a single CLI operation:
+### External Tools
+
+External tools are opt-in capability adapters, separate from AI providers. The
+first supported tool is SearXNG web search:
 
 ```yaml
-providers:
-  openai:
-    type: openai
-    api_key_env: OPENAI_API_KEY
-    chat_model: gpt-4.1-mini
-    prompt_templates:
-      system_prompt: You are a concise assistant.
-      no_context_template: "%{system_prompt}\n\nUser: %{query}"
-      with_context_template: "%{system_prompt}\n\nContext:\n%{context}\n\nUser: %{query}"
+tools:
+  web_search:
+    type: searxng
+    url_env: SEARXNG_URL
+    language: en
+    categories: [general, news]
+    timeout: 5
+    max_results: 5
+```
+
+Invoke a configured tool explicitly from Ruby or the CLI:
+
+```ruby
+result = Prescient.tool(:web_search).search('Ruby HTTP clients', limit: 3)
 ```
 
 ```bash
-prescient generate --prompt-templates-file prompts.yml "Summarize this"
+docker compose up -d searxng
+SEARXNG_URL=http://localhost:8080 bundle exec prescient search \
+  --config prescient.yml --format json "Ruby HTTP clients"
 ```
+
+Results use a normalized envelope containing `tool`, `query`, `source`, and
+`results` entries with `title`, `url`, `snippet`, and `source`. Requests have
+bounded query length, timeout, result count, and response size. Tool execution
+is explicit; Prescient does not autonomously invoke tools, and tool endpoints
+are not exposed through `Prescient::API` yet. Other adapters can implement the
+same contract without changing provider integrations.
 
 ### Programmatic Configuration
 
@@ -600,6 +619,24 @@ end
 
 client = Prescient.client(:customer_service)
 response = client.generate_response("What's your return policy?")
+```
+
+Templates can also be configured in YAML or overridden for one CLI operation:
+
+```yaml
+providers:
+  openai:
+    type: openai
+    api_key_env: OPENAI_API_KEY
+    chat_model: gpt-4.1-mini
+    prompt_templates:
+      system_prompt: You are a concise assistant.
+      no_context_template: "%{system_prompt}\n\nUser: %{query}"
+      with_context_template: "%{system_prompt}\n\nContext:\n%{context}\n\nUser: %{query}"
+```
+
+```bash
+prescient generate --prompt-templates-file prompts.yml "Summarize this"
 ```
 
 ### Template Placeholders
@@ -1132,6 +1169,8 @@ The included `docker-compose.yml` provides:
 
 - **ollama**: Ollama AI service with persistent model storage
 - **ollama-init**: Automatically pulls required models on startup
+- **searxng**: Optional SearXNG web-search service with JSON output enabled
+- **postgres**: Optional PostgreSQL database with pgvector support
 - **redis**: Optional caching layer for embeddings
 - **prescient-app**: Example Ruby application container
 

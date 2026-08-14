@@ -15,6 +15,7 @@ class ConfigurationTest < PrescientTest
     assert_in_delta(1.0, @config.retry_delay)
     assert_empty(@config.sensitive_keys)
     assert_empty(@config.providers)
+    assert_empty(@config.tools)
   end
 
   def test_sensitive_keys_normalizes_custom_keys
@@ -32,6 +33,15 @@ class ConfigurationTest < PrescientTest
     }
 
     assert_equal expected, @config.providers[:test]
+  end
+
+  def test_add_tool_adds_and_caches_tool_configuration
+    @config.add_tool(:web_search, Prescient::Tool::SearXNG, url: 'http://localhost:8080')
+
+    assert_equal({ class: Prescient::Tool::SearXNG, options: { url: 'http://localhost:8080' } },
+                 @config.tools[:web_search])
+    assert_instance_of Prescient::Tool::SearXNG, @config.tool(:web_search)
+    assert_same @config.tool(:web_search), @config.tool(:web_search)
   end
 
   def test_add_provider_converts_provider_name_to_symbol

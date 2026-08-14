@@ -93,6 +93,14 @@ class Prescient::CLI
       #   api_key_env: HUGGINGFACE_API_KEY
       #   embedding_model: sentence-transformers/all-MiniLM-L6-v2
       #   chat_model: google/gemma-2-2b-it
+
+    # External tools are opt-in and separate from AI providers.
+    tools:
+      # web_search:
+      #   type: searxng
+      #   url: http://localhost:8080
+      #   timeout: 5
+      #   max_results: 5
   YAML
 
   # Raised when command-line arguments are invalid or incomplete.
@@ -149,6 +157,7 @@ class Prescient::CLI
     when 'health' then health
     when 'generate' then generate
     when 'embed' then embed
+    when 'search' then search
     when 'config' then config
     when 'help', '--help', '-h' then print_help(0)
     else
@@ -214,6 +223,33 @@ class Prescient::CLI
     0
   end
 
+  def search
+    options = parse_options('Search with a configured external tool', tool: true, limit: true)
+    return options if options.is_a?(Integer)
+
+    query = read_text(options[:arguments], 'query')
+    tool_name = (options[:tool] || 'web_search').to_sym
+    tool = Prescient.tool(tool_name)
+    raise UsageError, "tool not configured: #{tool_name}" unless tool
+
+    result = tool.search(query, limit: options[:limit])
+    if options[:format] == 'json'
+      print_json(result)
+    else
+      print_search_results(result[:results])
+    end
+    0
+  end
+
+  def print_search_results(results)
+    results.each do |item|
+      @output.puts item[:title]
+      @output.puts item[:url]
+      @output.puts item[:snippet] unless item[:snippet].empty?
+      @output.puts
+    end
+  end
+
   def config
     subcommand = @arguments.shift
     case subcommand
@@ -251,16 +287,22 @@ class Prescient::CLI
       raise Prescient::Error, 'default provider is not configured'
     end
 
-    configuration.providers.each_key { |name| configuration.provider(name) }
+    configuration.providers.each_key do |name|
+      configuration.provider(name)
+    end
+    configuration.tools.each_key do |name|
+      configuration.tool(name)
+    end
   end
 
-  def parse_options(description, fallback: false)
+  def parse_options(description, fallback: false, tool: false, limit: false)
     options = { format: 'text', fallback: fallback }
     parser = OptionParser.new do |parser|
       parser.banner = "Usage: prescient #{@arguments.first || 'command'} [options]"
       parser.separator description
       add_common_options(parser, options)
       parser.on('--no-fallback', 'Disable provider fallback') { options[:fallback] = false } if fallback
+      add_tool_options(parser, options, tool:, limit:)
       parser.on('-h', '--help', 'Show command help') do
         @output.puts parser
         throw :help_shown, 0
@@ -272,6 +314,13 @@ class Prescient::CLI
 
     options[:arguments] = @arguments
     options
+  end
+
+  def add_tool_options(parser, options, tool:, limit:)
+    parser.on('--tool NAME', 'Use a configured external tool') { |value| options[:tool] = value } if tool
+    return unless limit
+
+    parser.on('--limit COUNT', Integer, 'Limit the number of results') { |value| options[:limit] = value }
   end
 
   def add_common_options(parser, options)
@@ -425,6 +474,7 @@ class Prescient::CLI
         health          Check provider health
         generate TEXT   Generate a text response
         embed TEXT      Generate an embedding
+        search TEXT     Search with a configured external tool
         config validate Validate the current configuration
         config example  Generate an annotated YAML configuration example
 
@@ -443,6 +493,8 @@ class Prescient::CLI
                                  Load prompt templates from a YAML file
         --api-key KEY            Use an API key for the operation
         --api-key-env NAME       Read the API key from an environment variable
+        --tool NAME              Select an external tool for search
+        --limit COUNT            Limit search results
         --format FORMAT          Use text or json output
     HELP
     status

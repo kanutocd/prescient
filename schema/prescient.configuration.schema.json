@@ -58,6 +58,12 @@
       "additionalProperties": {
         "$ref": "#/$defs/provider"
       }
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/tool"
+      }
     }
   },
   "$defs": {
@@ -145,6 +151,72 @@
           }
         },
         "prompt_templates_env": {
+          "type": "string"
+        }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "searxng"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "url_env": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "language_env": {
+          "type": "string"
+        },
+        "categories": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "categories_env": {
+          "type": "string"
+        },
+        "timeout": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "timeout_env": {
+          "type": "string"
+        },
+        "max_results": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "max_results_env": {
+          "type": "string"
+        },
+        "max_response_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_response_bytes_env": {
           "type": "string"
         }
       }

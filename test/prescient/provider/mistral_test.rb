@@ -118,6 +118,20 @@ class MistralProviderTest < PrescientTest
     assert_equal 'chunked answer', result[:response]
   end
 
+  # rubocop:disable Layout/HashAlignment
+  def test_generate_response_ignores_non_hash_content_chunks
+    response = stub(
+      success?: true,
+      parsed_response: {
+        'choices' => [{ 'message' => { 'content' => ['invalid', { 'text' => 'answer' }] } }],
+      },
+    )
+    @provider.class.expects(:post).returns(response)
+
+    assert_equal 'answer', @provider.generate_response('test')[:response]
+  end
+  # rubocop:enable Layout/HashAlignment
+
   def test_generate_response_rejects_missing_content
     response = stub(success?: true, parsed_response: { 'choices' => [] })
     @provider.class.expects(:post).returns(response)

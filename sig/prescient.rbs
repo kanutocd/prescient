@@ -33,6 +33,37 @@ module Prescient
   class ProviderError < Error
   end
 
+  class ToolError < Error
+  end
+
+  class ToolConfigurationError < ToolError
+  end
+
+  class ToolConnectionError < ToolError
+  end
+
+  class ToolInvalidResponseError < ToolError
+  end
+
+  module Tool
+    class Base
+      DEFAULT_TIMEOUT: Integer
+      DEFAULT_MAX_RESULTS: Integer
+      MAX_QUERY_LENGTH: Integer
+      DEFAULT_MAX_RESPONSE_BYTES: Integer
+
+      attr_reader options: Hash[Symbol, untyped]
+
+      def initialize: (**untyped) -> void
+      def search: (String, **untyped) -> Hash[Symbol, untyped]
+    end
+
+    class SearXNG < Base
+      def initialize: (**untyped) -> void
+      def search: (String, ?limit: Integer?, ?timeout: Numeric?) -> Hash[Symbol, untyped]
+    end
+  end
+
   class Base
     attr_reader options: Hash[Symbol, untyped]
     attr_reader provider_name: String
@@ -257,11 +288,14 @@ module Prescient
     attr_accessor fallback_providers: Array[Symbol]
     attr_reader sensitive_keys: Array[Symbol]
     attr_reader providers: Hash[Symbol, Hash[Symbol, untyped]]
+    attr_reader tools: Hash[Symbol, Hash[Symbol, untyped]]
 
     def initialize: () -> void
     def sensitive_keys=: (Array[Symbol | String]) -> Array[Symbol]
     def add_provider: (Symbol | String, Class, **untyped) -> void
     def provider: (Symbol | String) -> untyped
+    def add_tool: (Symbol | String, Class, **untyped) -> void
+    def tool: (Symbol | String) -> untyped
     def available_providers: () -> Array[Symbol]
   end
 
@@ -313,6 +347,8 @@ module Prescient
     TOP_LEVEL_KEYS: Array[String]
     PROVIDER_TYPES: Hash[String, untyped]
     COMMON_PROVIDER_KEYS: Array[String]
+    TOOL_TYPES: Hash[String, untyped]
+    COMMON_TOOL_KEYS: Array[String]
     PROMPT_TEMPLATE_KEYS: Array[String]
     ATTR_KEYS: Array[String]
 
@@ -336,6 +372,7 @@ module Prescient
   def self.generate_embedding: (String, ?provider: Symbol, ?enable_fallback: bool, **untyped) -> Array[Float]
   def self.generate_response: (String, ?Array[untyped], ?provider: Symbol, ?enable_fallback: bool, **untyped) -> Hash[Symbol, untyped]
   def self.health_check: (?provider: Symbol) -> Hash[Symbol, untyped]
+  def self.tool: (Symbol | String) -> untyped
 
   private
 

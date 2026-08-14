@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- Added an explicit external-tool contract with a configurable SearXNG web-search adapter.
+- Added YAML/schema configuration for tool registration, environment references, bounded requests, and normalized search results.
+- Added `prescient search` and an annotated `web_search` configuration example.
+- Added an optional development SearXNG service to `docker-compose.yml` for runnable web-search examples.
+
 ## [0.6.0] - 2025-08-15
 
 ### Added

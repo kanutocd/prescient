@@ -102,6 +102,133 @@ class ConfigurationLoaderTest < PrescientTest
                  configuration.provider(:demo).options.dig(:prompt_templates, :no_context_template)
   end
 
+  # rubocop:disable Layout/HashAlignment, Style/BlockDelimiters, Minitest/MultipleAssertions, Minitest/AssertInDelta, Minitest/EmptyLineBeforeAssertionMethods
+  def test_load_configuration_supports_tools_and_environment_references
+    env = {
+      'SEARXNG_URL' => 'http://search.local:8080',
+      'SEARCH_LIMIT' => '7',
+    }
+    configuration = Prescient::ConfigurationLoader.load_yaml(<<~YAML, env:)
+      version: 1
+      tools:
+        web_search:
+          type: searxng
+          url_env: SEARXNG_URL
+          max_results_env: SEARCH_LIMIT
+          categories:
+            - general
+            - news
+    YAML
+
+    tool = configuration.tool(:web_search)
+
+    assert_instance_of Prescient::Tool::SearXNG, tool
+    assert_equal 'http://search.local:8080', tool.options[:url]
+    assert_equal 7, tool.options[:max_results]
+    assert_equal ['general', 'news'], tool.options[:categories]
+  end
+
+  def test_load_configuration_rejects_unknown_tools
+    error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: {})
+        version: 1
+        tools:
+          search:
+            type: imaginary
+      YAML
+    end
+
+    assert_includes error.message, 'Unknown tool type'
+  end
+
+  def test_load_configuration_rejects_invalid_tool_shapes_and_keys
+    invalid_shape = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash({ tools: { search: 'invalid' } }, env: {})
+    end
+    assert_includes invalid_shape.message, 'must be a mapping'
+
+    missing_type = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash({ tools: { search: {} } }, env: {})
+    end
+    assert_includes missing_type.message, 'must define type'
+
+    unknown_key = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash(
+        { tools: { search: { type: 'searxng', unsupported: true } } },
+        env: {},
+      )
+    end
+    assert_includes unknown_key.message, 'Unknown tool configuration key'
+
+    source_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_hash(
+        { tools: { search: 'invalid' } },
+        source: 'tools.yml',
+      )
+    end
+    assert_includes source_error.message, 'in tools.yml'
+
+    source_type_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_hash(
+        { tools: { search: {} } },
+        source: 'tools.yml',
+      )
+    end
+    assert_includes source_type_error.message, 'in tools.yml'
+
+    plural_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_hash(
+        { tools: { search: { type: 'searxng', first: true, second: true } } },
+        source: 'tools.yml',
+      )
+    end
+    assert_includes plural_error.message, 'configuration keys'
+  end
+
+  def test_load_configuration_rejects_conflicting_and_missing_tool_environment_values
+    conflict = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash(
+        { tools: { search: { type: 'searxng', url: 'http://one', url_env: 'URL' } } },
+        env: { 'URL' => 'http://two' },
+      )
+    end
+    assert_includes conflict.message, 'cannot combine'
+
+    missing = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash(
+        { tools: { search: { type: 'searxng', url_env: 'MISSING' } } },
+        env: {},
+      )
+    end
+    assert_includes missing.message, 'Environment variable not set: MISSING'
+
+    configuration = Prescient::ConfigurationLoader.load_hash(
+      {
+        tools: {
+          search: {
+            type: 'searxng',
+            url: 'http://search.local',
+            timeout: '2.5',
+            max_response_bytes: '1024',
+            url_env: nil,
+          },
+        },
+      },
+      env: {},
+    )
+    assert_equal 2.5, configuration.tools[:search][:options][:timeout]
+    assert_equal 1024, configuration.tools[:search][:options][:max_response_bytes]
+
+    unknown_type = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_hash(
+        { tools: { search: { type: 'imaginary' } } },
+        source: 'tools.yml',
+      )
+    end
+    assert_includes unknown_type.message, 'in tools.yml'
+  end
+  # rubocop:enable Layout/HashAlignment, Style/BlockDelimiters, Minitest/MultipleAssertions, Minitest/AssertInDelta, Minitest/EmptyLineBeforeAssertionMethods
+
   def test_load_configuration_rejects_invalid_prompt_templates
     invalid_templates = assert_raises(Prescient::Error) {
       Prescient::ConfigurationLoader.load_hash(
