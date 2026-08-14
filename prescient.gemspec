@@ -32,5 +32,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Runtime dependencies
-  spec.add_dependency "httparty", "~> 0.23.1"
+  spec.add_dependency "httparty", ">= 0.24.0"
 end
