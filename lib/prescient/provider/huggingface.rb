@@ -140,12 +140,13 @@ class Prescient::Provider::HuggingFace < Prescient::Base
         ready:           embedding_healthy && chat_healthy,
       }
     end
-  rescue Prescient::ConnectionError => e
+  rescue Prescient::Error => e
     {
       status:   'unavailable',
       provider: 'huggingface',
       error:    e.class.name,
       message:  e.message,
+      ready:    false,
     }
   end
 

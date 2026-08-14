@@ -97,15 +97,17 @@ class Prescient::Provider::Anthropic < Prescient::Base
           provider: 'anthropic',
           error:    "HTTP #{response.code}",
           message:  response.message,
+          ready:    false,
         }
       end
     end
-  rescue Prescient::ConnectionError => e
+  rescue Prescient::Error => e
     {
       status:   'unavailable',
       provider: 'anthropic',
       error:    e.class.name,
       message:  e.message,
+      ready:    false,
     }
   end
 

@@ -98,6 +98,7 @@ class Prescient::Provider::Ollama < Prescient::Base
       error:    e.class.name,
       message:  e.message,
       url:      @options[:url],
+      ready:    false,
     }
   end
 

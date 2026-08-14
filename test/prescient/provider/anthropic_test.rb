@@ -177,6 +177,7 @@ class AnthropicProviderTest < PrescientTest
     assert_equal 'anthropic', result[:provider]
     assert_equal 'HTTP 401', result[:error]
     assert_equal 'Unauthorized', result[:message]
+    refute result[:ready]
   end
 
   def test_health_check_handles_connection_errors
@@ -188,6 +189,17 @@ class AnthropicProviderTest < PrescientTest
     assert_equal 'anthropic', result[:provider]
     assert_equal 'Prescient::ConnectionError', result[:error]
     assert_equal 'Connection failed', result[:message]
+    refute result[:ready]
+  end
+
+  def test_health_check_handles_provider_errors
+    @provider.class.expects(:post).raises(Prescient::AuthenticationError.new('Invalid key'))
+
+    result = @provider.health_check
+
+    assert_equal 'unavailable', result[:status]
+    assert_equal 'Prescient::AuthenticationError', result[:error]
+    refute result[:ready]
   end
 
   def test_list_models

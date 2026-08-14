@@ -126,6 +126,7 @@ class Prescient::Provider::OpenAI < Prescient::Base
           provider: 'openai',
           error:    "HTTP #{response.code}",
           message:  response.message,
+          ready:    false,
         }
       end
     end
@@ -135,6 +136,7 @@ class Prescient::Provider::OpenAI < Prescient::Base
       provider: 'openai',
       error:    e.class.name,
       message:  e.message,
+      ready:    false,
     }
   end
 

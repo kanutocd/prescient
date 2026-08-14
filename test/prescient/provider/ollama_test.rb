@@ -216,6 +216,7 @@ class OllamaProviderTest < PrescientTest
     assert_equal 'ollama', result[:provider]
     assert_equal 'Prescient::Error', result[:error]
     assert_equal 'Unexpected error: Connection failed', result[:message]
+    refute result[:ready]
   end
 
   def test_available_models_success

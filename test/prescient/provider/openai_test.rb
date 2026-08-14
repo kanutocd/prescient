@@ -245,6 +245,7 @@ class OpenAIProviderTest < PrescientTest
     assert_equal 'openai', result[:provider]
     assert_equal 'Prescient::Error', result[:error]
     assert_equal 'Unexpected error: Connection failed', result[:message]
+    refute result[:ready]
   end
 
   def test_list_models_success
