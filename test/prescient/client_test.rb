@@ -33,7 +33,7 @@ class ClientTest < PrescientTest
       Prescient::Client.new(:nonexistent_provider)
     }
 
-    assert_includes error.message, 'Provider not found'
+    assert_includes error.message, 'Provider not configured'
     assert_includes error.message, 'nonexistent_provider'
   end
 

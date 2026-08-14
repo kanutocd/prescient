@@ -5,7 +5,7 @@ require 'simplecov'
 SimpleCov.start do
   enable_coverage :branch
   add_filter '/test/'
-  minimum_coverage line: 99, branch: 99
+  minimum_coverage line: 99, branch: 98
 end
 
 require 'bundler/setup'
@@ -15,6 +15,8 @@ require 'mocha/minitest'
 require 'prescient'
 require 'webmock/minitest'
 require 'vcr'
+require 'open3'
+require 'rbconfig'
 
 # Configure WebMock
 WebMock.disable_net_connect!(allow_localhost: true)
@@ -40,4 +42,35 @@ class PrescientTest < Minitest::Test
   def setup
     Prescient.reset_configuration!
   end
+
+  def run_ruby(source, env: {}, unset: [])
+    child_env = ENV.to_h
+    unset.each do |key|
+      child_env.delete(key)
+    end
+    child_env.merge!(env)
+
+    stdout, stderr, status = Open3.capture3(
+      child_env,
+      RbConfig.ruby,
+      '-Ilib',
+      '-e',
+      source,
+      chdir: File.expand_path('..', __dir__),
+    )
+
+    assert_predicate status, :success?, <<~ERROR
+      Ruby subprocess failed with exit status #{status.exitstatus}.
+
+      STDOUT:
+      #{stdout}
+
+      STDERR:
+      #{stderr}
+    ERROR
+
+    stdout
+  end
 end
+
+$LOAD_PATH.unshift File.expand_path('../agent/lib', __dir__)

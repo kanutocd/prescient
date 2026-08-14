@@ -92,4 +92,47 @@ class ConfigurationTest < PrescientTest
     refute_same old_provider, new_provider
     assert_equal 'new-embed', new_provider.options[:embedding_model]
   end
+
+  def test_default_configuration_registers_openai_when_api_key_is_present
+    output = run_ruby(
+      <<~RUBY,
+        ENV["OPENAI_API_KEY"] = "test-openai-key"
+        require "prescient"
+
+        provider = Prescient.configuration.providers[:openai]
+
+        abort "OpenAI provider was not registered" unless provider
+        abort "Unexpected API key" unless provider[:options]&.fetch(:api_key, "") == "test-openai-key"
+      RUBY
+      unset: [
+        'OPENAI_API_KEY',
+        'ANTHROPIC_API_KEY',
+        'HUGGINGFACE_API_KEY',
+      ],
+    )
+
+    assert_empty output
+  end
+
+  def test_default_configuration_registers_huggingface_when_api_key_is_present
+    output = run_ruby(
+      <<~RUBY,
+        ENV["HUGGINGFACE_API_KEY"] = "test-huggingface-key"
+        require "prescient"
+
+
+        provider = Prescient.configuration.providers[:huggingface]
+
+        abort "Hugging Face provider was not registered" unless provider
+        abort "Unexpected API key" unless provider[:options]&.fetch(:api_key, "") == "test-huggingface-key"
+      RUBY
+      unset: [
+        'OPENAI_API_KEY',
+        'ANTHROPIC_API_KEY',
+        'HUGGINGFACE_API_KEY',
+      ],
+    )
+
+    assert_empty output
+  end
 end

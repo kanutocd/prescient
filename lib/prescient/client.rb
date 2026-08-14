@@ -33,7 +33,7 @@ module Prescient
       @provider = Prescient.configuration.provider(@provider_name)
       @enable_fallback = enable_fallback
 
-      raise Prescient::Error, "Provider not found: #{@provider_name}" unless @provider
+      raise Prescient::Error, "Provider not configured: #{@provider_name}" unless @provider
     end
 
     # Generate embeddings for the given text
