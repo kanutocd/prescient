@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.5.0] - 2025-08-14
+
 ### Added
 
 - Added a versioned YAML configuration loader with environment-variable references,
