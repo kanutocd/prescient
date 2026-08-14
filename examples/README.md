@@ -30,6 +30,17 @@ PRESCIENT_API_TOKEN=change-me BUNDLE_WITH=rack_example \
 curl http://localhost:9292/
 ```
 
+The endpoint catalog includes `POST /v1/search/generate`. With a configured
+SearXNG tool and AI provider, call it explicitly to feed search results into
+generation:
+
+```bash
+curl -X POST http://localhost:9292/v1/search/generate \
+  -H 'Authorization: Bearer change-me' \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"Ruby HTTP clients","provider":"openai","limit":5}'
+```
+
 Running `bundle exec ruby examples/rest_api.ru` directly prints the same
 endpoint catalog without starting a server.
 

@@ -245,6 +245,8 @@ run Prescient::API.new(
 Available endpoints include:
 
 - **`POST /v1/generate`**
+- **`POST /v1/search`**
+- **`POST /v1/search/generate`**
 - **`POST /v1/embeddings`**
 - **`POST /v1/embeddings/batch`**
 - **`GET /v1/providers`**
@@ -386,8 +388,9 @@ Results use a normalized envelope containing `tool`, `query`, `source`, and
 `results` entries with `title`, `url`, `snippet`, and `source`. Requests have
 bounded query length, timeout, result count, and response size. Tool execution
 is explicit; Prescient does not autonomously invoke tools, and tool endpoints
-are not exposed through `Prescient::API` yet. Other adapters can implement the
-same contract without changing provider integrations.
+are not exposed as raw tool endpoints through `Prescient::API`; the API exposes
+the explicit combined search-and-generation operation below. Other adapters can
+implement the same contract without changing provider integrations.
 
 Search results are not sent to an AI provider by default. Opt in when you want
 the normalized results assembled as generation context:
@@ -405,6 +408,26 @@ The CLI exposes the same opt-in behavior with `--generate`:
 ```bash
 prescient search --generate --provider openai "Ruby HTTP clients"
 ```
+
+The REST API exposes the same opt-in behavior:
+
+Raw normalized search results are available without generation:
+
+```bash
+curl -X POST http://localhost:9292/v1/search \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"Ruby HTTP clients","limit":5}'
+```
+
+```bash
+curl -X POST http://localhost:9292/v1/search/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"Ruby HTTP clients","provider":"openai","limit":5}'
+```
+
+Use `fallback: false` to disable provider fallback for the request. The
+response is the normalized AI provider response; omit this endpoint and use
+`POST /v1/generate` when search context is not wanted.
 
 ### Programmatic Configuration
 

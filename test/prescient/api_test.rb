@@ -61,6 +61,22 @@ class APITest < PrescientTest
     end
   end
 
+  class APISearchTool < Prescient::Tool::Base
+    class << self
+      attr_accessor :last_request
+    end
+
+    def search(query, limit: nil)
+      self.class.last_request = { query: query, limit: limit }
+      {
+        tool:    'web_search',
+        query:   query,
+        source:  'test',
+        results: [{ title: 'Ruby', url: 'https://www.ruby-lang.org', snippet: 'Ruby' }],
+      }
+    end
+  end
+
   class FailureProvider < APIProvider
     def generate_response(*_args, **_options)
       failure = @options.fetch(:failure)
@@ -84,9 +100,12 @@ class APITest < PrescientTest
 
   def setup
     super
+    APIProvider.last_request = nil
+    APISearchTool.last_request = nil
     Prescient.configure do |config|
       config.default_provider = :api_test
       config.add_provider(:api_test, APIProvider)
+      config.add_tool(:web_search, APISearchTool)
     end
     @api = Prescient::API.new
   end
@@ -151,6 +170,44 @@ class APITest < PrescientTest
 
     assert_equal 2, batch['embeddings'].length
     assert_equal 3, batch['dimensions']
+  end
+
+  def test_search_generate_endpoint_feeds_tool_results_to_provider
+    result = body(call('POST', '/v1/search/generate', body: {
+      query:    'Ruby tools',
+      tool:     'web_search',
+      provider: 'api_test',
+      limit:    3,
+      model:    'search-model',
+      fallback: false,
+    }))
+
+    assert_equal 'generated', result['response']
+    assert_equal({ query: 'Ruby tools', limit: 3 }, APISearchTool.last_request)
+    assert_equal 'Ruby tools', APIProvider.last_request[:prompt]
+    assert_equal 'Ruby', APIProvider.last_request[:context].first[:title]
+    assert_equal 'search-model', APIProvider.last_request[:options][:model]
+  end
+
+  def test_search_endpoint_returns_normalized_tool_results_without_generation
+    result = body(call('POST', '/v1/search', body: {
+      query: 'Ruby tools',
+      limit: 3,
+    }))
+
+    assert_equal 'web_search', result['tool']
+    assert_equal 'Ruby tools', result['query']
+    assert_equal 'test', result['source']
+    assert_equal 'Ruby', result['results'].first['title']
+    assert_equal({ query: 'Ruby tools', limit: 3 }, APISearchTool.last_request)
+    assert_nil APIProvider.last_request
+  end
+
+  def test_search_generate_uses_the_configured_default_provider
+    result = body(call('POST', '/v1/search/generate', body: { query: 'Ruby tools' }))
+
+    assert_equal 'generated', result['response']
+    assert_equal 'Ruby tools', APIProvider.last_request[:prompt]
   end
 
   def test_request_ids_authentication_and_error_envelopes
@@ -273,6 +330,17 @@ class APITest < PrescientTest
     Prescient.configuration.add_provider(:failure, FailureProvider, failure: 'StandardError')
 
     assert_equal 500, call('POST', '/v1/generate', body: { provider: 'failure', prompt: 'hello', fallback: false }).first
+  end
+
+  def test_search_generate_request_validation
+    assert_equal 400, call('POST', '/v1/search/generate', body: { query: 'hello', limit: 0 }).first
+    assert_equal 400, call('POST', '/v1/search/generate', body: { query: 'hello', fallback: 'yes' }).first
+    assert_equal 400, call('POST', '/v1/search', body: { query: 'hello', tool: 1 }).first
+
+    missing_tool = call('POST', '/v1/search', body: { query: 'hello', tool: 'missing' })
+
+    assert_equal 500, missing_tool.first
+    assert_equal 'toolconfiguration', body(missing_tool).dig('error', 'type')
   end
 
   private

@@ -27,6 +27,8 @@ class Prescient::API
     ['GET',  '/v1/capabilities']     => :capabilities_response,
     ['GET',  '/v1/health']           => :health_response,
     ['POST', '/v1/generate']         => :generate_response,
+    ['POST', '/v1/search']           => :search_response,
+    ['POST', '/v1/search/generate']  => :search_generate_response,
     ['POST', '/v1/embeddings']       => :embeddings_response,
     ['POST', '/v1/embeddings/batch'] => :batch_embeddings_response,
   }.freeze
@@ -86,6 +88,56 @@ class Prescient::API
     client = client_for(payload)
     result = client.generate_response(prompt, context, **generation_options(payload))
     json_response(200, result, request_id)
+  end
+
+  def search_generate_response(env, _query, request_id)
+    payload = request_payload(env)
+    query = required_string(payload, 'query')
+    tool = search_tool_name(payload)
+    fallback = search_fallback(payload)
+    limit = search_limit(payload)
+
+    result = Prescient.search_and_generate(
+      query,
+      tool:            tool,
+      provider:        payload['provider']&.to_sym,
+      limit:           limit,
+      enable_fallback: fallback,
+      **generation_options(payload),
+    )
+    json_response(200, result, request_id)
+  end
+
+  def search_response(env, _query, request_id)
+    payload = request_payload(env)
+    query = required_string(payload, 'query')
+    tool_name = search_tool_name(payload)
+    tool = Prescient.tool(tool_name)
+    raise Prescient::ToolConfigurationError, "tool not configured: #{tool_name}" unless tool
+
+    result = tool.search(query, limit: search_limit(payload))
+    json_response(200, result, request_id)
+  end
+
+  def search_tool_name(payload)
+    value = payload.fetch('tool', 'web_search')
+    raise ArgumentError, 'tool must be a non-empty string' unless value.is_a?(String) && !value.empty?
+
+    value.to_sym
+  end
+
+  def search_fallback(payload)
+    fallback = payload.key?('fallback') ? payload['fallback'] : true
+    raise ArgumentError, 'fallback must be boolean' unless [true, false].include?(fallback)
+
+    fallback
+  end
+
+  def search_limit(payload)
+    limit = payload['limit']
+    raise ArgumentError, 'limit must be a positive integer' if limit && (!limit.is_a?(Integer) || !limit.positive?)
+
+    limit
   end
 
   def embeddings_response(env, _query, request_id)

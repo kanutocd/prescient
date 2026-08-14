@@ -190,6 +190,8 @@ This makes the following routes available under `/prescient`:
 | `GET` | `/v1/capabilities` | Provider capabilities |
 | `GET` | `/v1/health` | Provider health |
 | `POST` | `/v1/generate` | Text generation |
+| `POST` | `/v1/search` | Normalized external-tool search |
+| `POST` | `/v1/search/generate` | Search with opt-in AI generation |
 | `POST` | `/v1/embeddings` | Single embedding |
 | `POST` | `/v1/embeddings/batch` | Bounded batch embeddings |
 
@@ -202,6 +204,16 @@ curl -X POST http://localhost:3000/prescient/v1/generate \
   -H "Authorization: Bearer ${PRESCIENT_API_TOKEN}" \
   -H 'Content-Type: application/json' \
   -d '{"prompt":"Explain Ruby fibers"}'
+
+curl -X POST http://localhost:3000/prescient/v1/search/generate \
+  -H "Authorization: Bearer ${PRESCIENT_API_TOKEN}" \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"Ruby HTTP clients","provider":"openai","limit":5}'
+
+curl -X POST http://localhost:3000/prescient/v1/search \
+  -H "Authorization: Bearer ${PRESCIENT_API_TOKEN}" \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"Ruby HTTP clients","limit":5}'
 ```
 
 Responses include a request ID. Request bodies are size-limited, batch inputs
