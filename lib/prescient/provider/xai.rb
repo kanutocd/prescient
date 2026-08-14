@@ -2,25 +2,25 @@
 
 require 'httparty'
 
-# DeepSeek API provider adapter.
-class Prescient::Provider::DeepSeek < Prescient::Base
+# xAI API provider adapter.
+class Prescient::Provider::XAI < Prescient::Base
   include HTTParty
 
-  base_uri 'https://api.deepseek.com'
+  base_uri 'https://api.x.ai'
 
   def initialize(**options)
     super
-    @provider_name = 'DeepSeek'
+    @provider_name = 'xAI'
     self.class.default_timeout(@options[:timeout] || 60)
   end
 
-  # DeepSeek does not currently provide an embeddings endpoint.
+  # xAI does not expose a standard embeddings API for this adapter.
   # @raise [Prescient::Error] Always, because embeddings are unsupported
   def generate_embedding(_text, **_options)
-    raise Prescient::Error, 'DeepSeek provider does not support embeddings.'
+    raise Prescient::Error, 'xAI provider does not support embeddings.'
   end
 
-  # Generate a response through DeepSeek's OpenAI-compatible chat API.
+  # Generate a response through xAI's OpenAI-compatible chat API.
   # @param prompt [String] Prompt to send
   # @param context_items [Array<Hash, String>] Optional context items
   # @return [Hash] Normalized response data
@@ -28,7 +28,7 @@ class Prescient::Provider::DeepSeek < Prescient::Base
     handle_errors do
       model = options[:model] || @options[:chat_model]
       response = self.class.post(
-        '/chat/completions',
+        '/v1/chat/completions',
         headers: api_headers,
         body:    {
           model:       model,
@@ -48,7 +48,7 @@ class Prescient::Provider::DeepSeek < Prescient::Base
       {
         response:        content.strip,
         model:           model,
-        provider:        'deepseek',
+        provider:        'xai',
         processing_time: nil,
         metadata:        {
           usage:         parsed_response['usage'],
@@ -58,11 +58,11 @@ class Prescient::Provider::DeepSeek < Prescient::Base
     end
   end
 
-  # Check whether the configured DeepSeek model is available.
+  # Check whether the configured xAI model is available.
   # @return [Hash] Provider health information
   def health_check
     handle_errors do
-      response = self.class.get('/models', headers: api_headers)
+      response = self.class.get('/v1/models', headers: api_headers)
 
       if response.success?
         models = response.parsed_response['data'] || []
@@ -70,7 +70,7 @@ class Prescient::Provider::DeepSeek < Prescient::Base
 
         {
           status:           'healthy',
-          provider:         'deepseek',
+          provider:         'xai',
           reachable:        true,
           models_available: models.map { |model| model['id'] },
           chat_model:       { name: @options[:chat_model], available: model_available },
@@ -79,7 +79,7 @@ class Prescient::Provider::DeepSeek < Prescient::Base
       else
         {
           status:    'unhealthy',
-          provider:  'deepseek',
+          provider:  'xai',
           reachable: true,
           error:     "HTTP #{response.code}",
           message:   response.message,
@@ -90,7 +90,7 @@ class Prescient::Provider::DeepSeek < Prescient::Base
   rescue Prescient::Error => e
     {
       status:    'unavailable',
-      provider:  'deepseek',
+      provider:  'xai',
       reachable: false,
       error:     e.class.name,
       message:   e.message,
@@ -98,20 +98,20 @@ class Prescient::Provider::DeepSeek < Prescient::Base
     }
   end
 
-  # List models available to the configured DeepSeek API key.
+  # List models available to the configured xAI API key.
   # @return [Array<Hash>] Model descriptors
   def list_models
     handle_errors do
-      response = self.class.get('/models', headers: api_headers)
+      response = self.class.get('/v1/models', headers: api_headers)
       validate_response!(response, 'model listing')
 
       (response.parsed_response['data'] || []).map do |model|
         {
-          name:       model['id'],
-          object:     model['object'],
-          created:    model['created'],
-          owned_by:   model['owned_by'],
-          permission: model['permission'],
+          name:           model['id'],
+          object:         model['object'],
+          created:        model['created'],
+          owned_by:       model['owned_by'],
+          context_length: model['context_length'],
         }.compact
       end
     end

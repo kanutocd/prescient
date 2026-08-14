@@ -29,6 +29,7 @@ class Prescient::Provider::HuggingFace < Prescient::Base
 
   def initialize(**options)
     super
+    @provider_name = 'Hugging Face'
     self.class.default_timeout(@options[:timeout] || 60)
   end
 

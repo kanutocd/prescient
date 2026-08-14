@@ -11,6 +11,8 @@
 - Added Mistral environment-variable defaults and YAML configuration support.
 - Added DeepSeek provider support for text generation, health checks, and model listing.
 - Documented DeepSeek's unsupported embedding capability explicitly.
+- Added xAI provider support for text generation, health checks, and model listing.
+- Documented xAI's unsupported embedding capability explicitly.
 
 ### Changed
 

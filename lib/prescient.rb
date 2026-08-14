@@ -11,6 +11,7 @@ require_relative 'prescient/provider/huggingface'
 require_relative 'prescient/provider/gemini'
 require_relative 'prescient/provider/mistral'
 require_relative 'prescient/provider/deepseek'
+require_relative 'prescient/provider/xai'
 require_relative 'prescient/configuration_loader'
 require_relative 'prescient/client'
 require_relative 'prescient/cli'
@@ -199,6 +200,7 @@ module Prescient
       configure_gemini(config, env)
       configure_mistral(config, env)
       configure_deepseek(config, env)
+      configure_xai(config, env)
       configure_huggingface(config, env)
     end
 
@@ -273,6 +275,17 @@ module Prescient
         Prescient::Provider::DeepSeek,
         api_key:    env['DEEPSEEK_API_KEY'],
         chat_model: env.fetch('DEEPSEEK_CHAT_MODEL', 'deepseek-v4-flash'),
+      )
+    end
+
+    def configure_xai(config, env)
+      return unless env['XAI_API_KEY']
+
+      config.add_provider(
+        :xai,
+        Prescient::Provider::XAI,
+        api_key:    env['XAI_API_KEY'],
+        chat_model: env.fetch('XAI_CHAT_MODEL', 'grok-4.5'),
       )
     end
 

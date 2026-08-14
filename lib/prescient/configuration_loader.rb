@@ -36,6 +36,7 @@ class Prescient::ConfigurationLoader
     'gemini'      => Prescient::Provider::Gemini,
     'mistral'     => Prescient::Provider::Mistral,
     'deepseek'    => Prescient::Provider::DeepSeek,
+    'xai'         => Prescient::Provider::XAI,
   }.freeze
 
   # Provider-specific keys shared by all supported adapters.

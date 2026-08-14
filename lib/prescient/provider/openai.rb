@@ -17,6 +17,7 @@ class Prescient::Provider::OpenAI < Prescient::Base
 
   def initialize(**options)
     super
+    @provider_name = 'OpenAI'
     self.class.default_timeout(@options[:timeout] || 60)
   end
 

@@ -77,7 +77,8 @@
             "huggingface",
             "gemini",
             "mistral",
-            "deepseek"
+            "deepseek",
+            "xai"
           ]
         },
         "api_key": {

@@ -74,6 +74,11 @@ class Prescient::CLI
       #   api_key_env: DEEPSEEK_API_KEY
       #   chat_model: deepseek-v4-flash
 
+      # xai:
+      #   type: xai
+      #   api_key_env: XAI_API_KEY
+      #   chat_model: grok-4.5
+
       # huggingface:
       #   type: huggingface
       #   api_key_env: HUGGINGFACE_API_KEY

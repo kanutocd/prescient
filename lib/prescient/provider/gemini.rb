@@ -10,6 +10,7 @@ class Prescient::Provider::Gemini < Prescient::Base
 
   def initialize(**options)
     super
+    @provider_name = 'Google Gemini'
     self.class.default_timeout(@options[:timeout] || 60)
   end
 

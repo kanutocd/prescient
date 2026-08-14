@@ -111,6 +111,7 @@ class ConfigurationTest < PrescientTest
         'GEMINI_API_KEY',
         'MISTRAL_API_KEY',
         'DEEPSEEK_API_KEY',
+        'XAI_API_KEY',
       ],
     )
 
@@ -136,6 +137,7 @@ class ConfigurationTest < PrescientTest
         'GEMINI_API_KEY',
         'MISTRAL_API_KEY',
         'DEEPSEEK_API_KEY',
+        'XAI_API_KEY',
       ],
     )
 
@@ -145,7 +147,8 @@ class ConfigurationTest < PrescientTest
   def test_default_configuration_handles_provider_api_key_combinations
     [{}, { 'OPENAI_API_KEY' => 'openai-key' }, { 'ANTHROPIC_API_KEY' => 'anthropic-key' },
      { 'HUGGINGFACE_API_KEY' => 'huggingface-key' }, { 'GEMINI_API_KEY' => 'gemini-key' },
-     { 'MISTRAL_API_KEY' => 'mistral-key' }, { 'DEEPSEEK_API_KEY' => 'deepseek-key' }].each do |env|
+     { 'MISTRAL_API_KEY' => 'mistral-key' }, { 'DEEPSEEK_API_KEY' => 'deepseek-key' },
+     { 'XAI_API_KEY' => 'xai-key' }].each do |env|
       config = Prescient::Configuration.new
 
       Prescient.send(:configure_default_providers, config, env)
