@@ -1,0 +1,80 @@
+name: Deploy YARD docs to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/**/*.rb"
+      - "**/*.md"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:    
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+
+jobs:
+  build-docs:
+    name: Build YARD documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+
+      - name: Build YARD documentation
+        run: bundle exec rake yard
+
+      - name: Enforce YARD coverage
+        shell: bash
+        run: |
+          stats="$(bundle exec yard stats --no-progress --list-undoc --exclude sig)"
+          echo "$stats"
+
+          # shellcheck disable=SC2016
+          coverage="$(printf '%s\n' "$stats" | ruby -ne 'puts($1) if /([0-9]+(?:\.[0-9]+)?)% documented/ =~ $_')"
+
+          if [ -z "$coverage" ]; then
+            echo "Could not determine YARD documentation coverage."
+            exit 1
+          fi
+
+          ruby -e 'coverage = ARGV.fetch(0).to_f; abort("YARD documentation coverage #{coverage}% is below 99%") if coverage < 99.0' "$coverage"
+
+      - name: Disable Jekyll processing
+        run: touch doc/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: doc
+
+
+  deploy-docs:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: build-docs
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

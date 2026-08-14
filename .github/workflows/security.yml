@@ -2,47 +2,77 @@ name: Security
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
   pull_request:
-    branches: [main, develop]
   schedule:
-    # Run security checks daily at 2 AM UTC
-    - cron: "0 2 * * *"
+    - cron: "23 4 * * 1"
+
+permissions:
+  contents: read
 
 jobs:
-  dependency-check:
+  dependency-audit:
+    name: Ruby dependency audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.4"
+          ruby-version: "4.0.5"
           bundler-cache: true
 
-      - name: Install bundler-audit
-        run: gem install bundler-audit
+      - name: Install Bundler Audit
+        run: gem install bundler-audit --version 0.9.2 --no-document
 
-      - name: Update vulnerability database
-        run: bundler-audit --update
+      - name: Audit Ruby dependencies
+        run: bundler-audit check --update
 
-      - name: Run dependency security audit
-        run: bundler-audit
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
 
-      - name: Create security report
-        if: failure()
-        run: |
-          bundler-audit --format json > security-report.json
-          echo "Security vulnerabilities found. Check the artifact for details."
-
-      - name: Upload security report
-        if: failure()
-        uses: actions/upload-artifact@v4
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
         with:
-          name: security-report
-          path: security-report.json
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v5
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4.37.3
+        with:
+          languages: ruby
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4.37.3
 
   static-analysis:
     runs-on: ubuntu-latest
