@@ -42,6 +42,8 @@ class Prescient::CLI
     @errors = errors
   end
 
+  # Execute the CLI command and return its process status.
+  # @return [Integer] Process exit status
   def run
     config_path = extract_global_config_path
     Prescient.load_configuration(config_path) if config_path || ENV['PRESCIENT_CONFIG']
@@ -52,6 +54,9 @@ class Prescient::CLI
     run_command(command)
   end
 
+  # Dispatch a parsed command to its handler.
+  # @param command [String] Command name
+  # @return [Integer] Process exit status
   def run_command(command)
     case command
     when 'providers' then providers

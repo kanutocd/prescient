@@ -9,6 +9,7 @@ require_relative 'prescient/provider/anthropic'
 require_relative 'prescient/provider/openai'
 require_relative 'prescient/provider/huggingface'
 require_relative 'prescient/provider/gemini'
+require_relative 'prescient/provider/mistral'
 require_relative 'prescient/configuration_loader'
 require_relative 'prescient/client'
 require_relative 'prescient/cli'
@@ -195,6 +196,7 @@ module Prescient
       configure_openai(config, env)
       configure_anthropic(config, env)
       configure_gemini(config, env)
+      configure_mistral(config, env)
       configure_huggingface(config, env)
     end
 
@@ -258,6 +260,18 @@ module Prescient
           'HUGGINGFACE_CHAT_MODEL',
           'google/gemma-2-2b-it',
         ),
+      )
+    end
+
+    def configure_mistral(config, env)
+      return unless env['MISTRAL_API_KEY']
+
+      config.add_provider(
+        :mistral,
+        Prescient::Provider::Mistral,
+        api_key:         env['MISTRAL_API_KEY'],
+        embedding_model: env.fetch('MISTRAL_EMBEDDING_MODEL', 'mistral-embed'),
+        chat_model:      env.fetch('MISTRAL_CHAT_MODEL', 'mistral-large-latest'),
       )
     end
   end

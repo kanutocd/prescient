@@ -6,6 +6,12 @@
 
 - Added Google Gemini provider support for text generation, embeddings, health checks, and model listing.
 - Added Gemini environment-variable defaults and YAML configuration support.
+- Added Mistral provider support for text generation, embeddings, health checks, and model listing.
+- Added Mistral environment-variable defaults and YAML configuration support.
+
+### Changed
+
+- Raised YARD documentation coverage enforcement from 99% to 100%.
 
 ## [0.4.0] - 2025-08-14
 

@@ -154,6 +154,46 @@ module Prescient
       def validate_configuration!: () -> void
       def validate_response!: (untyped, String) -> void
     end
+
+    class Gemini < Base
+      def self.base_uri: (String) -> untyped
+      def self.default_timeout: (Integer) -> untyped
+      def self.get: (String, **untyped) -> untyped
+      def self.post: (String, **untyped) -> untyped
+
+      def initialize: (**untyped) -> void
+      def generate_embedding: (String, **untyped) -> Array[Float]
+      def generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
+      def health_check: () -> Hash[Symbol, untyped]
+      def list_models: () -> Array[Hash[Symbol, untyped]]
+
+      private
+
+      def validate_configuration!: () -> void
+      def api_headers: () -> Hash[String, String]
+      def model_endpoint: (untyped, String) -> String
+      def find_model: (Array[untyped], untyped, String) -> bool
+    end
+
+    class Mistral < Base
+      def self.base_uri: (String) -> untyped
+      def self.default_timeout: (Integer) -> untyped
+      def self.get: (String, **untyped) -> untyped
+      def self.post: (String, **untyped) -> untyped
+
+      def initialize: (**untyped) -> void
+      def generate_embedding: (String, **untyped) -> Array[Float]
+      def generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
+      def health_check: () -> Hash[Symbol, untyped]
+      def list_models: () -> Array[Hash[Symbol, untyped]]
+
+      private
+
+      def validate_configuration!: () -> void
+      def api_headers: () -> Hash[String, String]
+      def model_available?: (Array[untyped], untyped) -> bool
+      def normalize_content: (untyped) -> String?
+    end
   end
 
   module Pgvector
@@ -222,9 +262,29 @@ module Prescient
     def run: () -> Integer
   end
 
+  class ConfigurationLoader
+    CONFIGURATION_VERSION: Integer
+    TOP_LEVEL_KEYS: Array[String]
+    PROVIDER_TYPES: Hash[String, untyped]
+    COMMON_PROVIDER_KEYS: Array[String]
+    ATTR_KEYS: Array[String]
+
+    def self.load_file: (String, ?env: untyped) -> Configuration
+    def self.load_yaml: (String, ?env: untyped) -> Configuration
+    def self.load_hash: (Hash[untyped, untyped], ?env: untyped) -> Configuration
+    def self.schema_path: () -> String
+
+    def initialize: (?untyped) -> void
+    def load_file: (String) -> Configuration
+    def load_yaml: (String, ?source: String?) -> Configuration
+    def load_hash: (untyped, ?source: String?) -> Configuration
+    def apply!: (Configuration, untyped, ?source: String?) -> Configuration
+  end
+
   def self.configure: () { (Configuration) -> void } -> void
   def self.configuration: () -> Configuration
   def self.reset_configuration!: () -> Configuration
+  def self.load_configuration: (?String?, ?env: untyped) -> Configuration
   def self.client: (?Symbol, ?enable_fallback: bool, ?provider_options: Hash[Symbol, untyped]) -> Client
   def self.generate_embedding: (String, ?provider: Symbol, ?enable_fallback: bool, **untyped) -> Array[Float]
   def self.generate_response: (String, ?Array[untyped], ?provider: Symbol, ?enable_fallback: bool, **untyped) -> Hash[Symbol, untyped]
@@ -233,4 +293,10 @@ module Prescient
   private
 
   def self.configure_default_providers: (Configuration, untyped) -> void
+  def self.configure_ollama: (Configuration, untyped) -> void
+  def self.configure_openai: (Configuration, untyped) -> void
+  def self.configure_anthropic: (Configuration, untyped) -> void
+  def self.configure_gemini: (Configuration, untyped) -> void
+  def self.configure_mistral: (Configuration, untyped) -> void
+  def self.configure_huggingface: (Configuration, untyped) -> void
 end

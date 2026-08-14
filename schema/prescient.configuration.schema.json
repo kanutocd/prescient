@@ -75,7 +75,8 @@
             "anthropic",
             "openai",
             "huggingface",
-            "gemini"
+            "gemini",
+            "mistral"
           ]
         },
         "api_key": {

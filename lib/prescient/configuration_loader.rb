@@ -5,8 +5,10 @@ require 'yaml'
 
 # Load and validate Prescient configuration data from YAML.
 class Prescient::ConfigurationLoader
+  # Supported YAML configuration schema version.
   CONFIGURATION_VERSION = 1
 
+  # Allowed top-level configuration keys.
   TOP_LEVEL_KEYS = [
     '$schema',
     'default_provider',
@@ -25,14 +27,17 @@ class Prescient::ConfigurationLoader
     'version',
   ].freeze
 
+  # Provider names mapped to their adapter classes.
   PROVIDER_TYPES = {
     'ollama'      => Prescient::Provider::Ollama,
     'anthropic'   => Prescient::Provider::Anthropic,
     'openai'      => Prescient::Provider::OpenAI,
     'huggingface' => Prescient::Provider::HuggingFace,
     'gemini'      => Prescient::Provider::Gemini,
+    'mistral'     => Prescient::Provider::Mistral,
   }.freeze
 
+  # Provider-specific keys shared by all supported adapters.
   COMMON_PROVIDER_KEYS = [
     'api_key',
     'api_key_env',
@@ -52,6 +57,7 @@ class Prescient::ConfigurationLoader
     'url_env',
   ].freeze
 
+  # Configuration attributes supported by the loader.
   ATTR_KEYS = [
     'default_provider',
     'fallback_providers',
@@ -62,14 +68,26 @@ class Prescient::ConfigurationLoader
   ].freeze
 
   class << self
+    # Load and validate configuration from a YAML file.
+    # @param path [String] Configuration file path
+    # @param env [Hash] Environment variables used during expansion
+    # @return [Prescient::Configuration] Loaded configuration
     def load_file(path, env: ENV)
       new(env).load_file(path)
     end
 
+    # Load and validate configuration from YAML content.
+    # @param content [String] YAML configuration content
+    # @param env [Hash] Environment variables used during expansion
+    # @return [Prescient::Configuration] Loaded configuration
     def load_yaml(content, env: ENV)
       new(env).load_yaml(content)
     end
 
+    # Load and validate configuration from a Ruby hash.
+    # @param data [Hash] Configuration data
+    # @param env [Hash] Environment variables used during expansion
+    # @return [Prescient::Configuration] Loaded configuration
     def load_hash(data, env: ENV)
       new(env).load_hash(data)
     end
@@ -79,12 +97,19 @@ class Prescient::ConfigurationLoader
     @env = env
   end
 
+  # Load configuration from a YAML file.
+  # @param path [String] Configuration file path
+  # @return [Prescient::Configuration] Loaded configuration
   def load_file(path)
     load_yaml(File.read(path), source: path)
   rescue Errno::ENOENT
     raise Prescient::Error, "Configuration file not found: #{path}"
   end
 
+  # Load configuration from YAML content.
+  # @param content [String] YAML configuration content
+  # @param source [String, nil] Source label used in validation errors
+  # @return [Prescient::Configuration] Loaded configuration
   def load_yaml(content, source: nil)
     data = YAML.safe_load(content, permitted_classes: [], permitted_symbols: [], aliases: true)
     load_hash(data || {}, source:)
@@ -92,6 +117,10 @@ class Prescient::ConfigurationLoader
     raise Prescient::Error, "Invalid YAML configuration#{" in #{source}" if source}: #{e.message}"
   end
 
+  # Load configuration from a Ruby hash.
+  # @param data [Hash] Configuration data
+  # @param source [String, nil] Source label used in validation errors
+  # @return [Prescient::Configuration] Loaded configuration
   def load_hash(data, source: nil)
     configuration = Prescient::Configuration.new
     Prescient.send(:configure_default_providers, configuration, @env)
@@ -99,6 +128,11 @@ class Prescient::ConfigurationLoader
     configuration
   end
 
+  # Apply validated configuration data to an existing configuration object.
+  # @param configuration [Prescient::Configuration] Target configuration
+  # @param data [Hash] Configuration data
+  # @param source [String, nil] Source label used in validation errors
+  # @return [Prescient::Configuration] Updated configuration
   def apply!(configuration, data, source: nil)
     normalized = normalize_keys(data)
     validate_root!(normalized, source:)
@@ -109,6 +143,8 @@ class Prescient::ConfigurationLoader
     configuration
   end
 
+  # Return the packaged JSON Schema path.
+  # @return [String] Absolute path to the configuration schema
   def self.schema_path
     File.expand_path('../../schema/prescient.configuration.schema.json', __dir__)
   end

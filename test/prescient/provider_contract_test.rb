@@ -9,6 +9,7 @@ class ProviderContractTest < PrescientTest
     openai:      Prescient::Provider::OpenAI,
     huggingface: Prescient::Provider::HuggingFace,
     gemini:      Prescient::Provider::Gemini,
+    mistral:     Prescient::Provider::Mistral,
   }.freeze
 
   PROVIDER_CONFIGS = {
@@ -35,6 +36,11 @@ class ProviderContractTest < PrescientTest
       api_key:         'test-api-key',
       embedding_model: 'gemini-embedding-001',
       chat_model:      'gemini-2.5-flash',
+    },
+    mistral:     {
+      api_key:         'test-api-key',
+      embedding_model: 'mistral-embed',
+      chat_model:      'mistral-large-latest',
     },
   }.freeze
   HEALTH_STATUSES = ['healthy', 'partial', 'unhealthy', 'unavailable'].freeze
