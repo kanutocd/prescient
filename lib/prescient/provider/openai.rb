@@ -185,25 +185,4 @@ class Prescient::Provider::OpenAI < Prescient::Base
     raise Prescient::Error, "Missing required options: #{missing_options.join(', ')}"
   end
 
-  private
-
-  def validate_response!(response, operation)
-    return if response.success?
-
-    case response.code
-    when 400
-      raise Prescient::Error, "Bad request for #{operation}: #{response.body}"
-    when 401
-      raise Prescient::AuthenticationError, "Authentication failed for #{operation}"
-    when 403
-      raise Prescient::AuthenticationError, "Forbidden access for #{operation}"
-    when 429
-      raise Prescient::RateLimitError, "Rate limit exceeded for #{operation}"
-    when 500..599
-      raise Prescient::ProviderError, "OpenAI server error during #{operation}: #{response.body}"
-    else
-      raise Prescient::Error,
-            "OpenAI request failed for #{operation}: HTTP #{response.code} - #{response.message}"
-    end
-  end
 end

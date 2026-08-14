@@ -161,44 +161,53 @@ module Prescient
     end
   end
 
-  # Default configuration
-  configure do |config|
-    config.add_provider(:ollama,
-                        Prescient::Provider::Ollama,
-                        url:             ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
-                        embedding_model: ENV.fetch('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text'),
-                        chat_model:      ENV.fetch('OLLAMA_CHAT_MODEL', 'llama3.2:3b'))
-    if ENV['OPENAI_API_KEY']
-      config.add_provider(
-        :openai,
-        Prescient::Provider::OpenAI,
-        api_key:         ENV['OPENAI_API_KEY'],
-        embedding_model: ENV.fetch('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
-        chat_model:      ENV.fetch('OPENAI_CHAT_MODEL', 'gpt-4.1-mini'),
-      )
-    end
-    if ENV['ANTHROPIC_API_KEY']
-      config.add_provider(
-        :anthropic,
-        Prescient::Provider::Anthropic,
-        api_key: ENV['ANTHROPIC_API_KEY'],
-        model:   ENV.fetch('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
-      )
-    end
-    if ENV['HUGGINGFACE_API_KEY']
+  class << self
+    private
+
+    def configure_default_providers(config, env)
+      config.add_provider(:ollama,
+                          Prescient::Provider::Ollama,
+                          url:             env.fetch('OLLAMA_URL', 'http://localhost:11434'),
+                          embedding_model: env.fetch('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text'),
+                          chat_model:      env.fetch('OLLAMA_CHAT_MODEL', 'llama3.2:3b'))
+      if env['OPENAI_API_KEY']
+        config.add_provider(
+          :openai,
+          Prescient::Provider::OpenAI,
+          api_key:         env['OPENAI_API_KEY'],
+          embedding_model: env.fetch('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+          chat_model:      env.fetch('OPENAI_CHAT_MODEL', 'gpt-4.1-mini'),
+        )
+      end
+      if env['ANTHROPIC_API_KEY']
+        config.add_provider(
+          :anthropic,
+          Prescient::Provider::Anthropic,
+          api_key: env['ANTHROPIC_API_KEY'],
+          model:   env.fetch('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+        )
+      end
+
+      return unless env['HUGGINGFACE_API_KEY']
+
       config.add_provider(
         :huggingface,
         Prescient::Provider::HuggingFace,
-        api_key:         ENV['HUGGINGFACE_API_KEY'],
-        embedding_model: ENV.fetch(
+        api_key:         env['HUGGINGFACE_API_KEY'],
+        embedding_model: env.fetch(
           'HUGGINGFACE_EMBEDDING_MODEL',
           'sentence-transformers/all-MiniLM-L6-v2',
         ),
-        chat_model:      ENV.fetch(
+        chat_model:      env.fetch(
           'HUGGINGFACE_CHAT_MODEL',
           'google/gemma-2-2b-it',
         ),
       )
     end
+  end
+
+  # Default configuration
+  configure do |config|
+    configure_default_providers(config, ENV)
   end
 end

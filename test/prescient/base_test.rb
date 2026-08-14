@@ -25,6 +25,19 @@ class BaseTest < PrescientTest
     assert_equal 'test', @provider.options[:api_key]
   end
 
+  def test_response_errors_exclude_raw_response_bodies
+    response = mock('response')
+    response.stubs(success?: false, code: 500, body: 'sensitive provider detail')
+
+    error = assert_raises(Prescient::ProviderError) { @provider.send(:validate_response!, response, 'embedding') }
+
+    assert_equal "#{@provider.provider_name} Server Error", error.message
+    assert_equal @provider.provider_name, error.provider
+    assert_equal 'embedding', error.operation
+    assert_equal 500, error.status
+    refute_includes error.message, 'sensitive provider detail'
+  end
+
   def test_initialize_calls_validate_configuration
     @test_provider_class.any_instance.expects(:validate_configuration!)
     @test_provider_class.new(api_key: 'test')

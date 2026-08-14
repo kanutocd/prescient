@@ -182,36 +182,19 @@ class Prescient::Provider::HuggingFace < Prescient::Base
 
   private
 
-  def validate_response!(response, operation)
-    return if response.success?
-
-    case response.code
-    when 400
-      raise Prescient::Error, "Bad request for #{operation}: #{response.body}"
-    when 401
-      raise Prescient::AuthenticationError, "Authentication failed for #{operation}"
-    when 403
-      raise Prescient::AuthenticationError, "Forbidden access for #{operation}"
-    when 429
-      raise Prescient::RateLimitError, "Rate limit exceeded for #{operation}"
-    when 503
+  def provider_error(message, response, operation:, provider: nil, error_class: Prescient::ProviderError)
+    if response.code == 503
       # HuggingFace model loading
       error_body = begin
         response.parsed_response
       rescue StandardError
-        response.body
+        nil
       end
       if error_body.is_a?(Hash) && error_body['error']&.include?('loading')
-        raise Prescient::ProviderError, 'Model is loading, please try again later'
+        message = 'Model is loading, please try again later'
       end
-
-      raise Prescient::ProviderError, "HuggingFace service unavailable for #{operation}"
-
-    when 500..599
-      raise Prescient::ProviderError, "HuggingFace server error during #{operation}: #{response.body}"
-    else
-      raise Prescient::Error,
-            "HuggingFace request failed for #{operation}: HTTP #{response.code} - #{response.message}"
     end
+
+    super
   end
 end

@@ -30,7 +30,7 @@ require 'net/http'
 #
 class Prescient::Base
   # @return [Hash] Configuration options for this provider instance
-  attr_reader :options
+  attr_reader :options, :provider_name
 
   # Initialize the provider with configuration options
   #
@@ -45,6 +45,7 @@ class Prescient::Base
   #   field names excluded from generic embedding text
   def initialize(**options)
     @options = options
+    @provider_name = options.fetch(:provider_name, self.class.to_s.split('::').last).to_s.sub(/\A./, &:upcase)
     validate_configuration!
   end
 
@@ -392,5 +393,37 @@ class Prescient::Base
   def fallback_format_hash(item, format_data = nil)
     # Fallback: join key-value pairs
     (format_data || item).map { |k, v| "#{k}: #{v}" }.join(', ')
+  end
+
+  def validate_response!(response, operation)
+    return if response.success?
+
+    resp_message, error_class = case response.code
+                                when 400
+                                  ['Bad Request', Prescient::Error]
+                                when 401
+                                  ['Authentication Failure', Prescient::AuthenticationError]
+                                when 403
+                                  ['Forbidden Access', Prescient::AuthenticationError]
+                                when 404
+                                  ['Model Not Available', Prescient::ModelNotAvailableError]
+                                when 429
+                                  ['Rate Limit Exceeded', Prescient::RateLimitError]
+                                when 500..599
+                                  ["#{provider_name} Server Error", Prescient::ProviderError]
+                                else
+                                  ["#{provider_name} Request Failure", Prescient::Error]
+                                end
+
+    raise provider_error(resp_message, response, error_class:, operation:)
+  end
+
+  def provider_error(message, response, operation:, provider: nil, error_class: Prescient::ProviderError)
+    error_class.new(
+      message,
+      provider:  provider || provider_name,
+      operation:,
+      status:    response.code,
+    )
   end
 end

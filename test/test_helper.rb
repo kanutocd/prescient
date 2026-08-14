@@ -5,7 +5,7 @@ require 'simplecov'
 SimpleCov.start do
   enable_coverage :branch
   add_filter '/test/'
-  minimum_coverage line: 99, branch: 98
+  minimum_coverage line: 99, branch: 99
 end
 
 require 'bundler/setup'
@@ -72,5 +72,3 @@ class PrescientTest < Minitest::Test
     stdout
   end
 end
-
-$LOAD_PATH.unshift File.expand_path('../agent/lib', __dir__)

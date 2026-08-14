@@ -2,7 +2,19 @@
 
 module Prescient
   # Base error class for all Prescient-specific errors
-  class Error < StandardError; end
+  class Error < StandardError
+    attr_reader :provider
+    attr_reader :operation
+    attr_reader :status
+
+    def initialize(message = nil, provider: nil, operation: nil, status: nil)
+      super(message)
+
+      @provider = provider
+      @operation = operation
+      @status = status
+    end
+  end
 
   # Raised when there are connection issues with AI providers
   class ConnectionError < Error; end

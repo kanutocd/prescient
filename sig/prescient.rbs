@@ -5,6 +5,11 @@ module Prescient
   VERSION: String
 
   class Error < StandardError
+    attr_reader provider: String?
+    attr_reader operation: String?
+    attr_reader status: Integer?
+
+    def initialize: (?String?, ?provider: String?, ?operation: String?, ?status: Integer?) -> void
   end
 
   class ConnectionError < Error
@@ -27,6 +32,7 @@ module Prescient
 
   class Base
     attr_reader options: Hash[Symbol, untyped]
+    attr_reader provider_name: String
 
     def initialize: (**untyped) -> void
     def generate_embedding: (String, **untyped) -> Array[Float]
@@ -57,6 +63,8 @@ module Prescient
     def find_best_field_match: (Array[String], Hash[untyped, untyped]) -> String?
     def calculate_field_match_score: (Array[String], Array[String]) -> Numeric
     def fallback_format_hash: (Hash[untyped, untyped], ?Hash[Symbol, untyped]) -> String
+    def validate_response!: (untyped, String) -> void
+    def provider_error: (String, untyped, operation: String, ?provider: untyped, ?error_class: untyped) -> Error
   end
 
   module Provider
@@ -120,6 +128,7 @@ module Prescient
 
       def validate_configuration!: () -> void
       def validate_response!: (untyped, String) -> void
+      def provider_error: (String, untyped, operation: String, ?provider: untyped, ?error_class: untyped) -> Error
     end
 
     class HuggingFace < Base
@@ -192,4 +201,8 @@ module Prescient
   def self.generate_embedding: (String, ?provider: Symbol, ?enable_fallback: bool, **untyped) -> Array[Float]
   def self.generate_response: (String, ?Array[untyped], ?provider: Symbol, ?enable_fallback: bool, **untyped) -> Hash[Symbol, untyped]
   def self.health_check: (?provider: Symbol) -> Hash[Symbol, untyped]
+
+  private
+
+  def self.configure_default_providers: (Configuration, untyped) -> void
 end

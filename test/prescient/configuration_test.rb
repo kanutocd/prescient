@@ -135,4 +135,16 @@ class ConfigurationTest < PrescientTest
 
     assert_empty output
   end
+
+  def test_default_configuration_handles_provider_api_key_combinations
+    [{}, { 'OPENAI_API_KEY' => 'openai-key' }, { 'ANTHROPIC_API_KEY' => 'anthropic-key' },
+     { 'HUGGINGFACE_API_KEY' => 'huggingface-key' }].each do |env|
+      config = Prescient::Configuration.new
+
+      Prescient.send(:configure_default_providers, config, env)
+
+      assert_equal [:ollama, *env.keys.map { |name| name.delete_suffix('_API_KEY').downcase.to_sym }].sort,
+                   config.providers.keys.sort
+    end
+  end
 end

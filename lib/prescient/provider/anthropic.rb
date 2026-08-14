@@ -144,24 +144,4 @@ class Prescient::Provider::Anthropic < Prescient::Base
       'anthropic-version' => '2023-06-01',
     }
   end
-
-  def validate_response!(response, operation)
-    return if response.success?
-
-    case response.code
-    when 400
-      raise Prescient::Error, "Bad request for #{operation}: #{response.body}"
-    when 401
-      raise Prescient::AuthenticationError, "Authentication failed for #{operation}"
-    when 403
-      raise Prescient::AuthenticationError, "Forbidden access for #{operation}"
-    when 429
-      raise Prescient::RateLimitError, "Rate limit exceeded for #{operation}"
-    when 500..599
-      raise Prescient::ProviderError, "Anthropic server error during #{operation}: #{response.body}"
-    else
-      raise Prescient::Error,
-            "Anthropic request failed for #{operation}: HTTP #{response.code} - #{response.message}"
-    end
-  end
 end

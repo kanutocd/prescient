@@ -180,21 +180,4 @@ class Prescient::Provider::Ollama < Prescient::Base
     response.parsed_response[root_key]
   end
 
-  def validate_response!(response, operation)
-    return if response.success?
-
-    case response.code
-    when 404
-      raise Prescient::ModelNotAvailableError, "Model not available for #{operation}"
-    when 429
-      raise Prescient::RateLimitError, "Rate limit exceeded for #{operation}"
-    when 401, 403
-      raise Prescient::AuthenticationError, "Authentication failed for #{operation}"
-    when 500..599
-      raise Prescient::ProviderError, "Ollama server error during #{operation}: #{response.body}"
-    else
-      raise Prescient::Error,
-            "Ollama request failed for #{operation}: HTTP #{response.code} - #{response.message}"
-    end
-  end
 end
