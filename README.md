@@ -1,6 +1,6 @@
 # Prescient
 
-Prescient is a boring AI provider abstraction for Ruby. Configure your AI providers once, then use the same interface regardless of whether the request is handled by OpenAI, Anthropic, Ollama, Hugging Face, Google Gemini, or Mistral. Prescient handles provider selection, retries, health checks, and fallback.
+Prescient is a boring AI provider abstraction for Ruby. Configure your AI providers once, then use the same interface regardless of whether the request is handled by OpenAI, Anthropic, Ollama, Hugging Face, Google Gemini, Mistral, or DeepSeek. Prescient handles provider selection, retries, health checks, and fallback.
 
 For focused guidance, see the **[examples guide](https://github.com/kanutocd/prescient/tree/main/examples)**,
 **[Rails integration guide](https://github.com/kanutocd/prescient/blob/main/INTEGRATION_GUIDE.md)**, and
@@ -53,6 +53,12 @@ For focused guidance, see the **[examples guide](https://github.com/kanutocd/pre
 - **Models**: Mistral chat and embedding models
 - **Capabilities**: Embeddings, Text Generation
 - **Use Case**: Mistral AI hosted models
+
+### DeepSeek
+
+- **Models**: DeepSeek chat models
+- **Capabilities**: Text Generation only (no embeddings)
+- **Use Case**: DeepSeek hosted reasoning and chat models
 
 ## Installation
 
@@ -220,6 +226,10 @@ GEMINI_CHAT_MODEL=gemini-2.5-flash
 MISTRAL_API_KEY=your_api_key
 MISTRAL_EMBEDDING_MODEL=mistral-embed
 MISTRAL_CHAT_MODEL=mistral-large-latest
+
+# DeepSeek
+DEEPSEEK_API_KEY=your_api_key
+DEEPSEEK_CHAT_MODEL=deepseek-v4-flash
 ```
 
 ### Programmatic Configuration
@@ -266,6 +276,12 @@ Prescient.configure do |config|
     api_key: ENV['MISTRAL_API_KEY'],
     embedding_model: 'mistral-embed',
     chat_model: 'mistral-large-latest'
+  )
+
+  # Add DeepSeek
+  config.add_provider(:deepseek, Prescient::Provider::DeepSeek,
+    api_key: ENV['DEEPSEEK_API_KEY'],
+    chat_model: 'deepseek-v4-flash'
   )
 end
 ```

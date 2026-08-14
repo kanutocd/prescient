@@ -10,6 +10,7 @@ require_relative 'prescient/provider/openai'
 require_relative 'prescient/provider/huggingface'
 require_relative 'prescient/provider/gemini'
 require_relative 'prescient/provider/mistral'
+require_relative 'prescient/provider/deepseek'
 require_relative 'prescient/configuration_loader'
 require_relative 'prescient/client'
 require_relative 'prescient/cli'
@@ -197,6 +198,7 @@ module Prescient
       configure_anthropic(config, env)
       configure_gemini(config, env)
       configure_mistral(config, env)
+      configure_deepseek(config, env)
       configure_huggingface(config, env)
     end
 
@@ -260,6 +262,17 @@ module Prescient
           'HUGGINGFACE_CHAT_MODEL',
           'google/gemma-2-2b-it',
         ),
+      )
+    end
+
+    def configure_deepseek(config, env)
+      return unless env['DEEPSEEK_API_KEY']
+
+      config.add_provider(
+        :deepseek,
+        Prescient::Provider::DeepSeek,
+        api_key:    env['DEEPSEEK_API_KEY'],
+        chat_model: env.fetch('DEEPSEEK_CHAT_MODEL', 'deepseek-v4-flash'),
       )
     end
 

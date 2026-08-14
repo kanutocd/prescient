@@ -194,6 +194,24 @@ module Prescient
       def model_available?: (Array[untyped], untyped) -> bool
       def normalize_content: (untyped) -> String?
     end
+
+    class DeepSeek < Base
+      def self.base_uri: (String) -> untyped
+      def self.default_timeout: (Integer) -> untyped
+      def self.get: (String, **untyped) -> untyped
+      def self.post: (String, **untyped) -> untyped
+
+      def initialize: (**untyped) -> void
+      def generate_embedding: (String, **untyped) -> untyped
+      def generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
+      def health_check: () -> Hash[Symbol, untyped]
+      def list_models: () -> Array[Hash[Symbol, untyped]]
+
+      private
+
+      def validate_configuration!: () -> void
+      def api_headers: () -> Hash[String, String]
+    end
   end
 
   module Pgvector
@@ -298,5 +316,6 @@ module Prescient
   def self.configure_anthropic: (Configuration, untyped) -> void
   def self.configure_gemini: (Configuration, untyped) -> void
   def self.configure_mistral: (Configuration, untyped) -> void
+  def self.configure_deepseek: (Configuration, untyped) -> void
   def self.configure_huggingface: (Configuration, untyped) -> void
 end

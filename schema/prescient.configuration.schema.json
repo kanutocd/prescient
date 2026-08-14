@@ -76,7 +76,8 @@
             "openai",
             "huggingface",
             "gemini",
-            "mistral"
+            "mistral",
+            "deepseek"
           ]
         },
         "api_key": {

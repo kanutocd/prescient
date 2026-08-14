@@ -8,6 +8,8 @@
 - Added Gemini environment-variable defaults and YAML configuration support.
 - Added Mistral provider support for text generation, embeddings, health checks, and model listing.
 - Added Mistral environment-variable defaults and YAML configuration support.
+- Added DeepSeek provider support for text generation, health checks, and model listing.
+- Documented DeepSeek's unsupported embedding capability explicitly.
 
 ### Changed
 
