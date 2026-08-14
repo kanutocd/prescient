@@ -17,6 +17,7 @@
 - Updated default chat model names and README examples for current Ollama, Anthropic, OpenAI, and Hugging Face model selections.
 - Updated Hugging Face inference to use the current router feature-extraction and OpenAI-compatible chat-completion APIs.
 - Added credentialed, provider-selected live smoke tests that remain skipped by default.
+- Restored the RBS/Steep development tasks with a committed Steepfile and curated core API signatures.
 
 ### Removed
 

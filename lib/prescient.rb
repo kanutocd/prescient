@@ -90,7 +90,7 @@ module Prescient
       @retry_delay = 1.0
       @fallback_providers = []
       @providers = {}
-      @provider_instances = {}
+      @provider_instances = {} # : Hash[Symbol, untyped]
     end
 
     # Register a new AI provider
@@ -126,7 +126,8 @@ module Prescient
       provider_config = @providers[provider_name]
       return nil unless provider_config
 
-      @provider_instances[provider_name] ||= provider_config[:class].new(**provider_config[:options])
+      provider_options = provider_config[:options] # : Hash[Symbol, untyped]
+      @provider_instances[provider_name] ||= provider_config[:class].new(**provider_options)
     end
 
     # Get list of available providers (those that are configured and healthy)

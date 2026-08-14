@@ -910,6 +910,21 @@ Supported provider names are `ollama`, `anthropic`, `openai`, and
 overrides are honored. These tests are never live unless both opt-in
 variables are set.
 
+### RBS and Steep
+
+Validate the curated core API signatures with:
+
+```bash
+bundle exec rake rbs:validate
+```
+
+Generate disposable prototypes for comparison with:
+
+```bash
+bundle exec rake rbs:prototype
+bundle exec rake rbs:diff
+```
+
 After checking out the repo, run:
 
 ```bash

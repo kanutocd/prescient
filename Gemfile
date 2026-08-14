@@ -17,6 +17,7 @@ gem "simplecov", "~> 0.22.0"
 gem "rake", "~> 13.4"
 gem "irb", "~> 1.18"
 gem "yard", "~> 0.9.45"
+gem "steep", "~> 1.10"
 # Optional dependencies for vector database integration
 # PostgreSQL adapter for pgvector integration
 gem "pg", "~> 1.6"

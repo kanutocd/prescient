@@ -1,4 +1,84 @@
 module Prescient
   VERSION: String
-  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+  class Error < StandardError
+  end
+
+  class ConnectionError < Error
+  end
+
+  class AuthenticationError < Error
+  end
+
+  class RateLimitError < Error
+  end
+
+  class ModelNotAvailableError < Error
+  end
+
+  class InvalidResponseError < Error
+  end
+
+  class ProviderError < Error
+  end
+
+  class Base
+  end
+
+  module Provider
+    class Ollama < Base
+    end
+
+    class Anthropic < Base
+    end
+
+    class OpenAI < Base
+    end
+
+    class HuggingFace < Base
+    end
+  end
+
+  class Configuration
+    attr_accessor default_provider: Symbol
+    attr_accessor timeout: Integer
+    attr_accessor retry_attempts: Integer
+    attr_accessor retry_delay: Float
+    attr_accessor fallback_providers: Array[Symbol]
+    attr_reader providers: Hash[Symbol, Hash[Symbol, untyped]]
+
+    def initialize: () -> void
+    def add_provider: (Symbol | String, Class, **untyped) -> void
+    def provider: (Symbol | String) -> untyped
+    def available_providers: () -> Array[Symbol]
+  end
+
+  class Client
+    attr_reader provider_name: Symbol
+    attr_reader provider: untyped
+
+    def initialize: (?Symbol, ?enable_fallback: bool) -> void
+    def generate_embedding: (String, **untyped) -> Array[Float]
+    def generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
+    def health_check: () -> Hash[Symbol, untyped]
+    def available?: () -> bool
+    def provider_info: () -> Hash[Symbol, untyped]
+
+    private
+
+    def sanitize_options: (Hash[untyped, untyped]) -> Hash[untyped, untyped]
+    def with_error_handling: () { () -> untyped } -> untyped
+    def with_fallback_handling: (Symbol, *untyped, **untyped) -> untyped
+    def provider_for: (Symbol, Integer) -> untyped
+    def providers_to_try: () -> Array[Symbol]
+    def fallback_eligible?: (Error) -> bool
+  end
+
+  def self.configure: () { (Configuration) -> void } -> void
+  def self.configuration: () -> Configuration
+  def self.reset_configuration!: () -> Configuration
+  def self.client: (?Symbol, ?enable_fallback: bool) -> Client
+  def self.generate_embedding: (String, ?provider: Symbol, ?enable_fallback: bool, **untyped) -> Array[Float]
+  def self.generate_response: (String, ?Array[untyped], ?provider: Symbol, ?enable_fallback: bool, **untyped) -> Hash[Symbol, untyped]
+  def self.health_check: (?provider: Symbol) -> Hash[Symbol, untyped]
 end
