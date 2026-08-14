@@ -96,7 +96,7 @@ printf '%s' "Explain PostgreSQL logical replication" | \
   prescient generate --provider openai --format json
 ```
 
-Example JSON output:
+OpenAI example JSON output:
 
 ```json
 {
@@ -109,6 +109,35 @@ Example JSON output:
             "prompt_tokens": 38,
             "completion_tokens": 632,
             "total_tokens": 670,
+            "prompt_tokens_details": {
+                "cached_tokens": 0,
+                "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+                "reasoning_tokens": 0,
+                "audio_tokens": 0,
+                "accepted_prediction_tokens": 0,
+                "rejected_prediction_tokens": 0
+            }
+        },
+        "finish_reason": "stop"
+    }
+}
+```
+
+Anthropic example JSON outout:
+
+```json
+{
+    "response": "PostgreSQL logical replication is a method of replicating data between PostgreSQL databases that allows fine-grained control over which data is replicated and how it is applied. Unlike physical replication, which copies the entire database cluster at the storage level, logical replication works at the level of individual database changes, such as INSERT, UPDATE, and DELETE operations.\n\n### Key Features of PostgreSQL Logical Replication:\n\n1. **Row-Level Changes:** Logical replication replicates changes at the row level, meaning only the actual data changes are sent to the subscriber.\n\n2. **Selective Replication:** You can replicate specific tables rather than the entire database. This allows partial replication tailored to your needs.\n\n3. **Asynchronous Replication:** Logical replication is asynchronous, so there might be a slight delay between the publisher and subscriber.\n\n4. **Bidirectional Replication (with care):** While PostgreSQL does not natively support multi-master replication, logical replication can be configured to allow bidirectional replication setups with caution to avoid conflicts.\n\n5. **Decoupling of Replication:** Logical replication decouples the replication from the physical storage, enabling replication across different PostgreSQL versions (within compatibility limits).\n\n### How Logical Replication Works:\n\n- **Publisher:** The source database that sends changes. It publishes a set of changes based on one or more publications.\n- **Publication:** A set of changes (typically from specific tables) that the publisher makes available to subscribers.\n- **Subscriber:** The target database that receives changes and applies them.\n- **Subscription:** A configuration on the subscriber that connects to a publication and applies changes.\n\n### Use Cases:\n\n- Replicating specific tables or subsets of data.\n- Migrating data between PostgreSQL versions or clusters.\n- Distributing data geographically.\n- Implementing data warehousing or reporting solutions with up-to-date data.\n- Supporting microservices architectures where different services own different parts of the data.\n\n### Basic Setup Example:\n\n1. **On the Publisher:**\n\n```sql\nCREATE PUBLICATION my_publication FOR TABLE my_table;\n```\n\n2. **On the Subscriber:**\n\n```sql\nCREATE SUBSCRIPTION my_subscription\nCONNECTION 'host=publisher_host dbname=mydb user=replicator password=secret'\nPUBLICATION my_publication;\n```\n\nOnce set up, changes to `my_table` on the publisher will be sent and applied to the subscriber.\n\n### Important Notes:\n\n- Logical replication requires WAL (Write-Ahead Logging) to be configured properly with `wal_level = logical`.\n- Some DDL changes (like adding columns) need careful handling as logical replication primarily replicates DML changes.\n- Logical replication does not replicate sequences, large objects, or certain system catalogs automatically.\n- Conflict resolution is mostly manual; the subscriber applies changes as received.\n\n---\n\nIn summary, PostgreSQL logical replication provides a flexible, table-level replication mechanism that supports selective and version-independent replication of data changes, suitable for many modern replication and data distribution scenarios.",
+    "model": "gpt-4.1-mini",
+    "provider": "openai",
+    "processing_time": null,
+    "metadata": {
+        "usage": {
+            "prompt_tokens": 38,
+            "completion_tokens": 597,
+            "total_tokens": 635,
             "prompt_tokens_details": {
                 "cached_tokens": 0,
                 "audio_tokens": 0

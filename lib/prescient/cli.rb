@@ -43,9 +43,16 @@ class Prescient::CLI
   end
 
   def run
+    config_path = extract_global_config_path
+    Prescient.load_configuration(config_path) if config_path || ENV['PRESCIENT_CONFIG']
+
     command = @arguments.shift
     return print_help(2) unless command
 
+    run_command(command)
+  end
+
+  def run_command(command)
     case command
     when 'providers' then providers
     when 'health' then health
@@ -162,6 +169,9 @@ class Prescient::CLI
   end
 
   def add_common_options(parser, options)
+    parser.on('--config PATH', 'Load configuration from a YAML file') do |value|
+      options[:config] = value
+    end
     parser.on('--format FORMAT', FORMATS, "Output format (#{FORMATS.join(', ')})") do |value|
       options[:format] = value
     end
@@ -274,6 +284,7 @@ class Prescient::CLI
         config validate Validate the current configuration
 
       Options:
+        --config PATH            Load configuration from a YAML file
         --provider NAME          Select a provider
         --model NAME             Override the selected operation's model
         --chat-model NAME        Override the chat model
@@ -283,5 +294,35 @@ class Prescient::CLI
         --format FORMAT          Use text or json output
     HELP
     status
+  end
+
+  def extract_global_config_path
+    config_path = nil
+    filtered_arguments = []
+    index = 0
+
+    while index < @arguments.length
+      argument = @arguments[index]
+      if argument == '--config'
+        value = @arguments[index + 1]
+        raise UsageError, '--config requires a path' unless value
+
+        config_path = value
+        index += 2
+        next
+      end
+
+      if argument.start_with?('--config=')
+        config_path = argument.split('=', 2).last
+        index += 1
+        next
+      end
+
+      filtered_arguments << argument
+      index += 1
+    end
+
+    @arguments = filtered_arguments
+    config_path
   end
 end

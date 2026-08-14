@@ -82,6 +82,8 @@ class Prescient::Provider::OpenAI < Prescient::Base
 
       validate_response!(response, 'text generation')
 
+      puts "response.parsed_response: #{response.parsed_response.inspect}"
+
       content = response.parsed_response.dig('choices', 0, 'message', 'content')
       raise Prescient::InvalidResponseError, 'No response generated' unless content
 

@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kanutocd/prescient/schema/prescient.configuration.schema.json",
+  "title": "Prescient Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
+    "default_provider": {
+      "type": "string"
+    },
+    "default_provider_env": {
+      "type": "string"
+    },
+    "timeout": {
+      "type": "number"
+    },
+    "timeout_env": {
+      "type": "string"
+    },
+    "retry_attempts": {
+      "type": "integer"
+    },
+    "retry_attempts_env": {
+      "type": "string"
+    },
+    "retry_delay": {
+      "type": "number"
+    },
+    "retry_delay_env": {
+      "type": "string"
+    },
+    "fallback_providers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "fallback_providers_env": {
+      "type": "string"
+    },
+    "sensitive_keys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sensitive_keys_env": {
+      "type": "string"
+    },
+    "providers": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/provider"
+      }
+    }
+  },
+  "$defs": {
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ollama",
+            "anthropic",
+            "openai",
+            "huggingface"
+          ]
+        },
+        "api_key": {
+          "type": "string"
+        },
+        "api_key_env": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "url_env": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "model_env": {
+          "type": "string"
+        },
+        "chat_model": {
+          "type": "string"
+        },
+        "chat_model_env": {
+          "type": "string"
+        },
+        "embedding_model": {
+          "type": "string"
+        },
+        "embedding_model_env": {
+          "type": "string"
+        },
+        "embedding_dimensions": {
+          "type": "integer"
+        },
+        "embedding_dimensions_env": {
+          "type": "string"
+        },
+        "timeout": {
+          "type": "number"
+        },
+        "timeout_env": {
+          "type": "string"
+        },
+        "context_configs": {
+          "type": "object"
+        },
+        "context_configs_env": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

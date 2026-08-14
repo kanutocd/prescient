@@ -8,6 +8,7 @@ require_relative 'prescient/provider/ollama'
 require_relative 'prescient/provider/anthropic'
 require_relative 'prescient/provider/openai'
 require_relative 'prescient/provider/huggingface'
+require_relative 'prescient/configuration_loader'
 require_relative 'prescient/client'
 require_relative 'prescient/cli'
 
@@ -59,6 +60,28 @@ module Prescient
   # @return [Configuration] New configuration instance
   def self.reset_configuration!
     @_configuration = Configuration.new
+  end
+
+  # Load configuration from a YAML file and replace the current configuration.
+  #
+  # The loaded configuration starts from the current environment defaults,
+  # then applies the YAML file, environment-variable references, and any
+  # optional overrides.
+  #
+  # @param path [String, nil] YAML configuration file path
+  # @param env [Hash] Environment variables used while loading configuration
+  # @return [Configuration] The loaded configuration
+  def self.load_configuration(path = nil, env: ENV)
+    effective_path = path || env['PRESCIENT_CONFIG']
+    configuration = if effective_path
+                      ConfigurationLoader.load_file(effective_path, env:)
+                    else
+                      Configuration.new.tap do |config|
+                        configure_default_providers(config, env)
+                      end
+                    end
+
+    @_configuration = configuration
   end
 
   # Configuration class for managing Prescient settings and providers

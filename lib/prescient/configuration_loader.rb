@@ -1,0 +1,375 @@
+# frozen_string_literal: true
+
+require 'json'
+require 'yaml'
+
+# Load and validate Prescient configuration data from YAML.
+class Prescient::ConfigurationLoader
+  CONFIGURATION_VERSION = 1
+
+  TOP_LEVEL_KEYS = [
+    '$schema',
+    'default_provider',
+    'default_provider_env',
+    'fallback_providers',
+    'fallback_providers_env',
+    'providers',
+    'retry_attempts',
+    'retry_attempts_env',
+    'retry_delay',
+    'retry_delay_env',
+    'sensitive_keys',
+    'sensitive_keys_env',
+    'timeout',
+    'timeout_env',
+    'version',
+  ].freeze
+
+  PROVIDER_TYPES = {
+    'ollama'      => Prescient::Provider::Ollama,
+    'anthropic'   => Prescient::Provider::Anthropic,
+    'openai'      => Prescient::Provider::OpenAI,
+    'huggingface' => Prescient::Provider::HuggingFace,
+  }.freeze
+
+  COMMON_PROVIDER_KEYS = [
+    'api_key',
+    'api_key_env',
+    'chat_model',
+    'chat_model_env',
+    'context_configs',
+    'context_configs_env',
+    'embedding_dimensions',
+    'embedding_dimensions_env',
+    'embedding_model',
+    'embedding_model_env',
+    'model',
+    'model_env',
+    'timeout',
+    'timeout_env',
+    'url',
+    'url_env',
+  ].freeze
+
+  ATTR_KEYS = [
+    'default_provider',
+    'fallback_providers',
+    'retry_attempts',
+    'retry_delay',
+    'sensitive_keys',
+    'timeout',
+  ].freeze
+
+  class << self
+    def load_file(path, env: ENV)
+      new(env).load_file(path)
+    end
+
+    def load_yaml(content, env: ENV)
+      new(env).load_yaml(content)
+    end
+
+    def load_hash(data, env: ENV)
+      new(env).load_hash(data)
+    end
+  end
+
+  def initialize(env = ENV)
+    @env = env
+  end
+
+  def load_file(path)
+    load_yaml(File.read(path), source: path)
+  rescue Errno::ENOENT
+    raise Prescient::Error, "Configuration file not found: #{path}"
+  end
+
+  def load_yaml(content, source: nil)
+    data = YAML.safe_load(content, permitted_classes: [], permitted_symbols: [], aliases: true)
+    load_hash(data || {}, source:)
+  rescue Psych::SyntaxError => e
+    raise Prescient::Error, "Invalid YAML configuration#{" in #{source}" if source}: #{e.message}"
+  end
+
+  def load_hash(data, source: nil)
+    configuration = Prescient::Configuration.new
+    Prescient.send(:configure_default_providers, configuration, @env)
+    apply!(configuration, data, source:)
+    configuration
+  end
+
+  def apply!(configuration, data, source: nil)
+    normalized = normalize_keys(data)
+    validate_root!(normalized, source:)
+    validate_version!(normalized, source:)
+
+    apply_scalar_settings(configuration, normalized, source:)
+    apply_provider_settings(configuration, normalized, source:)
+    configuration
+  end
+
+  def self.schema_path
+    File.expand_path('../../schema/prescient.configuration.schema.json', __dir__)
+  end
+
+  private
+
+  def validate_root!(data, source:)
+    unless data.is_a?(Hash)
+      raise Prescient::Error, "Configuration#{" in #{source}" if source} must be a mapping"
+    end
+
+    unknown_keys = data.keys.map(&:to_s) - TOP_LEVEL_KEYS
+    return if unknown_keys.empty?
+
+    raise Prescient::Error,
+          "Unknown configuration key#{'s' if unknown_keys.length > 1}: #{unknown_keys.join(', ')}" \
+          "#{" in #{source}" if source}"
+  end
+
+  def apply_scalar_settings(configuration, data, source:)
+    apply_default_provider(configuration, data, source:)
+    apply_numeric_settings(configuration, data, source:)
+    apply_collection_settings(configuration, data, source:)
+  end
+
+  def apply_default_provider(configuration, data, source:)
+    return unless scalar_present?(data, :default_provider)
+
+    default_provider = resolve_scalar(data, :default_provider, source:)
+    if default_provider.nil? || default_provider.to_s.empty?
+      raise Prescient::Error, 'default_provider must be a non-empty string'
+    end
+
+    configuration.default_provider = default_provider.to_sym
+  end
+
+  def apply_numeric_settings(configuration, data, source:)
+    numeric_settings = {
+      timeout:        [:coerce_integer, 'timeout'],
+      retry_attempts: [:coerce_integer, 'retry_attempts'],
+      retry_delay:    [:coerce_float, 'retry_delay'],
+    }
+
+    numeric_settings.each do |key, (coercer, name)|
+      next unless scalar_present?(data, key)
+
+      value = resolve_scalar(data, key, source:)
+      setter = "#{key}="
+      configuration.public_send(setter, send(coercer, value, name))
+    end
+  end
+
+  def apply_collection_settings(configuration, data, source:)
+    if scalar_present?(data, :fallback_providers)
+      value = resolve_scalar(data, :fallback_providers, source:)
+      configuration.fallback_providers = Array(value).map(&:to_sym)
+    end
+
+    return unless scalar_present?(data, :sensitive_keys)
+
+    configuration.sensitive_keys = Array(resolve_scalar(data, :sensitive_keys, source:))
+  end
+
+  def apply_provider_settings(configuration, data, source:)
+    return unless key_present?(data, :providers)
+
+    providers = data[:providers]
+    unless providers.is_a?(Hash)
+      raise Prescient::Error, "Configuration#{" in #{source}" if source} providers must be a mapping"
+    end
+
+    providers.each do |name, provider_data|
+      provider_name = name.to_sym
+      provider_settings = normalize_keys(provider_data)
+      validate_provider!(provider_name, provider_settings, source:)
+
+      provider_options = resolve_provider_options(provider_settings, source:)
+      configuration.add_provider(provider_name, PROVIDER_TYPES[provider_settings.fetch(:type).to_s],
+                                 **provider_options)
+    end
+  end
+
+  def validate_provider!(name, provider_data, source:)
+    validate_provider_shape!(name, provider_data, source:)
+    validate_provider_type!(name, provider_data, source:)
+    validate_provider_keys!(name, provider_data, source:)
+  end
+
+  def validate_provider_shape!(name, provider_data, source:)
+    return if provider_data.is_a?(Hash)
+
+    raise Prescient::Error, "Provider #{name.inspect}#{" in #{source}" if source} must be a mapping"
+  end
+
+  def validate_provider_type!(name, provider_data, source:)
+    return if provider_data.key?(:type)
+
+    raise Prescient::Error, "Provider #{name}#{" in #{source}" if source} must define type"
+  end
+
+  def validate_provider_keys!(name, provider_data, source:)
+    unknown_keys = provider_data.keys.map(&:to_s) - (['type'] + COMMON_PROVIDER_KEYS)
+    return if unknown_keys.empty?
+
+    raise Prescient::Error,
+          "Unknown provider configuration key#{'s' if unknown_keys.length > 1} for #{name}: " \
+          "#{unknown_keys.join(', ')}" \
+          "#{" in #{source}" if source}"
+  end
+
+  def resolve_provider_options(provider_data, source:)
+    provider_type = provider_data[:type].to_s
+    provider_class = PROVIDER_TYPES[provider_type]
+    unless provider_class
+      raise Prescient::Error,
+            "Unknown provider type #{provider_type.inspect}#{" in #{source}" if source}"
+    end
+
+    provider_data.each_with_object({}) do |(key, value), options|
+      option = resolve_provider_option(provider_data, key, value, source:)
+      options[option.first] = option.last if option
+    end
+  end
+
+  def resolve_provider_option(provider_data, key, value, source:)
+    return if key == :type
+    return if key.to_s.end_with?('_env') && value.nil?
+
+    if key.to_s.end_with?('_env')
+      base_key = key.to_s.delete_suffix('_env').to_sym
+      if provider_data.key?(base_key)
+        raise Prescient::Error,
+              "Provider configuration cannot combine #{base_key} and #{key}"
+      end
+
+      [base_key, resolve_env_value(value, source:)]
+    else
+      [key, coerce_provider_option(key, resolve_value(value, source:))]
+    end
+  end
+
+  def resolve_scalar(data, key, source:)
+    env_key = :"#{key}_env"
+    if key_present?(data, key) && key_present?(data, env_key)
+      raise Prescient::Error, "Configuration cannot combine #{key} and #{key}_env"
+    end
+
+    return resolve_env_value(data[env_key], source:) if key_present?(data, env_key)
+
+    value = data[key]
+    return nil if value.nil?
+
+    resolve_value(value, source:)
+  end
+
+  def resolve_value(value, source:)
+    case value
+    when Hash
+      resolve_hash_value(value, source:)
+    when Array
+      value.map { |item| resolve_value(item, source:) }
+    when String
+      interpolate_env(value, source:)
+    else
+      value
+    end
+  end
+
+  def resolve_hash_value(value, source:)
+    value.each_with_object({}) do |(key, nested_value), result|
+      key_name = key.to_s
+      if key_name.end_with?('_env')
+        base_key = key_name.delete_suffix('_env').to_sym
+        if value.key?(base_key) || value.key?(base_key.to_s)
+          raise Prescient::Error, "Configuration cannot combine #{base_key} and #{key_name}"
+        end
+
+        result[base_key] = resolve_env_value(nested_value, source:)
+      else
+        result[key.to_sym] = resolve_value(nested_value, source:)
+      end
+    end
+  end
+
+  def resolve_env_value(value, source:)
+    env_name = resolve_value(value, source:)
+    unless env_name.is_a?(String) && !env_name.empty?
+      raise Prescient::Error, 'Environment variable name must be a non-empty string'
+    end
+
+    raw_value = @env.fetch(env_name)
+    parsed_value = YAML.safe_load(raw_value, permitted_classes: [], permitted_symbols: [], aliases: true)
+    parsed_value.nil? ? raw_value : parsed_value
+  rescue KeyError
+    raise Prescient::Error, "Environment variable not set: #{env_name}#{" in #{source}" if source}"
+  end
+
+  def interpolate_env(value, source:)
+    value.gsub(/\$\{([A-Z0-9_]+)\}/) do
+      env_name = Regexp.last_match(1)
+      @env.fetch(env_name)
+    rescue KeyError
+      raise Prescient::Error, "Environment variable not set: #{env_name}#{" in #{source}" if source}"
+    end
+  end
+
+  def normalize_keys(value)
+    case value
+    when Hash
+      value.each_with_object({}) do |(key, nested_value), result|
+        result[key.to_sym] = normalize_keys(nested_value)
+      end
+    when Array
+      value.map { |item| normalize_keys(item) }
+    else
+      value
+    end
+  end
+
+  def key_present?(data, key)
+    data.key?(key) || data.key?(key.to_s)
+  end
+
+  def scalar_present?(data, key)
+    key_present?(data, key) || key_present?(data, :"#{key}_env")
+  end
+
+  def coerce_integer(value, name)
+    return value if value.is_a?(Integer)
+    return value.to_i if value.is_a?(Numeric)
+
+    Integer(value)
+  rescue ArgumentError, TypeError
+    raise Prescient::Error, "#{name} must be an integer"
+  end
+
+  def coerce_float(value, name)
+    return value.to_f if value.is_a?(Numeric)
+
+    Float(value)
+  rescue ArgumentError, TypeError
+    raise Prescient::Error, "#{name} must be a number"
+  end
+
+  def coerce_provider_option(key, value)
+    case key.to_sym
+    when :embedding_dimensions
+      coerce_integer(value, 'embedding_dimensions')
+    when :timeout
+      coerce_integer(value, 'timeout')
+    else
+      value
+    end
+  end
+
+  def validate_version!(data, source:)
+    return unless key_present?(data, :version)
+
+    version = resolve_value(data[:version], source:)
+    return if version == CONFIGURATION_VERSION
+
+    raise Prescient::Error,
+          "Unsupported configuration version #{version.inspect}#{" in #{source}" if source}"
+  end
+end

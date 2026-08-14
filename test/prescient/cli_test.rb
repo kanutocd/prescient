@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
+require 'tempfile'
 
 class CLITest < PrescientTest
   class CLIProvider < Prescient::Base
@@ -57,6 +58,8 @@ class CLITest < PrescientTest
     assert_equal 2, status
 
     assert_includes output, 'Usage: prescient COMMAND'
+
+    assert_includes output, '--config PATH'
 
     assert_includes output, '--api-key-env NAME'
 
@@ -212,6 +215,29 @@ class CLITest < PrescientTest
     assert JSON.parse(output)['valid']
   end
 
+  def test_cli_loads_configuration_from_yaml_file
+    config_path = write_configuration(<<~YAML)
+      version: 1
+      default_provider: test
+      providers:
+        test:
+          type: ollama
+          url: http://localhost:11434
+          chat_model: configured-model
+          embedding_model: configured-embedding
+    YAML
+
+    status, output, _errors = run_cli(['--config', config_path, 'config', 'validate'])
+
+    assert_equal 0, status
+    assert_equal "configuration valid\n", output
+
+    status, output, _errors = run_cli(['--config', config_path, 'providers', '--format', 'json'])
+
+    assert_equal 0, status
+    assert_includes JSON.parse(output)['providers'].map { |provider| provider['name'] }, 'test'
+  end
+
   def test_usage_errors_are_reported_without_a_stack_trace
     status, _output, errors = run_cli(['generate'], input: TTYInput.new)
 
@@ -287,6 +313,14 @@ class CLITest < PrescientTest
     errors = StringIO.new
     status = Prescient::CLI.run(arguments, input:, output:, errors:)
     [status, output.string, errors.string]
+  end
+
+  def write_configuration(content)
+    file = Tempfile.new(['prescient-cli', '.yml'])
+    file.write(content)
+    file.flush
+    file.close
+    file.path
   end
 
   class BrokenCLIProvider < CLIProvider
