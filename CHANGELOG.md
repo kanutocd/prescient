@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.6.0] - 2025-08-15
+
 ### Added
 
 - Added a dependency-free Rack-compatible REST API with generation, embeddings,
@@ -17,6 +19,8 @@
   API, with optional GHCR publication on version tags.
 - Documented mounting `Prescient::API` in Rails routes with its endpoint
   catalog and authentication example.
+- Made the CLI and REST API optional lazy-loaded entry points so library users
+  requiring only `prescient` do not load either interface eagerly.
 
 ## [0.5.0] - 2025-08-14
 
