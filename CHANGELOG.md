@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.4.0] - 2025-08-14
+
 ### Added
 
 - Added the `prescient` CLI with provider listing, health checks, configuration validation, generation, embeddings, JSON output, stdin input, and exit-status handling.
