@@ -2,6 +2,7 @@
 
 require 'json'
 require 'optparse'
+require 'yaml'
 
 # Command-line interface for common Prescient operations.
 class Prescient::CLI
@@ -43,6 +44,10 @@ class Prescient::CLI
         url: http://localhost:11434
         embedding_model: nomic-embed-text
         chat_model: llama3.2:3b
+        # prompt_templates:
+        #   system_prompt: You are a concise assistant.
+        #   no_context_template: "%<system_prompt>s\\n\\nUser: %<query>s"
+        #   with_context_template: "%<system_prompt>s\\n\\nContext:\\n%<context>s\\n\\nUser: %<query>s"
 
       # Uncomment a cloud provider and set its credential in the environment.
       # openai:
@@ -50,6 +55,9 @@ class Prescient::CLI
       #   api_key_env: OPENAI_API_KEY
       #   embedding_model: text-embedding-3-small
       #   chat_model: gpt-4.1-mini
+      #   prompt_templates:
+      #     system_prompt: You are a concise assistant.
+      #     no_context_template: "%<system_prompt>s\n\nUser: %<query>s"
 
       # anthropic:
       #   type: anthropic
@@ -313,6 +321,18 @@ class Prescient::CLI
     parser.on('--chat-model NAME', 'Override the chat model') do |value|
       options[:chat_model] = value
     end
+    parser.on('--system-prompt TEXT', 'Override the system prompt') do |value|
+      options[:system_prompt] = value
+    end
+    parser.on('--no-context-template TEXT', 'Override the no-context prompt template') do |value|
+      options[:no_context_template] = value
+    end
+    parser.on('--with-context-template TEXT', 'Override the with-context prompt template') do |value|
+      options[:with_context_template] = value
+    end
+    parser.on('--prompt-templates-file PATH', 'Load prompt templates from a YAML file') do |value|
+      options[:prompt_templates_file] = value
+    end
   end
 
   def add_credential_options(parser, options)
@@ -335,10 +355,36 @@ class Prescient::CLI
 
   def provider_options(options)
     {
-      api_key:         api_key_override(options),
-      embedding_model: options[:embedding_model],
-      chat_model:      options[:chat_model],
+      api_key:          api_key_override(options),
+      embedding_model:  options[:embedding_model],
+      chat_model:       options[:chat_model],
+      prompt_templates: prompt_templates(options),
     }.compact
+  end
+
+  def prompt_templates(options)
+    templates = if options[:prompt_templates_file]
+                  data = YAML.safe_load_file(
+                    options[:prompt_templates_file],
+                    permitted_classes: [],
+                    permitted_symbols: [],
+                    aliases:           true,
+                  )
+                  raise UsageError, 'prompt templates file must contain a mapping' unless data.is_a?(Hash)
+
+                  data.transform_keys(&:to_sym)
+                else
+                  {}
+                end
+
+    [:system_prompt, :no_context_template, :with_context_template].each do |key|
+      templates[key] = options[key] if options[key]
+    end
+    templates.empty? ? nil : templates
+  rescue Errno::ENOENT
+    raise UsageError, "prompt templates file not found: #{options[:prompt_templates_file]}"
+  rescue Psych::SyntaxError => e
+    raise UsageError, "invalid prompt templates YAML: #{e.message}"
   end
 
   def api_key_override(options)
@@ -387,6 +433,13 @@ class Prescient::CLI
         --model NAME             Override the selected operation's model
         --chat-model NAME        Override the chat model
         --embedding-model NAME   Override the embedding model
+        --system-prompt TEXT     Override the system prompt
+        --no-context-template TEXT
+                                 Override the no-context prompt template
+        --with-context-template TEXT
+                                 Override the with-context prompt template
+        --prompt-templates-file PATH
+                                 Load prompt templates from a YAML file
         --api-key KEY            Use an API key for the operation
         --api-key-env NAME       Read the API key from an environment variable
         --format FORMAT          Use text or json output

@@ -303,6 +303,7 @@ module Prescient
     TOP_LEVEL_KEYS: Array[String]
     PROVIDER_TYPES: Hash[String, untyped]
     COMMON_PROVIDER_KEYS: Array[String]
+    PROMPT_TEMPLATE_KEYS: Array[String]
     ATTR_KEYS: Array[String]
 
     def self.load_file: (String, ?env: untyped) -> Configuration

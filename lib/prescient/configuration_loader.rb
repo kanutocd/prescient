@@ -53,11 +53,16 @@ class Prescient::ConfigurationLoader
     'embedding_model_env',
     'model',
     'model_env',
+    'prompt_templates',
+    'prompt_templates_env',
     'timeout',
     'timeout_env',
     'url',
     'url_env',
   ].freeze
+
+  # Prompt template keys supported by provider configuration.
+  PROMPT_TEMPLATE_KEYS = ['system_prompt', 'no_context_template', 'with_context_template'].freeze
 
   # Configuration attributes supported by the loader.
   ATTR_KEYS = [
@@ -233,6 +238,7 @@ class Prescient::ConfigurationLoader
     validate_provider_shape!(name, provider_data, source:)
     validate_provider_type!(name, provider_data, source:)
     validate_provider_keys!(name, provider_data, source:)
+    validate_prompt_templates!(name, provider_data, source:)
   end
 
   def validate_provider_shape!(name, provider_data, source:)
@@ -255,6 +261,23 @@ class Prescient::ConfigurationLoader
           "Unknown provider configuration key#{'s' if unknown_keys.length > 1} for #{name}: " \
           "#{unknown_keys.join(', ')}" \
           "#{" in #{source}" if source}"
+  end
+
+  def validate_prompt_templates!(name, provider_data, source:)
+    templates = provider_data[:prompt_templates]
+    return if templates.nil?
+
+    source_suffix = " in #{source}" if source
+    unless templates.is_a?(Hash)
+      raise Prescient::Error, "prompt_templates for #{name} must be a mapping#{source_suffix}"
+    end
+
+    unknown_keys = templates.keys.map(&:to_s) - PROMPT_TEMPLATE_KEYS
+    return if unknown_keys.empty?
+
+    message = "Unknown prompt template key#{'s' if unknown_keys.length > 1} for #{name}: " \
+              "#{unknown_keys.join(', ')}#{source_suffix}"
+    raise Prescient::Error, message
   end
 
   def resolve_provider_options(provider_data, source:)

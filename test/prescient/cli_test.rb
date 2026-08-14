@@ -65,6 +65,10 @@ class CLITest < PrescientTest
 
     assert_includes output, '--embedding-model NAME'
 
+    assert_includes output, '--system-prompt TEXT'
+
+    assert_includes output, '--prompt-templates-file PATH'
+
     assert_empty errors
 
     status, _output, errors = run_cli(['unknown'])
@@ -165,6 +169,28 @@ class CLITest < PrescientTest
     assert_equal 'configured-model', Prescient.configuration.provider(:test).options[:chat_model]
   end
 
+  def test_generate_supports_prompt_template_overrides
+    template_path = write_configuration(<<~YAML)
+      system_prompt: Be concise.
+      no_context_template: "%<system_prompt>s\\nUser: %<query>s"
+    YAML
+
+    status, output, _errors = run_cli(
+      [
+        'generate',
+        '--prompt-templates-file', template_path,
+        '--system-prompt', 'Be precise.',
+        'hello'
+      ],
+    )
+
+    assert_equal 0, status
+    assert_equal "response to hello\n", output
+    assert_equal 'Be precise.', CLIProvider.last_options.dig(:prompt_templates, :system_prompt)
+    assert_equal "%<system_prompt>s\nUser: %<query>s",
+                 CLIProvider.last_options.dig(:prompt_templates, :no_context_template)
+  end
+
   def test_embed_supports_embedding_model_and_api_key_environment_overrides
     ENV['PRESCIENT_CLI_TEST_KEY'] = 'environment-key'
     status, output, _errors = run_cli(
@@ -223,6 +249,10 @@ class CLITest < PrescientTest
     assert_includes output, '# yaml-language-server: $schema=https://raw.githubusercontent.com/kanutocd/prescient/refs/heads/main/schema/prescient.configuration.schema.json'
     assert_includes output, 'version: 1'
     assert_includes output, 'api_key_env: OPENAI_API_KEY'
+
+    assert_includes output, 'prompt_templates:'
+
+    assert_includes output, 'no_context_template:'
     assert_includes output, 'type: deepseek'
     assert_includes output, 'prescient config validate'
   end

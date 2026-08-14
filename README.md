@@ -112,6 +112,13 @@ Supported options include:
 --model NAME             Override the selected operation's model
 --chat-model NAME        Override the chat model for generation
 --embedding-model NAME   Override the embedding model
+--system-prompt TEXT     Override the system prompt
+--no-context-template TEXT
+                         Override the no-context prompt template
+--with-context-template TEXT
+                         Override the with-context prompt template
+--prompt-templates-file PATH
+                         Load prompt templates from a YAML file
 --api-key KEY            Use an API key for the operation
 --api-key-env NAME       Read the API key from an environment variable
 --format FORMAT          Select text or json output
@@ -283,6 +290,25 @@ Configuration precedence is CLI overrides, environment defaults and references,
 YAML values, then built-in defaults. Use `prescient config validate` to check a
 configuration before running an operation, or `prescient config example` to
 generate an annotated starter file.
+
+Prompt templates can also be configured per provider. Use the YAML mapping for
+multiline templates, or pass a template file to a single CLI operation:
+
+```yaml
+providers:
+  openai:
+    type: openai
+    api_key_env: OPENAI_API_KEY
+    chat_model: gpt-4.1-mini
+    prompt_templates:
+      system_prompt: You are a concise assistant.
+      no_context_template: "%{system_prompt}\n\nUser: %{query}"
+      with_context_template: "%{system_prompt}\n\nContext:\n%{context}\n\nUser: %{query}"
+```
+
+```bash
+prescient generate --prompt-templates-file prompts.yml "Summarize this"
+```
 
 ### Programmatic Configuration
 
@@ -496,14 +522,14 @@ Prescient.configure do |config|
     prompt_templates: {
       system_prompt: 'You are a friendly customer service representative.',
       no_context_template: <<~TEMPLATE.strip,
-        %{ system_prompt }
+        %{system_prompt}
 
         Customer Question: %{query}
 
         Please provide a helpful response.
       TEMPLATE
       with_context_template: <<~TEMPLATE.strip
-        %{ system_prompt } Use the company info below to help answer.
+        %{system_prompt} Use the company info below to help answer.
 
         Company Information:
         %{context}

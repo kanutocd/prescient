@@ -77,6 +77,57 @@ class ConfigurationLoaderTest < PrescientTest
     assert_includes configuration.providers, :ollama
   end
 
+  def test_load_configuration_supports_prompt_templates
+    configuration = Prescient::ConfigurationLoader.load_hash(
+      {
+        providers: {
+          demo: {
+            type:             'openai',
+            api_key:          'key',
+            chat_model:       'chat-model',
+            embedding_model:  'embedding-model',
+            prompt_templates: {
+              system_prompt:         'Be concise.',
+              no_context_template:   '%<system_prompt>s\nUser: %<query>s',
+              with_context_template: '%<system_prompt>s\nContext: %<context>s\nUser: %<query>s',
+            },
+          },
+        },
+      },
+      env: {},
+    )
+
+    assert_equal 'Be concise.', configuration.provider(:demo).options.dig(:prompt_templates, :system_prompt)
+    assert_equal '%<system_prompt>s\nUser: %<query>s',
+                 configuration.provider(:demo).options.dig(:prompt_templates, :no_context_template)
+  end
+
+  def test_load_configuration_rejects_invalid_prompt_templates
+    invalid_templates = assert_raises(Prescient::Error) {
+      Prescient::ConfigurationLoader.load_hash(
+        { providers: { demo: { type: 'ollama', prompt_templates: 'invalid' } } },
+        env: {},
+      )
+    }
+    assert_includes invalid_templates.message, 'must be a mapping'
+
+    unknown_template = assert_raises(Prescient::Error) {
+      Prescient::ConfigurationLoader.new({}).load_hash(
+        {
+          providers: {
+            demo: {
+              type:             'ollama',
+              prompt_templates: { first: 'one', second: 'two' },
+            },
+          },
+        },
+        source: 'config.yml',
+      )
+    }
+    assert_includes unknown_template.message, 'Unknown prompt template keys'
+    assert_includes unknown_template.message, 'in config.yml'
+  end
+
   def test_load_configuration_applies_direct_values_and_provider_numbers
     configuration = Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: {})
       version: 1
