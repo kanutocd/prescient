@@ -93,7 +93,7 @@ jobs:
         run: brakeman --no-pager --force --format json --output brakeman-report.json
 
       - name: Upload Brakeman report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: brakeman-report
           path: brakeman-report.json
