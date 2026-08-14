@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 require 'simplecov'
+
 SimpleCov.start do
+  enable_coverage :branch
   add_filter '/test/'
-  SimpleCov.minimum_coverage 90
+  minimum_coverage line: 99, branch: 99
 end
+
 
 require 'bundler/setup'
 require 'minitest/autorun'
