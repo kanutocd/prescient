@@ -8,8 +8,12 @@ Gem::Specification.new do |spec|
   spec.authors = ["Ken C. Demanawa"]
   spec.email = ["kenneth.c.demanawa@gmail.com"]
 
-  spec.summary = "Prescient AI provider abstraction for Ruby applications"
-  spec.description = "Prescient provides a unified interface for AI providers including local Ollama, Anthropic Claude, OpenAI GPT, and HuggingFace models. Built for AI applications with error handling, health monitoring, and provider switching."
+  spec.summary = "A boring AI provider abstraction for Ruby"
+  spec.description =<<~DESC
+    Prescient provides a consistent interface for AI providers including OpenAI, Anthropic, 
+    Ollama, and Hugging Face, with provider selection, retries, health checks, and automatic fallback.
+  DESC
+
   spec.homepage = "https://kanutocd.github.io/prescient"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.1.0"
