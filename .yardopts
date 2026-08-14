@@ -1,10 +1,7 @@
---markup markdown
---markup-provider kramdown
---main README.md
---output-dir doc
+--title "Prescient API Documentation"
 --protected
---private
---title "Prescient Documentation"
+--markup markdown
+
 lib/**/*.rb
 -
 README.md
