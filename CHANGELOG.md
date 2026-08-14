@@ -15,6 +15,8 @@
   the library.
 - Added a non-root, healthchecked Docker image and Compose example for the REST
   API, with optional GHCR publication on version tags.
+- Documented mounting `Prescient::API` in Rails routes with its endpoint
+  catalog and authentication example.
 
 ## [0.5.0] - 2025-08-14
 

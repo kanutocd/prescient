@@ -11,7 +11,7 @@ and [examples guide](examples/README.md).
 
 ```ruby
 # Add to your Gemfile
-gem 'prescient', '~> 0.5.0'
+gem 'prescient', '~> 0.6.0'
 ```
 
 ### 2. Replace Existing AI Service
@@ -126,7 +126,56 @@ Configuration precedence is CLI overrides, environment defaults and
 references, YAML values, then built-in defaults. The generated
 `prescient config example` file includes the current JSON Schema URL.
 
-### 4. Update Environment Variables
+### 4. Mount the REST API
+
+`Prescient::API` is Rack-compatible and can be mounted directly in a Rails
+route set. The API keeps provider execution on `Prescient::Client` and exposes
+only generic operations:
+
+```ruby
+# config/routes.rb
+prescient_api = Prescient::API.new(
+  authentication: lambda { |env|
+    expected_token = ENV.fetch('PRESCIENT_API_TOKEN', nil)
+    expected_token && env['HTTP_AUTHORIZATION'] == "Bearer #{expected_token}"
+  }
+)
+
+mount prescient_api => '/prescient', as: :prescient_api
+```
+
+This makes the following routes available under `/prescient`:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/healthz` | Liveness check |
+| `GET` | `/readyz` | Readiness check |
+| `GET` | `/v1/version` | Library and API versions |
+| `GET` | `/v1/providers` | Configured providers |
+| `GET` | `/v1/models` | Available models, optionally filtered by provider |
+| `GET` | `/v1/capabilities` | Provider capabilities |
+| `GET` | `/v1/health` | Provider health |
+| `POST` | `/v1/generate` | Text generation |
+| `POST` | `/v1/embeddings` | Single embedding |
+| `POST` | `/v1/embeddings/batch` | Bounded batch embeddings |
+
+For example:
+
+```bash
+curl http://localhost:3000/prescient/healthz
+
+curl -X POST http://localhost:3000/prescient/v1/generate \
+  -H "Authorization: Bearer ${PRESCIENT_API_TOKEN}" \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"Explain Ruby fibers"}'
+```
+
+Responses include a request ID. Request bodies are size-limited, batch inputs
+are bounded, and JSON errors do not expose raw provider response bodies. Keep
+the API behind the application’s normal TLS, authentication, rate-limiting,
+and observability controls.
+
+### 5. Update Environment Variables
 
 ```bash
 # .env or environment configuration
@@ -151,7 +200,7 @@ HUGGINGFACE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 HUGGINGFACE_CHAT_MODEL=google/gemma-2-2b-it
 ```
 
-### 5. Update Controllers
+### 6. Update Controllers
 
 **Before:**
 
@@ -197,7 +246,7 @@ class Api::V1::AiQueriesController < ApplicationController
 end
 ```
 
-### 6. Health Check Integration
+### 7. Health Check Integration
 
 ```ruby
 # app/controllers/api/v1/system/health_controller.rb
@@ -250,7 +299,7 @@ class Api::V1::System::HealthController < ApplicationController
 end
 ```
 
-### 7. Migration Strategy
+### 8. Migration Strategy
 
 1. **Phase 1: Side-by-side deployment**
 
@@ -269,7 +318,7 @@ end
    - Update all controllers to use AIService
    - Clean up unused code
 
-### 8. Testing Updates
+### 9. Testing Updates
 
 ```ruby
 # test/services/ai_service_test.rb
@@ -294,7 +343,7 @@ class AIServiceTest < ActiveSupport::TestCase
 end
 ```
 
-### 9. Monitoring and Logging
+### 10. Monitoring and Logging
 
 ```ruby
 # config/initializers/prescient_monitoring.rb
@@ -318,7 +367,7 @@ end
 PrescientMonitoring.setup! if Rails.env.production?
 ```
 
-### 10. Performance Optimization
+### 11. Performance Optimization
 
 ```ruby
 # app/services/ai_service.rb (enhanced)
