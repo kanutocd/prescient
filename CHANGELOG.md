@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.3.0] - 2025-08-14
+
 ### Added
 
 - Added a development quality harness covering tests, RuboCop, YARD, and RBS tasks.
