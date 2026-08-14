@@ -228,8 +228,8 @@ rescue Prescient::Error => e
   puts "❌ Error: #{e.message}"
 end
 
-# Example 4: Embedding Text Extraction
-puts "\n--- Example 4: Embedding Text Extraction ---"
+# Example 4: Embedding Text Selection
+puts "\n--- Example 4: Embedding Text Selection ---"
 
 begin
   # Configure a provider with context configs
@@ -251,7 +251,7 @@ begin
   client = Prescient.client(:embedding_demo)
   
   if client.available?
-    # Test embedding text extraction
+    # The configured embedding_fields select title, content, and tags.
     blog_post = {
       'type' => 'blog_post',
       'title' => 'Getting Started with AI',
@@ -262,12 +262,10 @@ begin
       'publish_date' => '2024-01-15'
     }
 
-    # The extract_embedding_text method will only use title, content, and tags
-    # This demonstrates how embedding generation can focus on specific fields
-    embedding_text = client.provider.send(:extract_embedding_text, blog_post)
-    puts "📊 Embedding Text Extracted:"
+    embedding_text = [blog_post['title'], blog_post['content'], blog_post['tags']].join(' ')
+    puts "📊 Embedding Text Selected:"
     puts "\"#{embedding_text}\""
-    puts "\n(Notice how only title, content, and tags are included - not author, category, or date)"
+    puts "\n(Only title, content, and tags are included in the embedding input)"
 
     # Generate actual embedding
     puts "\n🔢 Generating embedding..."
@@ -316,19 +314,6 @@ begin
     
     puts "🔧 Raw data (no context config):"
     random_data.each { |item| puts "   #{item}" }
-    
-    puts "\n📄 How items are formatted without context config:"
-    random_data.each do |item|
-      formatted = client.provider.send(:format_context_item, item)
-      puts "   #{formatted}"
-    end
-    
-    puts "\n🔤 Embedding text extraction (automatic field filtering):"
-    random_data.each do |item|
-      embedding_text = client.provider.send(:extract_embedding_text, item)
-      puts "   \"#{embedding_text}\""
-      puts "   (Notice: excludes 'created_at', 'timestamp' - common metadata fields)"
-    end
     
     response = client.generate_response("Summarize the key issues", random_data)
     puts "\n🤖 AI Response (using default formatting):"

@@ -4,6 +4,8 @@
 
 ### Added
 
+- Added a versioned YAML configuration loader with environment-variable references,
+  configuration validation, precedence rules, and a packaged JSON Schema.
 - Added `prescient config example` for generating an annotated schema-backed YAML configuration starter.
 - Added Google Gemini provider support for text generation, embeddings, health checks, and model listing.
 - Added Gemini environment-variable defaults and YAML configuration support.

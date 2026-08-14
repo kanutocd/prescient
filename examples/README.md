@@ -15,7 +15,8 @@ bundle install
 - `custom_prompts.rb` — system prompts and no-context/with-context templates.
 - `custom_contexts.rb` — explicit context types, field matching, formatting,
   and embedding field selection.
-- `vector_search.rb` — PostgreSQL/pgvector storage and similarity search.
+- `vector_search.rb` — `Prescient::Pgvector::Store` PostgreSQL/pgvector storage
+  and similarity search.
 
 The first three examples use Ollama by default. Start Ollama and pull the
 current local models before running them:

@@ -1,5 +1,11 @@
 # Prescient
 
+[![Gem Version](https://img.shields.io/gem/v/prescient?logo=rubygems&logoColor=white)](https://rubygems.org/gems/prescient)
+[![Requires Ruby 3.1+](https://img.shields.io/badge/Requires-Ruby%203.1%2B-CC342D?logo=ruby&logoColor=white)](https://www.ruby-lang.org/)
+[![CI](https://github.com/kanutocd/prescient/actions/workflows/ci.yml/badge.svg)](https://github.com/kanutocd/prescient/actions/workflows/ci.yml)
+[![Security](https://img.shields.io/github/actions/workflow/status/kanutocd/prescient/security.yml?branch=main&event=push&label=Security)](https://github.com/kanutocd/prescient/actions/workflows/security.yml)
+[![License](https://img.shields.io/badge/License-MIT-22C55E)](LICENSE.txt)
+
 Prescient is a boring AI provider abstraction for Ruby. Configure your AI providers once, then use the same interface regardless of whether the request is handled by OpenAI, Anthropic, Ollama, Hugging Face, Google Gemini, Mistral, DeepSeek, or xAI. Prescient handles provider selection, retries, health checks, and fallback.
 
 For focused guidance, see the **[examples guide](https://github.com/kanutocd/prescient/tree/main/examples)**,
@@ -14,7 +20,7 @@ For focused guidance, see the **[examples guide](https://github.com/kanutocd/pre
 - **Text Completion**: Chat completions with context support
 - **Error Handling**: Robust error handling with automatic retries
 - **Health Monitoring**: Built-in health checks for all providers
-- **Flexible Configuration**: Environment variable and programmatic configuration
+- **Flexible Configuration**: YAML, environment variable, and programmatic configuration
 
 ## Supported Providers
 
@@ -45,25 +51,25 @@ For focused guidance, see the **[examples guide](https://github.com/kanutocd/pre
 ### Google Gemini
 
 - **Models**: Gemini generation and embedding models
-- **Capabilities**: Embeddings, Text Generation
+- **Capabilities**: Embeddings, Text Generation, Model Listing
 - **Use Case**: Google AI hosted models
 
 ### Mistral
 
 - **Models**: Mistral chat and embedding models
-- **Capabilities**: Embeddings, Text Generation
+- **Capabilities**: Embeddings, Text Generation, Model Listing
 - **Use Case**: Mistral AI hosted models
 
 ### DeepSeek
 
 - **Models**: DeepSeek chat models
-- **Capabilities**: Text Generation only (no embeddings)
+- **Capabilities**: Text Generation, Model Listing (no embeddings)
 - **Use Case**: DeepSeek hosted reasoning and chat models
 
 ### xAI
 
 - **Models**: Grok chat models
-- **Capabilities**: Text Generation only (no embeddings)
+- **Capabilities**: Text Generation, Model Listing (no embeddings)
 - **Use Case**: xAI hosted reasoning and chat models
 
 ## Installation
@@ -150,7 +156,7 @@ OpenAI example JSON output:
 }
 ```
 
-Anthropic example JSON outout:
+Anthropic example JSON output:
 
 ```json
 {
@@ -252,6 +258,31 @@ DEEPSEEK_CHAT_MODEL=deepseek-v4-flash
 XAI_API_KEY=your_api_key
 XAI_CHAT_MODEL=grok-4.5
 ```
+
+### YAML Configuration
+
+Load a versioned YAML configuration with environment-backed credentials:
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kanutocd/prescient/refs/heads/main/schema/prescient.configuration.schema.json
+version: 1
+default_provider: openai
+providers:
+  openai:
+    type: openai
+    api_key_env: OPENAI_API_KEY
+    embedding_model: text-embedding-3-small
+    chat_model: gpt-4.1-mini
+```
+
+```ruby
+Prescient.load_configuration('prescient.yml')
+```
+
+Configuration precedence is CLI overrides, environment defaults and references,
+YAML values, then built-in defaults. Use `prescient config validate` to check a
+configuration before running an operation, or `prescient config example` to
+generate an annotated starter file.
 
 ### Programmatic Configuration
 
@@ -642,8 +673,9 @@ results = store.search(embedding:, provider: :openai, model: 'text-embedding-3-s
 ```
 
 Every vector must exactly match the store's configured dimensions; Prescient
-never pads or truncates vectors. The existing application-schema example below
-remains available for projects that need documents, chunks, and custom metadata.
+never pads or truncates vectors. The application-schema example below is
+optional integration material for projects that need documents, chunks, and
+custom metadata; it is not managed by `Prescient::Pgvector::Store`.
 
 ### Setup with Docker
 
@@ -662,7 +694,7 @@ docker compose up -d postgres
 
 ### Database Schema
 
-The setup creates these key tables:
+The optional Docker demo creates these application-owned tables:
 
 - **`documents`** - Store original content and metadata
 - **`document_embeddings`** - Store vector embeddings for documents
@@ -844,10 +876,9 @@ DB_HOST=localhost ruby examples/vector_search.rb
 
 The example demonstrates:
 
-- Document embedding generation and storage
-- Similarity search with different distance functions
-- Metadata filtering and advanced queries
-- Performance comparison between approaches
+- Embedding generation through `Prescient::Client`
+- Dimension-validated storage through `Prescient::Pgvector::Store`
+- Similarity search with provider and model filters
 
 ## Advanced Usage
 

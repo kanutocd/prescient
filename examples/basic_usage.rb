@@ -67,7 +67,7 @@ end
 # Example 3: Provider comparison (if multiple providers configured)
 puts "\n=== Example 3: Provider Health Check ==="
 
-providers = [:ollama, :anthropic, :openai, :huggingface]
+providers = %i[ollama anthropic openai huggingface gemini mistral deepseek xai]
 
 providers.each do |provider_name|
   begin

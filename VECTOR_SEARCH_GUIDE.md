@@ -27,6 +27,10 @@ store.create_index!(metric: :cosine)
 or chunk tables, connections, migrations outside that table, or the `pg` gem.
 Use `#upsert` and `#search` with embeddings of exactly the configured dimension.
 
+The remaining sections describe an optional application-owned document schema
+used by the repository's Docker demo. They are not tables created or managed
+by `Prescient::Pgvector::Store`.
+
 ### 1. Start Services
 
 ```bash
@@ -55,12 +59,12 @@ export DB_HOST=localhost
 export OLLAMA_URL=http://localhost:11434
 
 # Run the example
-ruby examples/vector_search.rb
+bundle exec ruby examples/vector_search.rb
 ```
 
 ## Architecture Overview
 
-### Database Schema
+### Application-Owned Example Schema
 
 ```
 documents
@@ -103,7 +107,7 @@ chunk_embeddings
 
 ### Vector Indexes
 
-The setup automatically creates HNSW indexes for optimal performance:
+The optional Docker demo creates HNSW indexes for the application-owned tables:
 
 - **Cosine Distance**: `embedding <=> query_vector`
 - **L2 Distance**: `embedding <-> query_vector`

@@ -117,6 +117,17 @@ end
 Rails.application.config.default_ai_provider = :ollama
 ```
 
+For YAML-based deployments, use the versioned configuration format and keep
+credentials in environment variables:
+
+```ruby
+Prescient.load_configuration('prescient.yml')
+```
+
+Configuration precedence is CLI overrides, environment defaults and
+references, YAML values, then built-in defaults. The generated
+`prescient config example` file includes the current JSON Schema URL.
+
 ### 4. Update Environment Variables
 
 ```bash
