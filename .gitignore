@@ -15,3 +15,5 @@
 Gemfile.lock
 mise.toml
 .envrc
+*.gem
+/.ignoreme/

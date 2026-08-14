@@ -1,11 +1,26 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## Unreleased
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Added
 
-## [0.1.0] - 2025-08-05
+- Added a development quality harness covering tests, RuboCop, YARD, and RBS tasks.
+- Added 99% minimum line and branch coverage requirements with expanded provider and context coverage tests.
+- Added an actionlint Rake task for GitHub Actions validation.
+- Added Dependabot configuration for Bundler, Docker, and GitHub Actions updates.
+
+### Changed
+
+- Updated Ollama embeddings to use `/api/embed` with strict vector-dimension validation.
+- Raised YARD API documentation coverage enforcement to 99% or higher.
+- Modernized gem development dependencies, packaging metadata, YARD configuration, and Ruby CI support.
+- Compacted GitHub Actions into focused CI, Pages, release, and security workflows.
+
+### Removed
+
+- Removed the obsolete PDF changelog and superseded workflow definitions.
+
+## [0.2.0] - 2025-08-05
 
 ### Added
 
