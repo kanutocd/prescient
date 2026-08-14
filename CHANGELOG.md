@@ -8,6 +8,7 @@
 - Added 99% minimum line and branch coverage requirements with expanded provider and context coverage tests.
 - Added an actionlint Rake task for GitHub Actions validation.
 - Added Dependabot configuration for Bundler, Docker, and GitHub Actions updates.
+- Added an opt-in `Prescient::Pgvector::Store` boundary for validated embedding storage and similarity search.
 
 ### Changed
 
@@ -25,6 +26,10 @@
 - Restored the RBS/Steep development tasks with a committed Steepfile and curated core API signatures.
 - Expanded Steep coverage to the base abstraction and all provider adapters, including their public operations and HTTP boundaries.
 - Added configurable provider-info sensitive-key sanitization and configurable generic context-field exclusions.
+- Audited README and documentation examples against the current codebase.
+- Removed client `method_missing` delegation so provider-specific behavior is not exposed through the public client.
+- Prevented default provider registration when required credentials are absent from the environment.
+- Sanitized provider HTTP errors so raw response bodies are not exposed in exception messages.
 
 ### Removed
 

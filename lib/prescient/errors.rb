@@ -31,6 +31,9 @@ module Prescient
   # Raised when AI provider returns invalid or malformed responses
   class InvalidResponseError < Error; end
 
+  # Raised when a vector cannot be stored or searched safely
+  class InvalidVectorError < Error; end
+
   # Raised when an AI provider reports a transient service-side failure
   class ProviderError < Error; end
 
@@ -40,5 +43,9 @@ module Prescient
   # from {Prescient::Base}.
   module Provider
     # Module for AI provider implementations
+  end
+
+  # Namespace for optional PostgreSQL pgvector integration
+  module Pgvector
   end
 end

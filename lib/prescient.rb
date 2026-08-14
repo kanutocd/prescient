@@ -2,6 +2,7 @@
 
 require_relative 'prescient/version'
 require_relative 'prescient/errors'
+require_relative 'prescient/pgvector'
 require_relative 'prescient/base'
 require_relative 'prescient/provider/ollama'
 require_relative 'prescient/provider/anthropic'

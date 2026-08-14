@@ -422,7 +422,30 @@ end
 
 ## Vector Database Integration (pgvector)
 
-Prescient integrates seamlessly with PostgreSQL's pgvector extension for storing and searching embeddings:
+`Prescient::Pgvector::Store` is an opt-in PostgreSQL integration for storing
+and searching embeddings. It accepts a PG-compatible connection, so `pg` stays
+an application dependency rather than a required dependency of this gem.
+
+```ruby
+require 'pg'
+
+connection = PG.connect(dbname: 'my_app')
+store = Prescient::Pgvector::Store.new(connection: connection, dimensions: 1536)
+store.install!
+store.create_index!
+
+embedding = Prescient.generate_embedding('Semantic search', provider: :openai)
+store.upsert(
+  id: 'document-42', embedding:, provider: 'openai', model: 'text-embedding-3-small',
+  content: 'Semantic search', metadata: { category: 'guide' }
+)
+
+results = store.search(embedding:, provider: :openai, model: 'text-embedding-3-small')
+```
+
+Every vector must exactly match the store's configured dimensions; Prescient
+never pads or truncates vectors. The existing application-schema example below
+remains available for projects that need documents, chunks, and custom metadata.
 
 ### Setup with Docker
 

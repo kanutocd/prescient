@@ -8,6 +8,25 @@ for the provider API.
 
 ## Quick Start
 
+For a reusable embedding store, use the library boundary rather than copying
+the example's application-specific SQL:
+
+```ruby
+require 'prescient'
+require 'pg'
+
+store = Prescient::Pgvector::Store.new(
+  connection: PG.connect(dbname: 'my_app'),
+  dimensions: 1536,
+)
+store.install!
+store.create_index!(metric: :cosine)
+```
+
+`Store` owns only its `prescient_embeddings` table. It does not manage document
+or chunk tables, connections, migrations outside that table, or the `pg` gem.
+Use `#upsert` and `#search` with embeddings of exactly the configured dimension.
+
 ### 1. Start Services
 
 ```bash

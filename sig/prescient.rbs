@@ -27,6 +27,9 @@ module Prescient
   class InvalidResponseError < Error
   end
 
+  class InvalidVectorError < Error
+  end
+
   class ProviderError < Error
   end
 
@@ -152,6 +155,21 @@ module Prescient
 
       def validate_configuration!: () -> void
       def validate_response!: (untyped, String) -> void
+    end
+  end
+
+  module Pgvector
+    class Store
+      METRICS: Hash[Symbol, String]
+
+      attr_reader dimensions: Integer
+      attr_reader table: String
+
+      def initialize: (connection: untyped, dimensions: Integer, ?table: String | Symbol) -> void
+      def install!: () -> void
+      def create_index!: (?metric: Symbol) -> void
+      def upsert: (id: untyped, embedding: Array[Numeric], provider: untyped, model: untyped, ?content: String?, ?metadata: Hash[untyped, untyped]) -> Hash[Symbol, untyped]
+      def search: (embedding: Array[Numeric], ?limit: Integer, ?metric: Symbol, ?provider: String | Symbol?, ?model: String?) -> Array[Hash[Symbol, untyped]]
     end
   end
 
