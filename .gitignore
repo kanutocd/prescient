@@ -12,3 +12,5 @@
 /.vscode/
 /.history/
 
+Gemfile.lock
+mise.toml
