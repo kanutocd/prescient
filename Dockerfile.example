@@ -1,5 +1,5 @@
 # Example Dockerfile for running Prescient gem applications
-FROM ruby:3.4-alpine
+FROM ruby:4.0-alpine
 
 # Install system dependencies
 RUN apk add --no-cache \
