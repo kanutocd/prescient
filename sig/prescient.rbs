@@ -72,8 +72,6 @@ module Prescient
 
   module Provider
     class Ollama < Base
-      EMBEDDING_DIMENSIONS: Integer
-
       def self.base_uri: (String) -> untyped
       def self.default_timeout: (Integer) -> untyped
       def self.get: (String, **untyped) -> untyped

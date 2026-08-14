@@ -129,7 +129,7 @@ class PgvectorStoreTest < PrescientTest
     end
   end
 
-  def test_search_validates_limits_and_metrics
+  def test_store_search_validates_blahblahashasjh
     assert_raises(ArgumentError) do
       @store.search(embedding: [1, 2, 3], limit: 0)
     end

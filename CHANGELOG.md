@@ -9,6 +9,8 @@
 - Added an actionlint Rake task for GitHub Actions validation.
 - Added Dependabot configuration for Bundler, Docker, and GitHub Actions updates.
 - Added an opt-in `Prescient::Pgvector::Store` boundary for validated embedding storage and similarity search.
+- Added configurable Ollama embedding dimensions while preserving strict validation when configured.
+- Added a default example-syntax quality gate that validates Ruby examples without contacting providers.
 
 ### Changed
 
@@ -30,6 +32,9 @@
 - Removed client `method_missing` delegation so provider-specific behavior is not exposed through the public client.
 - Prevented default provider registration when required credentials are absent from the environment.
 - Sanitized provider HTTP errors so raw response bodies are not exposed in exception messages.
+- Removed fallback health probes before provider operations to avoid duplicate network requests and race conditions.
+- Clarified health semantics: `reachable` reports transport availability and `ready` reports configured-model readiness.
+- Added shared provider health-contract coverage for status, reachability, readiness, and provider identity.
 
 ### Removed
 

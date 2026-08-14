@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "bundler/gem_tasks"
+require "rbconfig"
 require "rake/testtask"
 require "rubocop/rake_task"
 require "yard"
@@ -72,6 +73,15 @@ namespace :rbs do
   task check: %i[prototype validate]
 end
 
+namespace :examples do
+  desc "Validate Ruby example syntax without contacting providers"
+  task :syntax do
+    Dir["examples/**/*.rb"].sort.each do |file|
+      sh RbConfig.ruby, "-c", file
+    end
+  end
+end
+
 desc "Validate GitHub Actions workflows"
 task :actionlint do
   actionlint = if File.executable?(".tools/bin/actionlint")
@@ -84,7 +94,7 @@ end
 
 
 desc "Run tests and linting"
-task default: %w[test rubocop yard yard:validate rbs:validate]
+task default: %w[test rubocop yard yard:validate rbs:validate examples:syntax]
 
 desc "Console with gem loaded"
 task :console do

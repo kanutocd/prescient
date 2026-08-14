@@ -6,8 +6,6 @@ require 'httparty'
 class Prescient::Provider::Ollama < Prescient::Base
   include HTTParty
 
-  EMBEDDING_DIMENSIONS = 768 # nomic-embed-text dimensions
-
   def initialize(**options)
     super
     self.class.base_uri(@options[:url])
@@ -29,9 +27,11 @@ class Prescient::Provider::Ollama < Prescient::Base
 
       embedding = embeddings.is_a?(Array) ? embeddings.first : nil # : Array[Float]?
       raise Prescient::InvalidResponseError, 'No embedding returned' unless embedding.is_a?(Array)
-      unless embedding.length == EMBEDDING_DIMENSIONS
+
+      expected_dimensions = @options[:embedding_dimensions]
+      if expected_dimensions && embedding.length != expected_dimensions
         raise Prescient::InvalidResponseError,
-              "Invalid embedding dimensions: expected #{EMBEDDING_DIMENSIONS}, got #{embedding.length}"
+              "Invalid embedding dimensions: expected #{expected_dimensions}, got #{embedding.length}"
       end
 
       embedding

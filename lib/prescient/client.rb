@@ -157,10 +157,7 @@ module Prescient
         provider = provider_for(provider_name, index)
         next unless provider
 
-        # Check if provider is available before trying
-        next unless provider.available?
-
-        # Use retry logic for each provider
+        # Use the provider operation as the availability probe.
         return with_error_handling do
           provider.send(method_name, *args, **options)
         end

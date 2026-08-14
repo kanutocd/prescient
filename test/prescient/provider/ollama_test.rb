@@ -6,10 +6,11 @@ class OllamaProviderTest < PrescientTest
   def setup
     super
     @provider = Prescient::Provider::Ollama.new(
-      url:             'http://localhost:11434',
-      embedding_model: 'nomic-embed-text',
-      chat_model:      'llama3.1:8b',
-      timeout:         30,
+      url:                  'http://localhost:11434',
+      embedding_model:      'nomic-embed-text',
+      embedding_dimensions: 768,
+      chat_model:           'llama3.1:8b',
+      timeout:              30,
     )
   end
 
@@ -18,6 +19,7 @@ class OllamaProviderTest < PrescientTest
     assert_equal 'nomic-embed-text', @provider.options[:embedding_model]
     assert_equal 'llama3.1:8b', @provider.options[:chat_model]
     assert_equal 30, @provider.options[:timeout]
+    assert_equal 768, @provider.options[:embedding_dimensions]
   end
 
   def test_initialize_validates_required_options
@@ -49,6 +51,20 @@ class OllamaProviderTest < PrescientTest
 
     assert_equal 768, result.length
     assert_instance_of Float, result.first
+  end
+
+  def test_generate_embedding_accepts_model_specific_dimensions_without_a_configured_size
+    provider = Prescient::Provider::Ollama.new(
+      url:             'http://localhost:11434',
+      embedding_model: 'custom-embed',
+      chat_model:      'llama3.1:8b',
+    )
+    mock_response = mock('response')
+    mock_response.stubs(:success?).returns(true)
+    mock_response.stubs(:parsed_response).returns({ 'embeddings' => [[0.1, 0.2, 0.3]] })
+    provider.class.expects(:post).returns(mock_response)
+
+    assert_equal [0.1, 0.2, 0.3], provider.generate_embedding('test text')
   end
 
   def test_generate_embedding_rejects_short_vectors

@@ -140,7 +140,7 @@ vector_str = "[#{embedding.join(',')}]"
 
 db.exec_params(
   "INSERT INTO document_embeddings (document_id, embedding_provider, embedding_model, embedding_dimensions, embedding, embedding_text) VALUES ($1, $2, $3, $4, $5, $6)",
-  [document_id, 'ollama', 'nomic-embed-text', 768, vector_str, content]
+  [document_id, 'ollama', 'nomic-embed-text', embedding.length, vector_str, content]
 )
 ```
 
@@ -234,7 +234,7 @@ chunks.each do |chunk|
   # Store chunk embedding
   db.exec_params(
     "INSERT INTO chunk_embeddings (chunk_id, document_id, embedding_provider, embedding_model, embedding_dimensions, embedding) VALUES ($1, $2, $3, $4, $5, $6)",
-    [chunk_id, document_id, 'ollama', 'nomic-embed-text', 768, chunk_vector]
+    [chunk_id, document_id, 'ollama', 'nomic-embed-text', chunk_embedding.length, chunk_vector]
   )
 end
 ```
@@ -303,7 +303,7 @@ db.transaction do
     vector_str = "[#{embedding.join(',')}]"
     db.exec_params(
       "INSERT INTO document_embeddings (...) VALUES (...)",
-      [documents[index].id, 'ollama', 'nomic-embed-text', 768, vector_str, texts[index]]
+      [documents[index].id, 'ollama', 'nomic-embed-text', embedding.length, vector_str, texts[index]]
     )
   end
 end
@@ -345,14 +345,15 @@ Store embeddings from multiple providers for comparison:
 
 ```ruby
 providers = [
-  { client: Prescient.client(:ollama), name: 'ollama', model: 'nomic-embed-text', dims: 768 },
-  { client: Prescient.client(:openai), name: 'openai', model: 'text-embedding-3-small', dims: 1536 }
+  { client: Prescient.client(:ollama), name: 'ollama', model: 'nomic-embed-text' },
+  { client: Prescient.client(:openai), name: 'openai', model: 'text-embedding-3-small' }
 ]
 
 providers.each do |provider|
   next unless provider[:client].available?
 
   embedding = provider[:client].generate_embedding(text)
+  provider[:dims] = embedding.length
   vector_str = "[#{embedding.join(',')}]"
 
   db.exec_params(

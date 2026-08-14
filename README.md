@@ -26,13 +26,13 @@ For focused guidance, see the [examples guide](examples/README.md),
 
 ### Anthropic Claude
 
-- **Models**: Claude 3 (Haiku, Sonnet, Opus)
+- **Models**: Current Claude models selected through the Anthropic Models API
 - **Capabilities**: Text Generation only (no embeddings)
 - **Use Case**: High-quality conversational AI
 
 ### OpenAI
 
-- **Models**: GPT-3.5, GPT-4, text-embedding-3-small/large
+- **Models**: Current GPT and text-embedding models selected through the OpenAI Models API
 - **Capabilities**: Embeddings, Text Generation
 - **Use Case**: Proven performance, wide model selection
 
@@ -162,8 +162,8 @@ response = Prescient.generate_response("Hello", provider: :primary, enable_fallb
 
 **Fallback Behavior:**
 - When a provider fails with a persistent error, Prescient automatically tries the next available provider
-- Only available (healthy) providers are tried during fallback
-- If no fallback providers are configured, all available providers are tried as fallbacks
+- Configured fallback providers are tried in order; the provider operation determines availability
+- If no fallback providers are configured, all configured providers are tried as fallbacks
 - Transient errors (rate limits, timeouts) still use retry logic before fallback
 - Provider-service failures, connection failures, rate limits, and unavailable models may trigger fallback; authentication and invalid-request errors are returned to the caller
 - The fallback process preserves all method arguments and options
@@ -180,7 +180,7 @@ client = Prescient.client
 
 # Generate embeddings
 embedding = client.generate_embedding("Your text here")
-# => [0.1, 0.2, 0.3, ...] (768-dimensional vector)
+# => [0.1, 0.2, 0.3, ...] (model-dependent vector dimensions)
 
 # Generate text responses
 response = client.generate_response("What is Ruby?")
@@ -243,12 +243,18 @@ end
 
 ### Health Monitoring
 
+Health results separate transport reachability from configured-model readiness:
+`reachable: true` means the provider answered, while `ready: true` means the
+configured operation models were found or validated. Fallback uses the actual
+operation and does not perform an additional health request.
+
 ```ruby
 # Check all providers
 Prescient.configuration.providers.keys.each do |provider|
   health = Prescient.health_check(provider: provider)
   puts "#{provider}: #{health[:status]}"
-  puts "Ready: #{health[:ready]}" if health[:ready]
+  puts "Reachable: #{health[:reachable]}"
+  puts "Ready: #{health[:ready]}"
 rescue Prescient::Error => e
   puts "#{provider}: unavailable (#{e.message})"
 end
@@ -497,7 +503,7 @@ embedding = client.generate_embedding(text)
 vector_str = "[#{embedding.join(',')}]"
 db.exec_params(
   "INSERT INTO document_embeddings (document_id, embedding_provider, embedding_model, embedding_dimensions, embedding, embedding_text) VALUES ($1, $2, $3, $4, $5, $6)",
-  [doc_id, 'ollama', 'nomic-embed-text', 768, vector_str, text]
+  [doc_id, 'ollama', 'nomic-embed-text', embedding.length, vector_str, text]
 )
 
 # Perform similarity search

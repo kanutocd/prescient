@@ -31,6 +31,8 @@ class ProviderContractTest < PrescientTest
       chat_model:      'google/gemma-2-2b-it',
     },
   }.freeze
+  HEALTH_STATUSES = ['healthy', 'partial', 'unhealthy', 'unavailable'].freeze
+  BOOLEAN_VALUES = [true, false].freeze
 
   def test_all_providers_expose_the_common_contract
     PROVIDER_CONFIGS.each do |name, options|
@@ -62,6 +64,26 @@ class ProviderContractTest < PrescientTest
       )
 
       refute_predicate provider, :available?, "#{name} should be unavailable when unreachable"
+    end
+  end
+
+  def test_health_results_expose_common_status_fields
+    PROVIDER_CONFIGS.each do |name, options|
+      provider = PROVIDER_CLASSES.fetch(name).new(**options)
+      health = {
+        status:    'healthy',
+        provider:  name.to_s,
+        reachable: true,
+        ready:     true,
+      }
+      provider.stubs(:health_check).returns(health)
+
+      result = provider.health_check
+
+      assert_equal name.to_s, result[:provider]
+      assert_includes HEALTH_STATUSES, result[:status]
+      assert_includes BOOLEAN_VALUES, result[:reachable]
+      assert_includes BOOLEAN_VALUES, result[:ready]
     end
   end
 end
