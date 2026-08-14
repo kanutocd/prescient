@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `prescient config example` for generating an annotated schema-backed YAML configuration starter.
 - Added Google Gemini provider support for text generation, embeddings, health checks, and model listing.
 - Added Gemini environment-variable defaults and YAML configuration support.
 - Added Mistral provider support for text generation, embeddings, health checks, and model listing.

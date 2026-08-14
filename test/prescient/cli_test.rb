@@ -215,6 +215,18 @@ class CLITest < PrescientTest
     assert JSON.parse(output)['valid']
   end
 
+  def test_config_example_outputs_annotated_schema_backed_yaml
+    status, output, errors = run_cli(['config', 'example'])
+
+    assert_equal 0, status
+    assert_empty errors
+    assert_includes output, '# yaml-language-server: $schema=https://raw.githubusercontent.com/kanutocd/prescient/refs/heads/main/schema/prescient.configuration.schema.json'
+    assert_includes output, 'version: 1'
+    assert_includes output, 'api_key_env: OPENAI_API_KEY'
+    assert_includes output, 'type: deepseek'
+    assert_includes output, 'prescient config validate'
+  end
+
   def test_cli_loads_configuration_from_yaml_file
     config_path = write_configuration(<<~YAML)
       version: 1

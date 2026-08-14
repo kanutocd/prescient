@@ -88,6 +88,7 @@ Prescient includes a thin CLI for provider inspection and common operations:
 prescient providers
 prescient health
 prescient config validate
+prescient config example
 prescient generate "Explain Ruby Ractors"
 prescient embed "Ruby is a programming language"
 ```
@@ -192,6 +193,16 @@ prescient embed \
 The CLI writes results to stdout, diagnostics to stderr, and returns a
 non-zero status for invalid usage, provider errors, or unreachable health
 checks. It uses the same `Prescient::Client` execution path as Ruby callers.
+
+Generate a schema-backed, annotated starter configuration with:
+
+```bash
+prescient config example > prescient.yml
+```
+
+The generated file points YAML language servers at the latest schema on the
+main branch. Pin the schema URL to a release tag when reproducible tooling is
+required.
 
 ## Configuration
 

@@ -9,6 +9,78 @@ class Prescient::CLI
   # @return [Array<String>] Output format names
   FORMATS = ['text', 'json'].freeze
 
+  # Schema URL and annotated starter configuration for `config example`.
+  CONFIGURATION_EXAMPLE = <<~YAML
+    # yaml-language-server: $schema=https://raw.githubusercontent.com/kanutocd/prescient/refs/heads/main/schema/prescient.configuration.schema.json
+    #
+    # Prescient configuration example.
+    #
+    # Precedence, from lowest to highest:
+    # 1. Built-in defaults and provider environment variables.
+    # 2. Values in this YAML file.
+    # 3. Per-operation CLI overrides such as --provider and --chat-model.
+    #
+    # Use `prescient config validate` after editing this file.
+    # Keep credentials out of source control; use *_env references instead.
+    version: 1
+
+    # Global behavior.
+    default_provider: ollama
+    timeout: 30
+    retry_attempts: 3
+    retry_delay: 1.0
+    fallback_providers: []
+    sensitive_keys:
+      - api_key
+      - password
+      - token
+      - secret
+
+    providers:
+      # Local Ollama requires no API key.
+      ollama:
+        type: ollama
+        url: http://localhost:11434
+        embedding_model: nomic-embed-text
+        chat_model: llama3.2:3b
+
+      # Uncomment a cloud provider and set its credential in the environment.
+      # openai:
+      #   type: openai
+      #   api_key_env: OPENAI_API_KEY
+      #   embedding_model: text-embedding-3-small
+      #   chat_model: gpt-4.1-mini
+
+      # anthropic:
+      #   type: anthropic
+      #   api_key_env: ANTHROPIC_API_KEY
+      #   model: claude-sonnet-4-20250514
+
+      # gemini:
+      #   type: gemini
+      #   api_key_env: GEMINI_API_KEY
+      #   embedding_model: gemini-embedding-001
+      #   chat_model: gemini-2.5-flash
+
+      # mistral:
+      #   type: mistral
+      #   api_key_env: MISTRAL_API_KEY
+      #   embedding_model: mistral-embed
+      #   chat_model: mistral-large-latest
+
+      # DeepSeek supports text generation, but not embeddings.
+      # deepseek:
+      #   type: deepseek
+      #   api_key_env: DEEPSEEK_API_KEY
+      #   chat_model: deepseek-v4-flash
+
+      # huggingface:
+      #   type: huggingface
+      #   api_key_env: HUGGINGFACE_API_KEY
+      #   embedding_model: sentence-transformers/all-MiniLM-L6-v2
+      #   chat_model: google/gemma-2-2b-it
+  YAML
+
   # Raised when command-line arguments are invalid or incomplete.
   class UsageError < StandardError; end
 
@@ -130,8 +202,15 @@ class Prescient::CLI
 
   def config
     subcommand = @arguments.shift
-    raise UsageError, "unknown config command #{subcommand.inspect}" unless subcommand == 'validate'
+    case subcommand
+    when 'validate' then validate_config_command
+    when 'example' then configuration_example_command
+    else
+      raise UsageError, "unknown config command #{subcommand.inspect}"
+    end
+  end
 
+  def validate_config_command
     options = parse_options('Validate the current configuration')
     return options if options.is_a?(Integer)
 
@@ -141,6 +220,14 @@ class Prescient::CLI
     else
       @output.puts 'configuration valid'
     end
+    0
+  end
+
+  def configuration_example_command
+    options = parse_options('Generate an annotated YAML configuration example')
+    return options if options.is_a?(Integer)
+
+    @output.write(CONFIGURATION_EXAMPLE)
     0
   end
 
@@ -287,6 +374,7 @@ class Prescient::CLI
         generate TEXT   Generate a text response
         embed TEXT      Generate an embedding
         config validate Validate the current configuration
+        config example  Generate an annotated YAML configuration example
 
       Options:
         --config PATH            Load configuration from a YAML file
