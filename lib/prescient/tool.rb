@@ -3,6 +3,7 @@
 # Namespace for external capability adapters.
 module Prescient::Tool
   autoload :SearXNG, 'prescient/tool/searxng'
+  autoload :SearchApi, 'prescient/tool/search_api'
 
   # Base contract for explicit external tool invocation.
   class Base

@@ -128,6 +128,29 @@ class ConfigurationLoaderTest < PrescientTest
     assert_equal ['general', 'news'], tool.options[:categories]
   end
 
+  def test_load_configuration_supports_searchapi_tools
+    configuration = Prescient::ConfigurationLoader.load_hash(
+      {
+        tools: {
+          web_search: {
+            type: 'searchapi',
+            api_key_env: 'SEARCHAPI_API_KEY',
+            engine: 'google',
+            location: 'New York',
+          },
+        },
+      },
+      env: { 'SEARCHAPI_API_KEY' => 'test-key' },
+    )
+
+    tool = configuration.tool(:web_search)
+
+    assert_instance_of Prescient::Tool::SearchApi, tool
+    assert_equal 'test-key', tool.options[:api_key]
+    assert_equal 'google', tool.options[:engine]
+    assert_equal 'New York', tool.options[:location]
+  end
+
   def test_load_configuration_rejects_unknown_tools
     error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: {})

@@ -113,6 +113,18 @@ class Prescient::CLI
       #     - science
       #   max_response_bytes: 1048576
 
+      # SearchApi example. It uses SearchApi's Google engine by default and
+      # authenticates with a Bearer token from the environment.
+      # searchapi_web:
+      #   type: searchapi
+      #   api_key_env: SEARCHAPI_API_KEY
+      #   engine: google
+      #   location: New York
+      #   hl: en
+      #   gl: us
+      #   timeout: 10
+      #   max_results: 5
+
       # Prefer an environment reference when the URL differs by environment
       # or should not be committed. Use `--tool research_search` to select a
       # tool with a custom name.

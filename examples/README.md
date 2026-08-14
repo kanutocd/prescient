@@ -21,6 +21,9 @@ bundle install
   `Prescient::API` and lists its endpoints at `/`.
 - `web_search.rb` — explicit SearXNG tool invocation with normalized JSON output.
 
+The same `web_search` capability can use SearchApi instead of SearXNG when the
+tool is configured with `type: searchapi` and `SEARCHAPI_API_KEY`.
+
 Run the REST API example with a Rack server such as `rackup`:
 
 ```bash

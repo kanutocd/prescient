@@ -21,7 +21,7 @@ For focused guidance, see the **[examples guide](https://github.com/kanutocd/pre
 - **Reliability controls** — Retries, health checks, and fallback across configured providers
 - **Declarative configuration** — Versioned YAML, environment references, and JSON Schema validation
 - **Prompt and context customization** — Configurable prompt templates and context formatting
-- **External tools** — Explicit, normalized web-search integration with SearXNG
+- **External tools** — Explicit, normalized web-search integration with SearXNG and SearchApi
 - **Local and cloud support** — Ollama alongside hosted providers
 - **Optional integrations** — Docker deployment and pgvector support without making either mandatory
 
@@ -354,8 +354,11 @@ generate an annotated starter file.
 
 ### External Tools
 
-External tools are opt-in capability adapters, separate from AI providers. The
-first supported tool is SearXNG web search:
+External tools are opt-in capability adapters, separate from AI providers.
+Supported web-search adapters are [SearXNG](https://searxng.org/) and
+[SearchApi](https://www.searchapi.io/):
+
+#### SearXNG
 
 Setting `SEARXNG_URL` registers the default `web_search` tool for CLI and Ruby
 environment-based configuration. YAML or programmatic configuration can be
@@ -372,6 +375,43 @@ tools:
     max_results: 5
 ```
 
+Run the SearXNG-backed tool:
+
+```bash
+docker compose up -d searxng
+SEARXNG_URL=http://localhost:8080 bundle exec prescient search \
+  --format json "Ruby HTTP clients"
+```
+
+#### SearchApi
+
+[SearchApi](https://www.searchapi.io/) uses a hosted Google search engine and
+requires an API key:
+
+```yaml
+tools:
+  web_search:
+    type: searchapi
+    api_key_env: SEARCHAPI_API_KEY
+    engine: google
+    location: New York
+    hl: en
+    gl: us
+    timeout: 10
+    max_results: 5
+```
+
+The `engine` value can select another SearchApi web or product engine when its
+response uses `organic_results`, such as `bing`, `yahoo`, `yandex`,
+`amazon_search`, or `walmart_search`.
+
+Run the SearchApi-backed tool:
+
+```bash
+SEARCHAPI_API_KEY=your-key bundle exec prescient search \
+  --config prescient.yml --format json "Ruby HTTP clients"
+```
+
 Invoke a configured tool explicitly from Ruby or the CLI:
 
 ```ruby
@@ -379,9 +419,8 @@ result = Prescient.tool(:web_search).search('Ruby HTTP clients', limit: 3)
 ```
 
 ```bash
-docker compose up -d searxng
-SEARXNG_URL=http://localhost:8080 bundle exec prescient search \
-  --config prescient.yml --format json "Ruby HTTP clients"
+bundle exec prescient search --config prescient.yml \
+  --tool web_search --format json "Ruby HTTP clients"
 ```
 
 Results use a normalized envelope containing `tool`, `query`, `source`, and

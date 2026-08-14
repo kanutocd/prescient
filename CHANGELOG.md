@@ -11,6 +11,9 @@
 - Added opt-in search-to-provider context assembly through `Prescient.search_and_generate` and `prescient search --generate`.
 - Added `POST /v1/search/generate` for REST API consumers to opt in to search-result context.
 - Added `POST /v1/search` for normalized raw external-tool results without AI generation.
+- Added SearchApi as a hosted web-search adapter with engine, location, language,
+  country, API-key, timeout, and result-limit configuration.
+- Documented SearXNG and SearchApi setup and CLI usage side by side.
 - Added explicit `--generate` opt-in behavior to the web-search example.
 - Added `SEARXNG_URL` environment defaults for automatic `web_search` registration.
 - Expanded `prescient config example` with documented SearXNG settings,

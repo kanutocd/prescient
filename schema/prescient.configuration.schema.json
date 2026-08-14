@@ -165,8 +165,39 @@
         "type": {
           "type": "string",
           "enum": [
-            "searxng"
+            "searxng",
+            "searchapi"
           ]
+        },
+        "api_key": {
+          "type": "string"
+        },
+        "api_key_env": {
+          "type": "string"
+        },
+        "engine": {
+          "type": "string"
+        },
+        "engine_env": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "location_env": {
+          "type": "string"
+        },
+        "hl": {
+          "type": "string"
+        },
+        "hl_env": {
+          "type": "string"
+        },
+        "gl": {
+          "type": "string"
+        },
+        "gl_env": {
+          "type": "string"
         },
         "url": {
           "type": "string",

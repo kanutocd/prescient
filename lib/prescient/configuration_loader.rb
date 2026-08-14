@@ -42,7 +42,8 @@ class Prescient::ConfigurationLoader
 
   # Tool names mapped to lazily resolved adapter constants.
   TOOL_TYPES = {
-    'searxng' => :SearXNG,
+    'searchapi' => :SearchApi,
+    'searxng'   => :SearXNG,
   }.freeze
 
   # Provider-specific keys shared by all supported adapters.
@@ -69,10 +70,20 @@ class Prescient::ConfigurationLoader
 
   # Tool-specific keys accepted by all configured adapters.
   COMMON_TOOL_KEYS = [
+    'api_key',
+    'api_key_env',
     'categories',
     'categories_env',
+    'engine',
+    'engine_env',
+    'gl',
+    'gl_env',
+    'hl',
+    'hl_env',
     'language',
     'language_env',
+    'location',
+    'location_env',
     'max_response_bytes',
     'max_response_bytes_env',
     'max_results',
