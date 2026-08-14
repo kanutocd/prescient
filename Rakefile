@@ -77,6 +77,17 @@ namespace :rbs do
   task check: %i[prototype validate]
 end
 
+desc "Validate GitHub Actions workflows"
+task :actionlint do
+  actionlint = if File.executable?(".tools/bin/actionlint")
+                 ".tools/bin/actionlint"
+               else
+                 ENV.fetch("ACTIONLINT", "actionlint")
+               end
+  sh actionlint
+end
+
+
 desc "Run tests and linting"
 task default: %w[test rubocop yard yard:validate]
 # task default: %w[test rubocop yard yard:validate rbs:validate]
