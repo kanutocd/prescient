@@ -181,29 +181,14 @@ class ClientTest < PrescientTest
     assert_equal 'shown', options[:values].first[:visible]
   end
 
-  def test_method_missing_delegates_to_provider
-    # Test delegation of methods not explicitly defined
-    @client.provider.expects(:custom_method).with('arg1', 'arg2').returns('custom_result')
-
-    result = @client.custom_method('arg1', 'arg2')
-
-    assert_equal 'custom_result', result
-  end
-
-  def test_method_missing_raises_error_for_unknown_methods
+  def test_unknown_methods_raise_no_method_error
     assert_raises(NoMethodError) do
       @client.nonexistent_method
     end
   end
 
-  def test_respond_to_includes_provider_methods
-    @client.provider.stubs(:respond_to?).with(:custom_method, false).returns(true)
-
-    assert_respond_to @client, :custom_method
-
-    @client.provider.stubs(:respond_to?).with(:nonexistent_method, false).returns(false)
-
-    refute_respond_to @client, :nonexistent_method
+  def test_provider_specific_methods_are_not_exposed
+    refute_respond_to @client, :custom_method
   end
 
   def test_respond_to_includes_client_methods

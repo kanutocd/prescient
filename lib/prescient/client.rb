@@ -110,23 +110,6 @@ module Prescient
       }
     end
 
-    # Delegate unknown methods to the underlying provider instance.
-    #
-    # @private
-    # @param method_name [Symbol]
-    # @return [Object]
-    def method_missing(method_name, ...)
-      @provider.respond_to?(method_name) ? @provider.send(method_name, ...) : super
-    end
-
-    # @private
-    # @param method_name [Symbol]
-    # @param include_private [Boolean]
-    # @return [Boolean]
-    def respond_to_missing?(method_name, include_private = false)
-      @provider.respond_to?(method_name, include_private) || super
-    end
-
     private
 
     def sanitize_options(options)
