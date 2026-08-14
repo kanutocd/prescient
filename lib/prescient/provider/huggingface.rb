@@ -2,11 +2,13 @@
 
 require 'httparty'
 
+# Hugging Face Inference API provider adapter.
 class Prescient::Provider::HuggingFace < Prescient::Base
   include HTTParty
 
   base_uri 'https://api-inference.huggingface.co'
 
+  # Known embedding dimensions for commonly used models.
   EMBEDDING_DIMENSIONS = {
     'sentence-transformers/all-MiniLM-L6-v2'     => 384,
     'sentence-transformers/all-mpnet-base-v2'    => 768,
@@ -18,6 +20,9 @@ class Prescient::Provider::HuggingFace < Prescient::Base
     self.class.default_timeout(@options[:timeout] || 60)
   end
 
+  # Generate an embedding through Hugging Face feature extraction.
+  # @param text [String] Text to embed
+  # @return [Array<Float>] Embedding vector
   def generate_embedding(text, **_options)
     handle_errors do
       clean_text_input = clean_text(text)
@@ -47,6 +52,10 @@ class Prescient::Provider::HuggingFace < Prescient::Base
     end
   end
 
+  # Generate text through a Hugging Face text-generation model.
+  # @param prompt [String] Prompt to send
+  # @param context_items [Array<Hash, String>] Optional context items
+  # @return [Hash] Normalized response data
   def generate_response(prompt, context_items = [], **options)
     handle_errors do
       formatted_prompt = build_prompt(prompt, context_items)
@@ -93,6 +102,8 @@ class Prescient::Provider::HuggingFace < Prescient::Base
     end
   end
 
+  # Check availability of the configured embedding and text models.
+  # @return [Hash] Provider health information
   def health_check
     handle_errors do
       # Test embedding model
@@ -138,6 +149,8 @@ class Prescient::Provider::HuggingFace < Prescient::Base
     }
   end
 
+  # Return the configured Hugging Face models.
+  # @return [Array<Hash>] Model descriptors
   def list_models
     # HuggingFace doesn't provide a simple API to list all models
     # Return the configured models

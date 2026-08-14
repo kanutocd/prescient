@@ -193,18 +193,39 @@ module Prescient
   end
 
   # Convenience methods for quick access
+  #
+  # @param provider_name [Symbol, nil] Provider to use, or the configured default
+  # @param enable_fallback [Boolean] Whether provider fallback is enabled
+  # @return [Client] A configured client instance
   def self.client(provider_name = nil, enable_fallback: true)
     Client.new(provider_name, enable_fallback: enable_fallback)
   end
 
+  # Generate an embedding through a configured provider.
+  #
+  # @param text [String] Text to embed
+  # @param provider [Symbol, nil] Provider to use
+  # @param enable_fallback [Boolean] Whether provider fallback is enabled
+  # @return [Array<Float>] Embedding vector
   def self.generate_embedding(text, provider: nil, enable_fallback: true, **options)
     client(provider, enable_fallback: enable_fallback).generate_embedding(text, **options)
   end
 
+  # Generate a response through a configured provider.
+  #
+  # @param prompt [String] Prompt to send
+  # @param context_items [Array<Hash, String>] Optional context items
+  # @param provider [Symbol, nil] Provider to use
+  # @param enable_fallback [Boolean] Whether provider fallback is enabled
+  # @return [Hash] Normalized provider response
   def self.generate_response(prompt, context_items = [], provider: nil, enable_fallback: true, **options)
     client(provider, enable_fallback: enable_fallback).generate_response(prompt, context_items, **options)
   end
 
+  # Return the health status of a configured provider.
+  #
+  # @param provider [Symbol, nil] Provider to check
+  # @return [Hash] Provider health information
   def self.health_check(provider: nil)
     client(provider, enable_fallback: false).health_check
   end

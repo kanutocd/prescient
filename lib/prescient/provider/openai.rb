@@ -2,11 +2,13 @@
 
 require 'httparty'
 
+# OpenAI API provider adapter.
 class Prescient::Provider::OpenAI < Prescient::Base
   include HTTParty
 
   base_uri 'https://api.openai.com'
 
+  # Known embedding dimensions for OpenAI embedding models.
   EMBEDDING_DIMENSIONS = {
     'text-embedding-3-small' => 1536,
     'text-embedding-3-large' => 3072,
@@ -18,6 +20,9 @@ class Prescient::Provider::OpenAI < Prescient::Base
     self.class.default_timeout(@options[:timeout] || 60)
   end
 
+  # Generate an embedding through the OpenAI embeddings API.
+  # @param text [String] Text to embed
+  # @return [Array<Float>] Embedding vector
   def generate_embedding(text, **_options)
     handle_errors do
       clean_text_input = clean_text(text)
@@ -43,6 +48,10 @@ class Prescient::Provider::OpenAI < Prescient::Base
     end
   end
 
+  # Generate a response through the OpenAI chat completions API.
+  # @param prompt [String] Prompt to send
+  # @param context_items [Array<Hash, String>] Optional context items
+  # @return [Hash] Normalized response data
   def generate_response(prompt, context_items = [], **options)
     handle_errors do
       formatted_prompt = build_prompt(prompt, context_items)
@@ -83,6 +92,8 @@ class Prescient::Provider::OpenAI < Prescient::Base
     end
   end
 
+  # Check OpenAI model availability.
+  # @return [Hash] Provider health information
   def health_check
     handle_errors do
       response = self.class.get('/v1/models',
@@ -127,6 +138,8 @@ class Prescient::Provider::OpenAI < Prescient::Base
     }
   end
 
+  # List models available to the configured OpenAI account.
+  # @return [Array<Hash>] Model descriptors
   def list_models
     handle_errors do
       response = self.class.get('/v1/models',

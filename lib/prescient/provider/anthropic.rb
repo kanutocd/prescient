@@ -2,6 +2,7 @@
 
 require 'httparty'
 
+# Anthropic Messages API provider adapter.
 class Prescient::Provider::Anthropic < Prescient::Base
   include HTTParty
 
@@ -18,6 +19,10 @@ class Prescient::Provider::Anthropic < Prescient::Base
           'Anthropic provider does not support embeddings. Use OpenAI or HuggingFace for embeddings.'
   end
 
+  # Generate a response using Anthropic's Messages API.
+  # @param prompt [String] Prompt to send
+  # @param context_items [Array<Hash, String>] Optional context items
+  # @return [Hash] Normalized response data
   def generate_response(prompt, context_items = [], **options)
     handle_errors do
       formatted_prompt = build_prompt(prompt, context_items)
@@ -57,6 +62,8 @@ class Prescient::Provider::Anthropic < Prescient::Base
     end
   end
 
+  # Check Anthropic API availability with a minimal message request.
+  # @return [Hash] Provider health information
   def health_check
     handle_errors do
       # Test with a simple message
@@ -102,6 +109,8 @@ class Prescient::Provider::Anthropic < Prescient::Base
     }
   end
 
+  # Return the Anthropic models known by this adapter.
+  # @return [Array<Hash>] Model descriptors
   def list_models
     # Anthropic doesn't provide a models list API
     [

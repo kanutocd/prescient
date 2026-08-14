@@ -2,6 +2,7 @@
 
 require 'httparty'
 
+# Ollama local or hosted API provider adapter.
 class Prescient::Provider::Ollama < Prescient::Base
   include HTTParty
 
@@ -13,6 +14,9 @@ class Prescient::Provider::Ollama < Prescient::Base
     self.class.default_timeout(@options[:timeout] || 60)
   end
 
+  # Generate an embedding through Ollama's embedding endpoint.
+  # @param text [String] Text to embed
+  # @return [Array<Float>] Embedding vector
   def generate_embedding(text, **_options)
     handle_errors do
       embeddings = fetch_and_parse('post', '/api/embed',
@@ -34,6 +38,10 @@ class Prescient::Provider::Ollama < Prescient::Base
     end
   end
 
+  # Generate text through Ollama's generation endpoint.
+  # @param prompt [String] Prompt to send
+  # @param context_items [Array<Hash, String>] Optional context items
+  # @return [Hash] Normalized response data
   def generate_response(prompt, context_items = [], **options)
     handle_errors do
       request_options = prepare_generate_response(prompt, context_items, **options)
@@ -59,6 +67,8 @@ class Prescient::Provider::Ollama < Prescient::Base
     end
   end
 
+  # Check whether the configured Ollama models are available.
+  # @return [Hash] Provider health information
   def health_check
     handle_errors do
       models = available_models
@@ -91,6 +101,8 @@ class Prescient::Provider::Ollama < Prescient::Base
     }
   end
 
+  # List models currently available from Ollama.
+  # @return [Array<Hash>] Model descriptors
   def available_models
     return @_available_models if defined?(@_available_models)
 
@@ -103,6 +115,9 @@ class Prescient::Provider::Ollama < Prescient::Base
     end
   end
 
+  # Pull a model into the Ollama installation.
+  # @param model_name [String] Model identifier to download
+  # @return [Hash] Pull result
   def pull_model(model_name)
     handle_errors do
       fetch_and_parse('post', '/api/pull',
