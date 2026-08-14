@@ -8,7 +8,6 @@ SimpleCov.start do
   minimum_coverage line: 99, branch: 99
 end
 
-
 require 'bundler/setup'
 require 'minitest/autorun'
 require 'minitest/pride'

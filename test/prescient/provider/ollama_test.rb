@@ -158,6 +158,18 @@ class OllamaProviderTest < PrescientTest
     assert_equal 'Response with context', result[:response]
   end
 
+  def test_generate_response_handles_missing_response
+    mock_response = mock('response')
+    mock_response.stubs(:success?).returns(true)
+    mock_response.stubs(:parsed_response).returns({})
+
+    @provider.class.expects(:post).returns(mock_response)
+
+    assert_raises(Prescient::InvalidResponseError) do
+      @provider.generate_response('test prompt')
+    end
+  end
+
   def test_generate_response_with_options
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
@@ -191,6 +203,8 @@ class OllamaProviderTest < PrescientTest
     assert_equal 'http://localhost:11434', result[:url]
     assert_includes result[:models_available], 'nomic-embed-text'
     assert_includes result[:models_available], 'llama3.1:8b'
+
+    assert_equal(result[:models_available], @provider.available_models.map { |model| model[:name] })
   end
 
   def test_health_check_handles_errors

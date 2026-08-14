@@ -213,6 +213,18 @@ class HuggingFaceProviderTest < PrescientTest
     end
   end
 
+  def test_generate_response_handles_unrecognized_response_shape
+    mock_response = mock('response')
+    mock_response.stubs(:success?).returns(true)
+    mock_response.stubs(:parsed_response).returns('invalid')
+
+    @provider.class.expects(:post).returns(mock_response)
+
+    assert_raises(Prescient::InvalidResponseError) do
+      @provider.generate_response('test prompt')
+    end
+  end
+
   def test_health_check_success
     # Mock embedding model health check
     embedding_response = mock('embedding_response')

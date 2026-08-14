@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 require_relative 'prescient/version'
+require_relative 'prescient/errors'
+require_relative 'prescient/base'
+require_relative 'prescient/provider/ollama'
+require_relative 'prescient/provider/anthropic'
+require_relative 'prescient/provider/openai'
+require_relative 'prescient/provider/huggingface'
+require_relative 'prescient/client'
 
 # Main Prescient module for AI provider abstraction
 #
@@ -20,44 +27,6 @@ require_relative 'prescient/version'
 # @example Embedding generation
 #   embedding = client.generate_embedding("Some text to embed")
 #   puts embedding.length # => 1536 (for OpenAI text-embedding-3-small)
-#
-# @author Claude Code
-# @since 1.0.0
-module Prescient
-  # Base error class for all Prescient-specific errors
-  class Error < StandardError; end
-
-  # Raised when there are connection issues with AI providers
-  class ConnectionError < Error; end
-
-  # Raised when API authentication fails
-  class AuthenticationError < Error; end
-
-  # Raised when API rate limits are exceeded
-  class RateLimitError < Error; end
-
-  # Raised when a requested model is not available
-  class ModelNotAvailableError < Error; end
-
-  # Raised when AI provider returns invalid or malformed responses
-  class InvalidResponseError < Error; end
-
-  # Container module for AI provider implementations
-  #
-  # All provider classes should be defined within this module and inherit
-  # from {Prescient::Base}.
-  module Provider
-    # Module for AI provider implementations
-  end
-end
-
-require_relative 'prescient/base'
-require_relative 'prescient/provider/ollama'
-require_relative 'prescient/provider/anthropic'
-require_relative 'prescient/provider/openai'
-require_relative 'prescient/provider/huggingface'
-require_relative 'prescient/client'
-
 module Prescient
   # Configure Prescient with custom settings and providers
   #
