@@ -65,6 +65,18 @@ docker compose up -d searxng
 SEARXNG_URL=http://localhost:8080 bundle exec ruby examples/web_search.rb "Ruby HTTP clients"
 ```
 
+The example returns normalized search results directly by default. Opt in to
+feeding those results to the configured AI provider with `--generate`:
+
+```bash
+SEARXNG_URL=http://localhost:8080 PRESCIENT_PROVIDER=openai \
+  bundle exec ruby examples/web_search.rb --generate "Ruby HTTP clients"
+```
+
+Omit `--generate` to keep the search results direct. `PRESCIENT_PROVIDER` is
+only used with `--generate` and may be omitted when the default provider is
+configured.
+
 See the [main README](../README.md) for configuration, fallback behavior,
 prompt templates, context exclusions, embeddings, and the public API. Rails
 applications can also use the [integration guide](../INTEGRATION_GUIDE.md),

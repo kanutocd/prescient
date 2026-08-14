@@ -128,6 +128,22 @@ class ConfigurationTest < PrescientTest
     assert_empty output
   end
 
+  def test_default_configuration_registers_web_search_when_url_is_present
+    output = run_ruby(
+      <<~RUBY,
+        ENV['SEARXNG_URL'] = 'http://localhost:8080'
+        require 'prescient'
+
+        tool = Prescient.configuration.tools[:web_search]
+        abort 'web search tool was not registered' unless tool
+        abort 'unexpected SearXNG URL' unless tool[:options][:url] == 'http://localhost:8080'
+      RUBY
+      unset: ['SEARXNG_URL'],
+    )
+
+    assert_empty output
+  end
+
   def test_default_configuration_registers_huggingface_when_api_key_is_present
     output = run_ruby(
       <<~RUBY,

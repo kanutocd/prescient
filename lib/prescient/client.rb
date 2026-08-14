@@ -247,6 +247,32 @@ module Prescient
     client(provider, enable_fallback: enable_fallback).generate_response(prompt, context_items, **options)
   end
 
+  # Search with an explicit external tool and optionally use the normalized
+  # results as context for a configured AI provider.
+  #
+  # @param query [String] Search query and generation prompt
+  # @param tool [Symbol, String] Configured external tool name
+  # @param provider [Symbol, nil] Provider to use for generation
+  # @param limit [Integer, nil] Maximum number of search results
+  # @param enable_fallback [Boolean] Whether provider fallback is enabled
+  # @param provider_options [Hash] Temporary provider configuration overrides
+  # @return [Hash] Normalized provider response
+  def self.search_and_generate(query, tool: :web_search, provider: nil, limit: nil,
+                               enable_fallback: true, provider_options: {}, **options)
+    search_tool = self.tool(tool)
+    raise Prescient::ToolConfigurationError, "tool not configured: #{tool}" unless search_tool
+
+    search_result = search_tool.search(query, limit: limit)
+    context_items = search_result[:results]
+    raise Prescient::ToolInvalidResponseError, 'tool results must be an array' unless context_items.is_a?(Array)
+
+    client(provider, enable_fallback:, provider_options:).generate_response(
+      query,
+      context_items,
+      **options,
+    )
+  end
+
   # Return the health status of a configured provider.
   #
   # @param provider [Symbol, nil] Provider to check

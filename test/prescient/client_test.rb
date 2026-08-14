@@ -85,6 +85,32 @@ class ClientTest < PrescientTest
     @client.generate_response('test prompt')
   end
 
+  def test_search_and_generate_explicitly_feeds_normalized_results_to_provider
+    Prescient.configuration.add_tool(:web_search, TestTool)
+    context = [{ title: 'Result', url: 'https://example.test', snippet: 'Context' }]
+    @client.provider.expects(:generate_response).with('Ruby query', context).returns({ response: 'Answer' })
+
+    result = Prescient.search_and_generate('Ruby query', provider: :test_provider)
+
+    assert_equal({ response: 'Answer' }, result)
+  end
+
+  def test_search_and_generate_rejects_unconfigured_tools
+    error = assert_raises(Prescient::ToolConfigurationError) {
+      Prescient.search_and_generate('Ruby query', tool: :missing, provider: :test_provider)
+    }
+
+    assert_includes error.message, 'tool not configured: missing'
+  end
+
+  def test_search_and_generate_rejects_malformed_tool_results
+    Prescient.configuration.add_tool(:web_search, MalformedTool)
+
+    assert_raises(Prescient::ToolInvalidResponseError) do
+      Prescient.search_and_generate('Ruby query', provider: :test_provider)
+    end
+  end
+
   def test_generate_response_handles_provider_errors
     skip 'Mocha mock expectation setup issue - functionality works in integration tests'
 
@@ -297,6 +323,18 @@ class ClientTest < PrescientTest
 
     def validate_configuration!
       # No validation needed for test
+    end
+  end
+
+  class TestTool < Prescient::Tool::Base
+    def search(_query, limit: nil)
+      { results: [{ title: 'Result', url: 'https://example.test', snippet: 'Context' }].first(limit || 1) }
+    end
+  end
+
+  class MalformedTool < Prescient::Tool::Base
+    def search(_query, **_options)
+      { results: nil }
     end
   end
 end

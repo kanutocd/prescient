@@ -47,8 +47,8 @@ class Prescient::CLI
         chat_model: llama3.2:3b
         # prompt_templates:
         #   system_prompt: You are a concise assistant.
-        #   no_context_template: "%<system_prompt>s\\n\\nUser: %<query>s"
-        #   with_context_template: "%<system_prompt>s\\n\\nContext:\\n%<context>s\\n\\nUser: %<query>s"
+        #   no_context_template: "%<system_prompt>s\x5Cn\x5CnUser: %<query>s"
+        #   with_context_template: "%<system_prompt>s\x5Cn\x5CnContext:\x5Cn%<context>s\x5Cn\x5CnUser: %<query>s"
 
       # Uncomment a cloud provider and set its credential in the environment.
       # openai:
@@ -58,7 +58,7 @@ class Prescient::CLI
       #   chat_model: gpt-4.1-mini
       #   prompt_templates:
       #     system_prompt: You are a concise assistant.
-      #     no_context_template: "%<system_prompt>s\n\nUser: %<query>s"
+      #     no_context_template: "%<system_prompt>s\x5Cn\x5CnUser: %<query>s"
 
       # anthropic:
       #   type: anthropic
@@ -94,13 +94,39 @@ class Prescient::CLI
       #   embedding_model: sentence-transformers/all-MiniLM-L6-v2
       #   chat_model: google/gemma-2-2b-it
 
-    # External tools are opt-in and separate from AI providers.
+    # External tools are opt-in and separate from AI providers. They can be
+    # used directly with `prescient search`, or as context with
+    # `prescient search --generate`.
+    #
+    # The CLI also registers `web_search` automatically when SEARXNG_URL is
+    # set and no YAML tool configuration is provided.
     tools:
+      # Local SearXNG example. Uncomment this block to configure a tool in YAML.
       # web_search:
       #   type: searxng
       #   url: http://localhost:8080
       #   timeout: 5
       #   max_results: 5
+      #   language: en
+      #   categories:
+      #     - general
+      #     - science
+      #   max_response_bytes: 1048576
+
+      # Prefer an environment reference when the URL differs by environment
+      # or should not be committed. Use `--tool research_search` to select a
+      # tool with a custom name.
+      # research_search:
+      #   type: searxng
+      #   url_env: SEARXNG_URL
+      #   timeout_env: SEARXNG_TIMEOUT
+      #   max_results_env: SEARXNG_MAX_RESULTS
+      #   language_env: SEARXNG_LANGUAGE
+      #   categories_env: SEARXNG_CATEGORIES
+
+      # Search results are returned directly by default. Add `--generate` to
+      # feed normalized results to the selected AI provider. Omit `--generate`
+      # when the caller should handle the search results itself.
   YAML
 
   # Raised when command-line arguments are invalid or incomplete.
@@ -224,11 +250,16 @@ class Prescient::CLI
   end
 
   def search
-    options = parse_options('Search with a configured external tool', tool: true, limit: true)
+    options = parse_options(
+      'Search with a configured external tool',
+      fallback: true, tool: true, limit: true, generate: true,
+    )
     return options if options.is_a?(Integer)
 
     query = read_text(options[:arguments], 'query')
     tool_name = (options[:tool] || 'web_search').to_sym
+    return generate_search_response(query, tool_name, options) if options[:generate]
+
     tool = Prescient.tool(tool_name)
     raise UsageError, "tool not configured: #{tool_name}" unless tool
 
@@ -238,6 +269,20 @@ class Prescient::CLI
     else
       print_search_results(result[:results])
     end
+    0
+  end
+
+  def generate_search_response(query, tool_name, options)
+    response = Prescient.search_and_generate(
+      query,
+      tool:             tool_name,
+      provider:         options[:provider]&.to_sym,
+      limit:            options[:limit],
+      enable_fallback:  options[:fallback],
+      provider_options: provider_options(options),
+      **model_options(options),
+    )
+    options[:format] == 'json' ? print_json(response) : @output.puts(response[:response])
     0
   end
 
@@ -295,14 +340,16 @@ class Prescient::CLI
     end
   end
 
-  def parse_options(description, fallback: false, tool: false, limit: false)
+  def parse_options(description, fallback: false, tool: false, limit: false, generate: false)
     options = { format: 'text', fallback: fallback }
     parser = OptionParser.new do |parser|
       parser.banner = "Usage: prescient #{@arguments.first || 'command'} [options]"
       parser.separator description
+      parser.separator ''
+      parser.separator 'Global options:'
       add_common_options(parser, options)
       parser.on('--no-fallback', 'Disable provider fallback') { options[:fallback] = false } if fallback
-      add_tool_options(parser, options, tool:, limit:)
+      add_tool_options(parser, options, tool:, limit:, generate:)
       parser.on('-h', '--help', 'Show command help') do
         @output.puts parser
         throw :help_shown, 0
@@ -316,8 +363,13 @@ class Prescient::CLI
     options
   end
 
-  def add_tool_options(parser, options, tool:, limit:)
+  def add_tool_options(parser, options, tool:, limit:, generate:)
+    return unless tool || limit || generate
+
+    parser.separator ''
+    parser.separator 'Search options:'
     parser.on('--tool NAME', 'Use a configured external tool') { |value| options[:tool] = value } if tool
+    parser.on('--generate', 'Use search results as AI provider context') { options[:generate] = true } if generate
     return unless limit
 
     parser.on('--limit COUNT', Integer, 'Limit the number of results') { |value| options[:limit] = value }
@@ -478,7 +530,7 @@ class Prescient::CLI
         config validate Validate the current configuration
         config example  Generate an annotated YAML configuration example
 
-      Options:
+      Global options:
         --config PATH            Load configuration from a YAML file
         --provider NAME          Select a provider
         --model NAME             Override the selected operation's model
@@ -493,9 +545,12 @@ class Prescient::CLI
                                  Load prompt templates from a YAML file
         --api-key KEY            Use an API key for the operation
         --api-key-env NAME       Read the API key from an environment variable
-        --tool NAME              Select an external tool for search
-        --limit COUNT            Limit search results
         --format FORMAT          Use text or json output
+
+      Search options:
+        --tool NAME              Select an external tool for search
+        --generate               Use search results as AI provider context
+        --limit COUNT            Limit search results
     HELP
     status
   end

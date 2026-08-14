@@ -78,6 +78,10 @@ class CLITest < PrescientTest
 
     assert_includes output, '--prompt-templates-file PATH'
 
+    assert_includes output, 'Global options:'
+
+    assert_includes output, 'Search options:'
+
     assert_empty errors
 
     status, _output, errors = run_cli(['unknown'])
@@ -99,6 +103,12 @@ class CLITest < PrescientTest
     assert_equal 0, status
 
     assert_includes output, 'List configured providers'
+
+    status, output, _errors = run_cli(['search', '--help'])
+
+    assert_equal 0, status
+    assert_includes output, 'Global options:'
+    assert_includes output, 'Search options:'
   end
   # rubocop:enable Minitest/MultipleAssertions
 
@@ -116,6 +126,14 @@ class CLITest < PrescientTest
     assert_equal 0, status
 
     assert_includes output, 'Validate the current configuration'
+  end
+
+  def test_search_options_are_added_only_when_requested
+    cli = Prescient::CLI.new([], input: StringIO.new, output: StringIO.new, errors: StringIO.new)
+    parser = OptionParser.new
+
+    cli.send(:add_tool_options, parser, {}, tool: false, limit: true, generate: false)
+    cli.send(:add_tool_options, parser, {}, tool: true, limit: false, generate: false)
   end
 
   def test_providers_support_text_and_json_output
@@ -286,6 +304,20 @@ class CLITest < PrescientTest
 
     assert_equal 0, status
     refute_includes output, 'Snippet'
+  end
+
+  def test_search_can_explicitly_generate_with_results_as_context
+    status, output, _errors = run_cli(
+      ['search', '--generate', '--provider', 'test', '--format', 'json', 'Ruby tools'],
+    )
+
+    assert_equal 0, status
+    assert_equal 'response to Ruby tools', JSON.parse(output)['response']
+
+    status, output, _errors = run_cli(['search', '--generate', 'Ruby tools'])
+
+    assert_equal 0, status
+    assert_equal "response to Ruby tools\n", output
   end
 
   def test_search_rejects_missing_tool

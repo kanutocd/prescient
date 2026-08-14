@@ -93,6 +93,7 @@ module Prescient
                     else
                       Configuration.new.tap do |config|
                         configure_default_providers(config, env)
+                        configure_default_tools(config, env)
                       end
                     end
 
@@ -246,6 +247,12 @@ module Prescient
       configure_huggingface(config, env)
     end
 
+    def configure_default_tools(config, env)
+      return unless env['SEARXNG_URL']
+
+      config.add_tool(:web_search, Prescient::Tool::SearXNG, url: env['SEARXNG_URL'])
+    end
+
     def configure_ollama(config, env)
       config.add_provider(
         :ollama,
@@ -347,5 +354,6 @@ module Prescient
   # Default configuration
   configure do |config|
     configure_default_providers(config, ENV)
+    configure_default_tools(config, ENV)
   end
 end

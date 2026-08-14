@@ -153,6 +153,7 @@ class Prescient::ConfigurationLoader
   def load_hash(data, source: nil)
     configuration = Prescient::Configuration.new
     Prescient.send(:configure_default_providers, configuration, @env)
+    Prescient.send(:configure_default_tools, configuration, @env)
     apply!(configuration, data, source:)
     configuration
   end

@@ -355,6 +355,10 @@ generate an annotated starter file.
 External tools are opt-in capability adapters, separate from AI providers. The
 first supported tool is SearXNG web search:
 
+Setting `SEARXNG_URL` registers the default `web_search` tool for CLI and Ruby
+environment-based configuration. YAML or programmatic configuration can be
+used when more control is needed.
+
 ```yaml
 tools:
   web_search:
@@ -384,6 +388,23 @@ bounded query length, timeout, result count, and response size. Tool execution
 is explicit; Prescient does not autonomously invoke tools, and tool endpoints
 are not exposed through `Prescient::API` yet. Other adapters can implement the
 same contract without changing provider integrations.
+
+Search results are not sent to an AI provider by default. Opt in when you want
+the normalized results assembled as generation context:
+
+```ruby
+response = Prescient.search_and_generate(
+  'Ruby HTTP clients',
+  tool: :web_search,
+  provider: :openai,
+)
+```
+
+The CLI exposes the same opt-in behavior with `--generate`:
+
+```bash
+prescient search --generate --provider openai "Ruby HTTP clients"
+```
 
 ### Programmatic Configuration
 
