@@ -8,6 +8,7 @@ class ProviderContractTest < PrescientTest
     anthropic:   Prescient::Provider::Anthropic,
     openai:      Prescient::Provider::OpenAI,
     huggingface: Prescient::Provider::HuggingFace,
+    gemini:      Prescient::Provider::Gemini,
   }.freeze
 
   PROVIDER_CONFIGS = {
@@ -29,6 +30,11 @@ class ProviderContractTest < PrescientTest
       api_key:         'test-api-key',
       embedding_model: 'sentence-transformers/all-MiniLM-L6-v2',
       chat_model:      'google/gemma-2-2b-it',
+    },
+    gemini:      {
+      api_key:         'test-api-key',
+      embedding_model: 'gemini-embedding-001',
+      chat_model:      'gemini-2.5-flash',
     },
   }.freeze
   HEALTH_STATUSES = ['healthy', 'partial', 'unhealthy', 'unavailable'].freeze

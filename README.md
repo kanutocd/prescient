@@ -1,6 +1,6 @@
 # Prescient
 
-Prescient is a boring AI provider abstraction for Ruby. Configure your AI providers once, then use the same interface regardless of whether the request is handled by OpenAI, Anthropic, Ollama, or Hugging Face. Prescient handles provider selection, retries, health checks, and fallback.
+Prescient is a boring AI provider abstraction for Ruby. Configure your AI providers once, then use the same interface regardless of whether the request is handled by OpenAI, Anthropic, Ollama, Hugging Face, or Google Gemini. Prescient handles provider selection, retries, health checks, and fallback.
 
 For focused guidance, see the **[examples guide](https://github.com/kanutocd/prescient/tree/main/examples)**,
 **[Rails integration guide](https://github.com/kanutocd/prescient/blob/main/INTEGRATION_GUIDE.md)**, and
@@ -41,6 +41,12 @@ For focused guidance, see the **[examples guide](https://github.com/kanutocd/pre
 - **Models**: sentence-transformers, open-source chat models
 - **Capabilities**: Embeddings, Text Generation
 - **Use Case**: Open-source models, research
+
+### Google Gemini
+
+- **Models**: Gemini generation and embedding models
+- **Capabilities**: Embeddings, Text Generation
+- **Use Case**: Google AI hosted models
 
 ## Installation
 
@@ -198,6 +204,11 @@ OPENAI_CHAT_MODEL=gpt-4.1-mini
 HUGGINGFACE_API_KEY=your_api_key
 HUGGINGFACE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 HUGGINGFACE_CHAT_MODEL=google/gemma-2-2b-it
+
+# Google Gemini
+GEMINI_API_KEY=your_api_key
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+GEMINI_CHAT_MODEL=gemini-2.5-flash
 ```
 
 ### Programmatic Configuration
@@ -230,6 +241,13 @@ Prescient.configure do |config|
     api_key: ENV['OPENAI_API_KEY'],
     embedding_model: 'text-embedding-3-small',
     chat_model: 'gpt-4.1-mini'
+  )
+
+  # Add Google Gemini
+  config.add_provider(:gemini, Prescient::Provider::Gemini,
+    api_key: ENV['GEMINI_API_KEY'],
+    embedding_model: 'gemini-embedding-001',
+    chat_model: 'gemini-2.5-flash'
   )
 end
 ```

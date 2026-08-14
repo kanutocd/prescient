@@ -108,6 +108,7 @@ class ConfigurationTest < PrescientTest
         'OPENAI_API_KEY',
         'ANTHROPIC_API_KEY',
         'HUGGINGFACE_API_KEY',
+        'GEMINI_API_KEY',
       ],
     )
 
@@ -130,6 +131,7 @@ class ConfigurationTest < PrescientTest
         'OPENAI_API_KEY',
         'ANTHROPIC_API_KEY',
         'HUGGINGFACE_API_KEY',
+        'GEMINI_API_KEY',
       ],
     )
 
@@ -138,7 +140,7 @@ class ConfigurationTest < PrescientTest
 
   def test_default_configuration_handles_provider_api_key_combinations
     [{}, { 'OPENAI_API_KEY' => 'openai-key' }, { 'ANTHROPIC_API_KEY' => 'anthropic-key' },
-     { 'HUGGINGFACE_API_KEY' => 'huggingface-key' }].each do |env|
+     { 'HUGGINGFACE_API_KEY' => 'huggingface-key' }, { 'GEMINI_API_KEY' => 'gemini-key' }].each do |env|
       config = Prescient::Configuration.new
 
       Prescient.send(:configure_default_providers, config, env)

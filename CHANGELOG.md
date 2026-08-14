@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- Added Google Gemini provider support for text generation, embeddings, health checks, and model listing.
+- Added Gemini environment-variable defaults and YAML configuration support.
+
 ## [0.4.0] - 2025-08-14
 
 ### Added

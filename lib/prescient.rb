@@ -8,6 +8,7 @@ require_relative 'prescient/provider/ollama'
 require_relative 'prescient/provider/anthropic'
 require_relative 'prescient/provider/openai'
 require_relative 'prescient/provider/huggingface'
+require_relative 'prescient/provider/gemini'
 require_relative 'prescient/configuration_loader'
 require_relative 'prescient/client'
 require_relative 'prescient/cli'
@@ -190,29 +191,59 @@ module Prescient
     private
 
     def configure_default_providers(config, env)
-      config.add_provider(:ollama,
-                          Prescient::Provider::Ollama,
-                          url:             env.fetch('OLLAMA_URL', 'http://localhost:11434'),
-                          embedding_model: env.fetch('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text'),
-                          chat_model:      env.fetch('OLLAMA_CHAT_MODEL', 'llama3.2:3b'))
-      if env['OPENAI_API_KEY']
-        config.add_provider(
-          :openai,
-          Prescient::Provider::OpenAI,
-          api_key:         env['OPENAI_API_KEY'],
-          embedding_model: env.fetch('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
-          chat_model:      env.fetch('OPENAI_CHAT_MODEL', 'gpt-4.1-mini'),
-        )
-      end
-      if env['ANTHROPIC_API_KEY']
-        config.add_provider(
-          :anthropic,
-          Prescient::Provider::Anthropic,
-          api_key: env['ANTHROPIC_API_KEY'],
-          model:   env.fetch('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
-        )
-      end
+      configure_ollama(config, env)
+      configure_openai(config, env)
+      configure_anthropic(config, env)
+      configure_gemini(config, env)
+      configure_huggingface(config, env)
+    end
 
+    def configure_ollama(config, env)
+      config.add_provider(
+        :ollama,
+        Prescient::Provider::Ollama,
+        url:             env.fetch('OLLAMA_URL', 'http://localhost:11434'),
+        embedding_model: env.fetch('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text'),
+        chat_model:      env.fetch('OLLAMA_CHAT_MODEL', 'llama3.2:3b'),
+      )
+    end
+
+    def configure_openai(config, env)
+      return unless env['OPENAI_API_KEY']
+
+      config.add_provider(
+        :openai,
+        Prescient::Provider::OpenAI,
+        api_key:         env['OPENAI_API_KEY'],
+        embedding_model: env.fetch('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+        chat_model:      env.fetch('OPENAI_CHAT_MODEL', 'gpt-4.1-mini'),
+      )
+    end
+
+    def configure_anthropic(config, env)
+      return unless env['ANTHROPIC_API_KEY']
+
+      config.add_provider(
+        :anthropic,
+        Prescient::Provider::Anthropic,
+        api_key: env['ANTHROPIC_API_KEY'],
+        model:   env.fetch('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+      )
+    end
+
+    def configure_gemini(config, env)
+      return unless env['GEMINI_API_KEY']
+
+      config.add_provider(
+        :gemini,
+        Prescient::Provider::Gemini,
+        api_key:         env['GEMINI_API_KEY'],
+        embedding_model: env.fetch('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001'),
+        chat_model:      env.fetch('GEMINI_CHAT_MODEL', 'gemini-2.5-flash'),
+      )
+    end
+
+    def configure_huggingface(config, env)
       return unless env['HUGGINGFACE_API_KEY']
 
       config.add_provider(

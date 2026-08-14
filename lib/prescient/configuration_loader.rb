@@ -30,6 +30,7 @@ class Prescient::ConfigurationLoader
     'anthropic'   => Prescient::Provider::Anthropic,
     'openai'      => Prescient::Provider::OpenAI,
     'huggingface' => Prescient::Provider::HuggingFace,
+    'gemini'      => Prescient::Provider::Gemini,
   }.freeze
 
   COMMON_PROVIDER_KEYS = [
