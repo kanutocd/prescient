@@ -35,11 +35,12 @@ class Prescient::Provider::HuggingFace < Prescient::Base
   # Generate an embedding through Hugging Face feature extraction.
   # @param text [String] Text to embed
   # @return [Array<Float>] Embedding vector
-  def generate_embedding(text, **_options)
+  def generate_embedding(text, **options)
     handle_errors do
       clean_text_input = clean_text(text)
 
-      response = self.class.post(FEATURE_EXTRACTION_PATH % { model: @options[:embedding_model] },
+      embedding_model = options[:model] || @options[:embedding_model]
+      response = self.class.post(FEATURE_EXTRACTION_PATH % { model: embedding_model },
                                  headers: {
                                    'Content-Type'  => 'application/json',
                                    'Authorization' => "Bearer #{@options[:api_key]}",
@@ -54,10 +55,10 @@ class Prescient::Provider::HuggingFace < Prescient::Base
 
       raise Prescient::InvalidResponseError, 'No embedding returned' unless embedding_data.is_a?(Array)
 
-      expected_dimensions = EMBEDDING_DIMENSIONS[@options[:embedding_model]] || @options[:embedding_dimensions]
+      expected_dimensions = EMBEDDING_DIMENSIONS[embedding_model] || @options[:embedding_dimensions]
       unless expected_dimensions
         raise Prescient::Error,
-              "Embedding dimensions are required for model #{@options[:embedding_model]}"
+              "Embedding dimensions are required for model #{embedding_model}"
       end
 
       validate_embedding_dimensions(embedding_data, expected_dimensions)
@@ -78,7 +79,7 @@ class Prescient::Provider::HuggingFace < Prescient::Base
                                    'Authorization' => "Bearer #{@options[:api_key]}",
                                  },
                                  body:    {
-                                   model:       @options[:chat_model],
+                                   model:       options[:model] || @options[:chat_model],
                                    messages:    [{ role: 'user', content: formatted_prompt }],
                                    max_tokens:  options[:max_tokens] || 2000,
                                    temperature: options[:temperature] || 0.7,
@@ -93,7 +94,7 @@ class Prescient::Provider::HuggingFace < Prescient::Base
 
       {
         response:        generated_text.strip,
-        model:           @options[:chat_model],
+        model:           options[:model] || @options[:chat_model],
         provider:        'huggingface',
         processing_time: nil,
         metadata:        {

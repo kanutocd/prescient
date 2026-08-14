@@ -9,6 +9,7 @@ require_relative 'prescient/provider/anthropic'
 require_relative 'prescient/provider/openai'
 require_relative 'prescient/provider/huggingface'
 require_relative 'prescient/client'
+require_relative 'prescient/cli'
 
 # Main Prescient module for AI provider abstraction
 #

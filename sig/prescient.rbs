@@ -193,7 +193,7 @@ module Prescient
     attr_reader provider_name: Symbol
     attr_reader provider: untyped
 
-    def initialize: (?Symbol, ?enable_fallback: bool) -> void
+    def initialize: (?Symbol, ?enable_fallback: bool, ?provider_options: Hash[Symbol, untyped]) -> void
     def generate_embedding: (String, **untyped) -> Array[Float]
     def generate_response: (String, ?Array[untyped], **untyped) -> Hash[Symbol, untyped]
     def health_check: () -> Hash[Symbol, untyped]
@@ -203,6 +203,7 @@ module Prescient
     private
 
     def sanitize_options: (Hash[untyped, untyped]) -> Hash[untyped, untyped]
+    def provider_with_options: (Symbol, Hash[Symbol, untyped]) -> untyped
     def with_error_handling: () { () -> untyped } -> untyped
     def with_fallback_handling: (Symbol, *untyped, **untyped) -> untyped
     def provider_for: (Symbol, Integer) -> untyped
@@ -210,10 +211,21 @@ module Prescient
     def fallback_eligible?: (Error) -> bool
   end
 
+  class CLI
+    FORMATS: Array[String]
+
+    class UsageError < StandardError
+    end
+
+    def self.run: (Array[String], ?input: IO, ?output: IO, ?errors: IO) -> Integer
+    def initialize: (Array[String], input: IO, output: IO, errors: IO) -> void
+    def run: () -> Integer
+  end
+
   def self.configure: () { (Configuration) -> void } -> void
   def self.configuration: () -> Configuration
   def self.reset_configuration!: () -> Configuration
-  def self.client: (?Symbol, ?enable_fallback: bool) -> Client
+  def self.client: (?Symbol, ?enable_fallback: bool, ?provider_options: Hash[Symbol, untyped]) -> Client
   def self.generate_embedding: (String, ?provider: Symbol, ?enable_fallback: bool, **untyped) -> Array[Float]
   def self.generate_response: (String, ?Array[untyped], ?provider: Symbol, ?enable_fallback: bool, **untyped) -> Hash[Symbol, untyped]
   def self.health_check: (?provider: Symbol) -> Hash[Symbol, untyped]

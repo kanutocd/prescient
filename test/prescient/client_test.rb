@@ -35,6 +35,12 @@ class ClientTest < PrescientTest
 
     assert_includes error.message, 'Provider not configured'
     assert_includes error.message, 'nonexistent_provider'
+
+    error = assert_raises(Prescient::Error) {
+      Prescient::Client.new(:nonexistent_provider, provider_options: { api_key: 'temporary' })
+    }
+
+    assert_includes error.message, 'Provider not configured'
   end
 
   def test_generate_embedding_delegates_to_provider

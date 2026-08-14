@@ -62,6 +62,90 @@ Or install it yourself as:
 gem install prescient
 ```
 
+## Command-Line Interface
+
+Prescient includes a thin CLI for provider inspection and common operations:
+
+```bash
+prescient providers
+prescient health
+prescient config validate
+prescient generate "Explain Ruby Ractors"
+prescient embed "Ruby is a programming language"
+```
+
+Supported options include:
+
+```text
+--provider NAME          Select a provider
+--model NAME             Override the selected operation's model
+--chat-model NAME        Override the chat model for generation
+--embedding-model NAME   Override the embedding model
+--api-key KEY            Use an API key for the operation
+--api-key-env NAME       Read the API key from an environment variable
+--format FORMAT          Select text or json output
+```
+
+Use `--api-key-env` to source credentials from an environment variable. The
+direct `--api-key` option is available for ephemeral automation but may be
+visible in shell history or process listings. Use `--format json` for
+machine-readable output and stdin for shell pipelines:
+
+```bash
+printf '%s' "Explain PostgreSQL logical replication" | \
+  prescient generate --provider openai --format json
+```
+
+Example JSON output:
+
+```json
+{
+    "response": "PostgreSQL logical replication is a method of replicating data between PostgreSQL databases at a logical level, allowing fine-grained control over which data is replicated and how. Unlike physical replication, which copies the entire database cluster’s data files at the storage level, logical replication works by sending changes to data (such as INSERT, UPDATE, DELETE operations) based on logical changes in the database.\n\n### Key Features of PostgreSQL Logical Replication\n\n1. **Row-Level Replication:** Logical replication replicates data changes at the row level. It streams changes to individual tables rather than the entire database.\n\n2. **Selective Replication:** You can choose specific tables to replicate rather than the whole database. This makes it useful for replicating subsets of data.\n\n3. **Asynchronous Replication:** Changes are sent asynchronously from the publisher (source) to the subscriber (target). This means there may be a slight delay between when changes are made and when they appear on the subscriber.\n\n4. **Supports Heterogeneous Setups:** Logical replication can be used between different major versions of PostgreSQL, allowing upgrades with minimal downtime. It can also be used for replication between different architectures or operating systems.\n\n5. **Bidirectional Replication:** By configuring multiple publishers and subscribers, logical replication can support multi-master setups, although care must be taken to avoid conflicts.\n\n### How Logical Replication Works\n\n- **Publisher:** The database that sends data changes. It defines one or more publications, which specify which tables and changes (inserts, updates, deletes) to replicate.\n  \n- **Subscriber:** The database that receives and applies the changes. It subscribes to one or more publications from the publisher.\n\nWhen a change occurs on the publisher's table, the change is captured and sent to the subscriber, where it is applied to the corresponding table.\n\n### Setting Up Logical Replication (Basic Steps)\n\n1. **Enable required settings:** Ensure the PostgreSQL server has `wal_level` set to `logical`, and configure `max_replication_slots` and `max_wal_senders` appropriately.\n\n2. **Create a publication on the publisher:**\n\n   ```sql\n   CREATE PUBLICATION my_publication FOR TABLE my_table;\n   ```\n\n3. **Create a subscription on the subscriber:**\n\n   ```sql\n   CREATE SUBSCRIPTION my_subscription\n   CONNECTION 'host=publisher_host dbname=publisher_db user=replicator password=secret'\n   PUBLICATION my_publication;\n   ```\n\nOnce set up, changes to `my_table` on the publisher will be replicated to the subscriber.\n\n### Use Cases\n\n- **Selective data replication:** Replicating only certain tables or rows.\n- **Data integration:** Feeding data from multiple sources into a central database.\n- **Upgrading PostgreSQL versions:** Using logical replication to migrate data with minimal downtime.\n- **Multi-datacenter replication:** Replicating data across geographically distributed systems.\n\n---\n\nIn summary, PostgreSQL logical replication is a flexible, table-level replication mechanism that allows selective, asynchronous replication of data changes between PostgreSQL databases, useful for upgrades, distributed architectures, and data integration scenarios.",
+    "model": "gpt-4.1-mini",
+    "provider": "openai",
+    "processing_time": null,
+    "metadata": {
+        "usage": {
+            "prompt_tokens": 38,
+            "completion_tokens": 632,
+            "total_tokens": 670,
+            "prompt_tokens_details": {
+                "cached_tokens": 0,
+                "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+                "reasoning_tokens": 0,
+                "audio_tokens": 0,
+                "accepted_prediction_tokens": 0,
+                "rejected_prediction_tokens": 0
+            }
+        },
+        "finish_reason": "stop"
+    }
+}
+```
+
+For automated model and credential overrides:
+
+```bash
+prescient generate \
+  --provider openai \
+  --chat-model gpt-4.1-mini \
+  --api-key-env OPENAI_API_KEY \
+  --format json \
+  "Explain PostgreSQL logical replication"
+
+prescient embed \
+  --provider openai \
+  --embedding-model text-embedding-3-small \
+  --api-key-env OPENAI_API_KEY \
+  "Ruby is a programming language"
+```
+
+The CLI writes results to stdout, diagnostics to stderr, and returns a
+non-zero status for invalid usage, provider errors, or unreachable health
+checks. It uses the same `Prescient::Client` execution path as Ruby callers.
+
 ## Configuration
 
 ### Environment Variables

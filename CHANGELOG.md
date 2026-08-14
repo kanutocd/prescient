@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- Added the `prescient` CLI with provider listing, health checks, configuration validation, generation, embeddings, JSON output, stdin input, and exit-status handling.
+
+### Changed
+
+- Added CLI model overrides to provider generation and embedding operations.
+- Added secure CLI credential sourcing with `--api-key-env`, alongside direct `--api-key` support for ephemeral automation.
+- Documented all CLI automation overrides, including provider selection, generic and task-specific models, API keys, environment-backed credentials, and JSON output.
+
 ## [0.3.0] - 2025-08-14
 
 ### Added

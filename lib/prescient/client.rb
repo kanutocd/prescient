@@ -27,10 +27,11 @@ module Prescient
     #
     # @param provider_name [Symbol, nil] Name of provider to use, or nil for default
     # @param enable_fallback [Boolean] Whether to enable automatic fallback to other providers
+    # @param provider_options [Hash] Temporary options for the selected provider
     # @raise [Prescient::Error] If the specified provider is not configured
-    def initialize(provider_name = nil, enable_fallback: true)
+    def initialize(provider_name = nil, enable_fallback: true, provider_options: {})
       @provider_name = provider_name || Prescient.configuration.default_provider
-      @provider = Prescient.configuration.provider(@provider_name)
+      @provider = provider_with_options(@provider_name, provider_options)
       @enable_fallback = enable_fallback
 
       raise Prescient::Error, "Provider not configured: #{@provider_name}" unless @provider
@@ -131,6 +132,16 @@ module Prescient
       end
     end
 
+    def provider_with_options(provider_name, provider_options)
+      return Prescient.configuration.provider(provider_name) if provider_options.empty?
+
+      registration = Prescient.configuration.providers[provider_name.to_sym]
+      return unless registration
+
+      registration_options = registration[:options] # : Hash[Symbol, untyped]
+      registration[:class].new(**registration_options, **provider_options)
+    end
+
     def with_error_handling
       retries = 0
       begin
@@ -208,9 +219,10 @@ module Prescient
   #
   # @param provider_name [Symbol, nil] Provider to use, or the configured default
   # @param enable_fallback [Boolean] Whether provider fallback is enabled
+  # @param provider_options [Hash] Temporary options for the selected provider
   # @return [Client] A configured client instance
-  def self.client(provider_name = nil, enable_fallback: true)
-    Client.new(provider_name, enable_fallback: enable_fallback)
+  def self.client(provider_name = nil, enable_fallback: true, provider_options: {})
+    Client.new(provider_name, enable_fallback: enable_fallback, provider_options: provider_options)
   end
 
   # Generate an embedding through a configured provider.

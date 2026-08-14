@@ -23,17 +23,18 @@ class Prescient::Provider::OpenAI < Prescient::Base
   # Generate an embedding through the OpenAI embeddings API.
   # @param text [String] Text to embed
   # @return [Array<Float>] Embedding vector
-  def generate_embedding(text, **_options)
+  def generate_embedding(text, **options)
     handle_errors do
       clean_text_input = clean_text(text)
 
+      embedding_model = options[:model] || @options[:embedding_model]
       response = self.class.post('/v1/embeddings',
                                  headers: {
                                    'Content-Type'  => 'application/json',
                                    'Authorization' => "Bearer #{@options[:api_key]}",
                                  },
                                  body:    {
-                                   model:           @options[:embedding_model],
+                                   model:           embedding_model,
                                    input:           clean_text_input,
                                    encoding_format: 'float',
                                  }.to_json)
@@ -43,10 +44,10 @@ class Prescient::Provider::OpenAI < Prescient::Base
       embedding_data = response.parsed_response.dig('data', 0, 'embedding')
       raise Prescient::InvalidResponseError, 'No embedding returned' unless embedding_data
 
-      expected_dimensions = EMBEDDING_DIMENSIONS[@options[:embedding_model]] || @options[:embedding_dimensions]
+      expected_dimensions = EMBEDDING_DIMENSIONS[embedding_model] || @options[:embedding_dimensions]
       unless expected_dimensions
         raise Prescient::Error,
-              "Embedding dimensions are required for model #{@options[:embedding_model]}"
+              "Embedding dimensions are required for model #{embedding_model}"
       end
 
       validate_embedding_dimensions(embedding_data, expected_dimensions)
@@ -67,7 +68,7 @@ class Prescient::Provider::OpenAI < Prescient::Base
                                    'Authorization' => "Bearer #{@options[:api_key]}",
                                  },
                                  body:    {
-                                   model:       @options[:chat_model],
+                                   model:       options[:model] || @options[:chat_model],
                                    messages:    [
                                      {
                                        role:    'user',
@@ -86,7 +87,7 @@ class Prescient::Provider::OpenAI < Prescient::Base
 
       {
         response:        content.strip,
-        model:           @options[:chat_model],
+        model:           options[:model] || @options[:chat_model],
         provider:        'openai',
         processing_time: nil,
         metadata:        {

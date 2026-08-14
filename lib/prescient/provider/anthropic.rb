@@ -37,7 +37,7 @@ class Prescient::Provider::Anthropic < Prescient::Base
                                    'anthropic-version' => '2023-06-01',
                                  },
                                  body:    {
-                                   model:       @options[:model],
+                                   model:       options[:model] || @options[:model],
                                    max_tokens:  options[:max_tokens] || 2000,
                                    temperature: options[:temperature] || 0.7,
                                    messages:    [
@@ -55,7 +55,7 @@ class Prescient::Provider::Anthropic < Prescient::Base
 
       {
         response:        content.strip,
-        model:           @options[:model],
+        model:           options[:model] || @options[:model],
         provider:        'anthropic',
         processing_time: nil,
         metadata:        {

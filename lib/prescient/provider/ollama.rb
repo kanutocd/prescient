@@ -21,7 +21,7 @@ class Prescient::Provider::Ollama < Prescient::Base
                                    root_key: 'embeddings',
                                    headers:  { 'Content-Type' => 'application/json' },
                                    body:     {
-                                     model: @options[:embedding_model],
+                                     model: options[:model] || @options[:embedding_model],
                                      input: clean_text(text),
                                    }.to_json)
 
@@ -55,7 +55,7 @@ class Prescient::Provider::Ollama < Prescient::Base
 
       {
         response:        generated_text.strip,
-        model:           @options[:chat_model],
+        model:           options[:model] || @options[:chat_model],
         provider:        'ollama',
         processing_time: response.parsed_response['total_duration']&./(1_000_000_000.0),
         metadata:        {
@@ -158,7 +158,7 @@ class Prescient::Provider::Ollama < Prescient::Base
     { root_key: 'response',
       headers:  { 'Content-Type' => 'application/json' },
       body:     {
-        model:   @options[:chat_model],
+        model:   options[:model] || @options[:chat_model],
         prompt:  formatted_prompt,
         stream:  false,
         options: {
