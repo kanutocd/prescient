@@ -12,6 +12,7 @@
 ### Changed
 
 - Updated Ollama embeddings to use `/api/embed` with strict vector-dimension validation.
+- Restricted fallback to transient/provider-service failures and added the public `ProviderError` exception for provider-side service errors.
 - Raised YARD API documentation coverage enforcement to 99% or higher.
 - Modernized gem development dependencies, packaging metadata, YARD configuration, and Ruby CI support.
 - Compacted GitHub Actions into focused CI, Pages, release, and security workflows.

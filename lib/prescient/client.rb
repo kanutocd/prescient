@@ -150,12 +150,7 @@ module Prescient
       last_error = nil
 
       providers_to_try.each_with_index do |provider_name, index|
-        # Use existing provider instance for primary provider, create new ones for fallbacks
-        provider = if index.zero? && provider_name == @provider_name
-                     @provider
-                   else
-                     Prescient.configuration.provider(provider_name)
-                   end
+        provider = provider_for(provider_name, index)
         next unless provider
 
         # Check if provider is available before trying
@@ -166,13 +161,20 @@ module Prescient
           provider.send(method_name, *args, **options)
         end
       rescue Prescient::Error => e
+        raise e unless fallback_eligible?(e)
+
         last_error = e
-        # Log the error and continue to next provider
         next
       end
 
       # If we get here, all providers failed
       raise last_error || Prescient::Error.new("No available providers for #{method_name}")
+    end
+
+    def provider_for(provider_name, index)
+      return @provider if index.zero? && provider_name == @provider_name
+
+      Prescient.configuration.provider(provider_name)
     end
 
     def providers_to_try
@@ -189,6 +191,15 @@ module Prescient
       end
 
       providers.uniq
+    end
+
+    def fallback_eligible?(error)
+      [
+        Prescient::ConnectionError,
+        Prescient::RateLimitError,
+        Prescient::ModelNotAvailableError,
+        Prescient::ProviderError,
+      ].any? { |error_class| error.is_a?(error_class) }
     end
   end
 

@@ -19,6 +19,9 @@ module Prescient
   # Raised when AI provider returns invalid or malformed responses
   class InvalidResponseError < Error; end
 
+  # Raised when an AI provider reports a transient service-side failure
+  class ProviderError < Error; end
+
   # Container module for AI provider implementations
   #
   # All provider classes should be defined within this module and inherit

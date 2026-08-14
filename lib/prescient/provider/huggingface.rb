@@ -199,13 +199,13 @@ class Prescient::Provider::HuggingFace < Prescient::Base
         response.body
       end
       if error_body.is_a?(Hash) && error_body['error']&.include?('loading')
-        raise Prescient::Error, 'Model is loading, please try again later'
+        raise Prescient::ProviderError, 'Model is loading, please try again later'
       end
 
-      raise Prescient::Error, "HuggingFace service unavailable for #{operation}"
+      raise Prescient::ProviderError, "HuggingFace service unavailable for #{operation}"
 
     when 500..599
-      raise Prescient::Error, "HuggingFace server error during #{operation}: #{response.body}"
+      raise Prescient::ProviderError, "HuggingFace server error during #{operation}: #{response.body}"
     else
       raise Prescient::Error,
             "HuggingFace request failed for #{operation}: HTTP #{response.code} - #{response.message}"

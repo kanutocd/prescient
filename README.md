@@ -161,6 +161,7 @@ response = Prescient.generate_response("Hello", provider: :primary, enable_fallb
 - Only available (healthy) providers are tried during fallback
 - If no fallback providers are configured, all available providers are tried as fallbacks
 - Transient errors (rate limits, timeouts) still use retry logic before fallback
+- Provider-service failures, connection failures, rate limits, and unavailable models may trigger fallback; authentication and invalid-request errors are returned to the caller
 - The fallback process preserves all method arguments and options
 
 ## Usage

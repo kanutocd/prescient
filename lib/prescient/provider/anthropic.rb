@@ -148,7 +148,7 @@ class Prescient::Provider::Anthropic < Prescient::Base
     when 429
       raise Prescient::RateLimitError, "Rate limit exceeded for #{operation}"
     when 500..599
-      raise Prescient::Error, "Anthropic server error during #{operation}: #{response.body}"
+      raise Prescient::ProviderError, "Anthropic server error during #{operation}: #{response.body}"
     else
       raise Prescient::Error,
             "Anthropic request failed for #{operation}: HTTP #{response.code} - #{response.message}"

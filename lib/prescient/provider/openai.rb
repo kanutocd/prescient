@@ -187,7 +187,7 @@ class Prescient::Provider::OpenAI < Prescient::Base
     when 429
       raise Prescient::RateLimitError, "Rate limit exceeded for #{operation}"
     when 500..599
-      raise Prescient::Error, "OpenAI server error during #{operation}: #{response.body}"
+      raise Prescient::ProviderError, "OpenAI server error during #{operation}: #{response.body}"
     else
       raise Prescient::Error,
             "OpenAI request failed for #{operation}: HTTP #{response.code} - #{response.message}"

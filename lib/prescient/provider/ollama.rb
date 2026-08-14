@@ -184,7 +184,7 @@ class Prescient::Provider::Ollama < Prescient::Base
     when 401, 403
       raise Prescient::AuthenticationError, "Authentication failed for #{operation}"
     when 500..599
-      raise Prescient::Error, "Ollama server error during #{operation}: #{response.body}"
+      raise Prescient::ProviderError, "Ollama server error during #{operation}: #{response.body}"
     else
       raise Prescient::Error,
             "Ollama request failed for #{operation}: HTTP #{response.code} - #{response.message}"

@@ -46,7 +46,7 @@ class FallbackTest < PrescientTest
 
     # Mock primary provider to fail
     client.provider.stubs(:available?).returns(true)
-    client.provider.stubs(:generate_embedding).raises(Prescient::Error.new('Primary failed'))
+    client.provider.stubs(:generate_embedding).raises(Prescient::ProviderError.new('Primary failed'))
 
     # Mock backup provider to succeed
     backup_provider = TestProvider.new(test_option: 'backup_one')
@@ -90,7 +90,7 @@ class FallbackTest < PrescientTest
 
     # Mock primary provider to fail
     client.provider.stubs(:available?).returns(true)
-    client.provider.stubs(:generate_embedding).raises(Prescient::Error.new('Primary failed'))
+    client.provider.stubs(:generate_embedding).raises(Prescient::ProviderError.new('Primary failed'))
 
     # Mock first backup as unavailable
     backup1_provider = TestProvider.new(test_option: 'backup_one')
@@ -114,15 +114,15 @@ class FallbackTest < PrescientTest
 
     # Mock all providers to fail
     client.provider.stubs(:available?).returns(true)
-    client.provider.stubs(:generate_embedding).raises(Prescient::Error.new('Primary failed'))
+    client.provider.stubs(:generate_embedding).raises(Prescient::ProviderError.new('Primary failed'))
 
     backup1_provider = TestProvider.new(test_option: 'backup_one')
     backup1_provider.stubs(:available?).returns(true)
-    backup1_provider.stubs(:generate_embedding).raises(Prescient::Error.new('Backup1 failed'))
+    backup1_provider.stubs(:generate_embedding).raises(Prescient::ProviderError.new('Backup1 failed'))
 
     backup2_provider = TestProvider.new(test_option: 'backup_two')
     backup2_provider.stubs(:available?).returns(true)
-    backup2_provider.stubs(:generate_embedding).raises(Prescient::Error.new('Backup2 failed'))
+    backup2_provider.stubs(:generate_embedding).raises(Prescient::ProviderError.new('Backup2 failed'))
 
     Prescient.configuration.stubs(:provider).with(:backup_one).returns(backup1_provider)
     Prescient.configuration.stubs(:provider).with(:backup_two).returns(backup2_provider)
@@ -208,7 +208,7 @@ class FallbackTest < PrescientTest
 
     # Mock primary provider to fail
     client.provider.stubs(:available?).returns(true)
-    client.provider.stubs(:generate_response).raises(Prescient::Error.new('Primary failed'))
+    client.provider.stubs(:generate_response).raises(Prescient::ProviderError.new('Primary failed'))
 
     # Mock backup provider to succeed and verify arguments
     backup_provider = TestProvider.new(test_option: 'backup_one')
@@ -230,6 +230,21 @@ class FallbackTest < PrescientTest
     )
 
     assert_equal 'success', result[:response]
+  end
+
+  def test_fallback_does_not_hide_authentication_errors
+    client = Prescient::Client.new(:primary, enable_fallback: true)
+    client.provider.stubs(:available?).returns(true)
+    client.provider.stubs(:generate_embedding).raises(Prescient::AuthenticationError, 'Invalid API key')
+
+    backup_provider = TestProvider.new(test_option: 'backup_one')
+    backup_provider.stubs(:available?).returns(true)
+    backup_provider.expects(:generate_embedding).never
+    Prescient.configuration.stubs(:provider).with(:backup_one).returns(backup_provider)
+
+    assert_raises(Prescient::AuthenticationError) do
+      client.generate_embedding('test text')
+    end
   end
 
   # Test provider class for fallback testing
