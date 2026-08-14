@@ -2,9 +2,9 @@
 
 Prescient is a boring AI provider abstraction for Ruby. Configure your AI providers once, then use the same interface regardless of whether the request is handled by OpenAI, Anthropic, Ollama, or Hugging Face. Prescient handles provider selection, retries, health checks, and fallback.
 
-For focused guidance, see the [examples guide](examples/README.md),
-[Rails integration guide](INTEGRATION_GUIDE.md), and
-[pgvector guide](VECTOR_SEARCH_GUIDE.md).
+For focused guidance, see the **[examples guide](https://github.com/kanutocd/prescient/tree/main/examples)**,
+**[Rails integration guide](https://github.com/kanutocd/prescient/blob/main/INTEGRATION_GUIDE.md)**, and
+**[pgvector guide](https://github.com/kanutocd/prescient/blob/main/VECTOR_SEARCH_GUIDE.md)**.
 
 ## Features
 
