@@ -116,9 +116,9 @@ class Prescient::Provider::Anthropic < Prescient::Base
   def list_models
     # Anthropic doesn't provide a models list API
     [
-      { name: 'claude-3-haiku-20240307', type: 'text' },
-      { name: 'claude-3-sonnet-20240229', type: 'text' },
-      { name: 'claude-3-opus-20240229', type: 'text' },
+      { name: 'claude-sonnet-4-20250514', type: 'text' },
+      { name: 'claude-3-5-haiku-20241022', type: 'text' },
+      { name: 'claude-opus-4-20250514', type: 'text' },
     ]
   end
 

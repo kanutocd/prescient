@@ -13,6 +13,14 @@
 
 - Updated Ollama embeddings to use `/api/embed` with strict vector-dimension validation.
 - Restricted fallback to transient/provider-service failures and added the public `ProviderError` exception for provider-side service errors.
+- Reused registered provider instances and removed redundant health checks during fallback discovery.
+- Updated default chat model names and README examples for current Ollama, Anthropic, OpenAI, and Hugging Face model selections.
+- Updated Hugging Face inference to use the current router feature-extraction and OpenAI-compatible chat-completion APIs.
+- Added credentialed, provider-selected live smoke tests that remain skipped by default.
+
+### Removed
+
+- Removed the nonfunctional Steep/RBS check from the development quality harness.
 - Raised YARD API documentation coverage enforcement to 99% or higher.
 - Modernized gem development dependencies, packaging metadata, YARD configuration, and Ruby CI support.
 - Compacted GitHub Actions into focused CI, Pages, release, and security workflows.

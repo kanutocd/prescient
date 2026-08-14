@@ -45,38 +45,6 @@ namespace :yard do
   end
 end
 
-namespace :rbs do
-  desc "Remove generated RBS prototype files"
-  task :clobber do
-    sh "rm -rf tmp/sig"
-  end
-
-  desc "Generate disposable RBS prototypes into tmp/sig"
-  task :prototype do
-    sh "rm -rf tmp/sig"
-    sh "mkdir -p tmp/sig"
-    sh "bundle exec rbs prototype rb --out-dir=tmp/sig --base-dir=lib lib"
-
-    unless Dir.exist?("sig")
-      puts "sig/ does not exist; seeding curated signatures from tmp/sig"
-      sh "cp -R tmp/sig sig"
-    end
-  end
-
-  desc "Validate curated RBS signatures"
-  task :validate do
-    sh "bundle exec steep check"
-  end
-
-  desc "Open diff between curated and generated signatures"
-  task :diff do
-    sh "diff -ru sig tmp/sig || true"
-  end
-
-  desc "Generate disposable RBS prototypes and validate curated signatures"
-  task check: %i[prototype validate]
-end
-
 desc "Validate GitHub Actions workflows"
 task :actionlint do
   actionlint = if File.executable?(".tools/bin/actionlint")
@@ -90,7 +58,6 @@ end
 
 desc "Run tests and linting"
 task default: %w[test rubocop yard yard:validate]
-# task default: %w[test rubocop yard yard:validate rbs:validate]
 
 desc "Console with gem loaded"
 task :console do

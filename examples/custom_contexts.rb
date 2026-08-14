@@ -16,7 +16,7 @@ Prescient.configure do |config|
   config.add_provider(:ecommerce, Prescient::Provider::Ollama,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b',
+    chat_model: 'llama3.2:3b',
     # Define your own context types - no hardcoded assumptions!
     context_configs: {
       'product' => {
@@ -88,7 +88,7 @@ Prescient.configure do |config|
   config.add_provider(:healthcare, Prescient::Provider::Ollama,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b',
+    chat_model: 'llama3.2:3b',
     context_configs: {
       'patient' => {
         fields: %w[name age gender medical_conditions medications],
@@ -158,7 +158,7 @@ Prescient.configure do |config|
   config.add_provider(:project_mgmt, Prescient::Provider::Ollama,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b',
+    chat_model: 'llama3.2:3b',
     context_configs: {
       'issue' => {
         fields: %w[title description status priority assignee labels created_date],
@@ -237,7 +237,7 @@ begin
     config.add_provider(:embedding_demo, Prescient::Provider::Ollama,
       url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
       embedding_model: 'nomic-embed-text',
-      chat_model: 'llama3.1:8b',
+      chat_model: 'llama3.2:3b',
       context_configs: {
         'blog_post' => {
           fields: %w[title content author tags category publish_date],
@@ -288,7 +288,7 @@ Prescient.configure do |config|
   config.add_provider(:no_config, Prescient::Provider::Ollama,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b'
+    chat_model: 'llama3.2:3b'
     # No context_configs defined - uses pure default behavior
   )
 end

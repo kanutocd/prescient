@@ -209,17 +209,17 @@ class AnthropicProviderTest < PrescientTest
     assert_instance_of Array, result
     assert_operator result.length, :>=, 3
 
-    haiku_model = result.find { |m| m[:name] == 'claude-3-haiku-20240307' }
+    haiku_model = result.find { |m| m[:name] == 'claude-3-5-haiku-20241022' }
 
     assert haiku_model
     assert_equal 'text', haiku_model[:type]
 
-    sonnet_model = result.find { |m| m[:name] == 'claude-3-sonnet-20240229' }
+    sonnet_model = result.find { |m| m[:name] == 'claude-sonnet-4-20250514' }
 
     assert sonnet_model
     assert_equal 'text', sonnet_model[:type]
 
-    opus_model = result.find { |m| m[:name] == 'claude-3-opus-20240229' }
+    opus_model = result.find { |m| m[:name] == 'claude-opus-4-20250514' }
 
     assert opus_model
     assert_equal 'text', opus_model[:type]

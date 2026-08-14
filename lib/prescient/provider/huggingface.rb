@@ -6,7 +6,15 @@ require 'httparty'
 class Prescient::Provider::HuggingFace < Prescient::Base
   include HTTParty
 
-  base_uri 'https://api-inference.huggingface.co'
+  base_uri 'https://router.huggingface.co'
+
+  # Router path for the Hugging Face feature-extraction provider.
+  # @return [String] Feature-extraction endpoint template
+  FEATURE_EXTRACTION_PATH = '/hf-inference/models/%<model>s/pipeline/feature-extraction'
+
+  # OpenAI-compatible router path for Hugging Face chat completions.
+  # @return [String] Chat-completions endpoint path
+  CHAT_COMPLETIONS_PATH = '/v1/chat/completions'
 
   # Known embedding dimensions for commonly used models.
   EMBEDDING_DIMENSIONS = {
@@ -27,17 +35,12 @@ class Prescient::Provider::HuggingFace < Prescient::Base
     handle_errors do
       clean_text_input = clean_text(text)
 
-      response = self.class.post("/pipeline/feature-extraction/#{@options[:embedding_model]}",
+      response = self.class.post(FEATURE_EXTRACTION_PATH % { model: @options[:embedding_model] },
                                  headers: {
                                    'Content-Type'  => 'application/json',
                                    'Authorization' => "Bearer #{@options[:api_key]}",
                                  },
-                                 body:    {
-                                   inputs:  clean_text_input,
-                                   options: {
-                                     wait_for_model: true,
-                                   },
-                                 }.to_json)
+                                 body:    { inputs: clean_text_input }.to_json)
 
       validate_response!(response, 'embedding generation')
 
@@ -60,36 +63,23 @@ class Prescient::Provider::HuggingFace < Prescient::Base
     handle_errors do
       formatted_prompt = build_prompt(prompt, context_items)
 
-      response = self.class.post("/models/#{@options[:chat_model]}",
+      response = self.class.post(CHAT_COMPLETIONS_PATH,
                                  headers: {
                                    'Content-Type'  => 'application/json',
                                    'Authorization' => "Bearer #{@options[:api_key]}",
                                  },
                                  body:    {
-                                   inputs:     formatted_prompt,
-                                   parameters: {
-                                     max_new_tokens:   options[:max_tokens] || 2000,
-                                     temperature:      options[:temperature] || 0.7,
-                                     top_p:            options[:top_p] || 0.9,
-                                     return_full_text: false,
-                                   },
-                                   options:    {
-                                     wait_for_model: true,
-                                   },
+                                   model:       @options[:chat_model],
+                                   messages:    [{ role: 'user', content: formatted_prompt }],
+                                   max_tokens:  options[:max_tokens] || 2000,
+                                   temperature: options[:temperature] || 0.7,
+                                   top_p:       options[:top_p] || 0.9,
                                  }.to_json)
 
       validate_response!(response, 'text generation')
 
-      # HuggingFace returns different formats depending on the model
-      generated_text = nil
       parsed_response = response.parsed_response
-
-      if parsed_response.is_a?(Array) && parsed_response.first.is_a?(Hash)
-        generated_text = parsed_response.first['generated_text']
-      elsif parsed_response.is_a?(Hash)
-        generated_text = parsed_response['generated_text'] || parsed_response['text']
-      end
-
+      generated_text = parsed_response.dig('choices', 0, 'message', 'content') if parsed_response.is_a?(Hash)
       raise Prescient::InvalidResponseError, 'No response generated' unless generated_text
 
       {
@@ -97,7 +87,10 @@ class Prescient::Provider::HuggingFace < Prescient::Base
         model:           @options[:chat_model],
         provider:        'huggingface',
         processing_time: nil,
-        metadata:        {},
+        metadata:        {
+          usage:         parsed_response['usage'],
+          finish_reason: parsed_response.dig('choices', 0, 'finish_reason'),
+        },
       }
     end
   end
@@ -107,20 +100,21 @@ class Prescient::Provider::HuggingFace < Prescient::Base
   def health_check
     handle_errors do
       # Test embedding model
-      embedding_response = self.class.post("/pipeline/feature-extraction/#{@options[:embedding_model]}",
+      embedding_response = self.class.post(FEATURE_EXTRACTION_PATH % { model: @options[:embedding_model] },
                                            headers: {
                                              'Authorization' => "Bearer #{@options[:api_key]}",
                                            },
                                            body:    { inputs: 'test' }.to_json)
 
       # Test chat model
-      chat_response = self.class.post("/models/#{@options[:chat_model]}",
+      chat_response = self.class.post(CHAT_COMPLETIONS_PATH,
                                       headers: {
                                         'Authorization' => "Bearer #{@options[:api_key]}",
                                       },
                                       body:    {
-                                        inputs:     'test',
-                                        parameters: { max_new_tokens: 5 },
+                                        model:      @options[:chat_model],
+                                        messages:   [{ role: 'user', content: 'test' }],
+                                        max_tokens: 5,
                                       }.to_json)
 
       embedding_healthy = embedding_response.success?

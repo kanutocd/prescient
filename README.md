@@ -66,21 +66,21 @@ gem install prescient
 # Ollama (Local)
 OLLAMA_URL=http://localhost:11434
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text
-OLLAMA_CHAT_MODEL=llama3.1:8b
+OLLAMA_CHAT_MODEL=llama3.2:3b
 
 # Anthropic
 ANTHROPIC_API_KEY=your_api_key
-ANTHROPIC_MODEL=claude-3-haiku-20240307
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
 # OpenAI
 OPENAI_API_KEY=your_api_key
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-OPENAI_CHAT_MODEL=gpt-3.5-turbo
+OPENAI_CHAT_MODEL=gpt-4.1-mini
 
 # HuggingFace
 HUGGINGFACE_API_KEY=your_api_key
 HUGGINGFACE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-HUGGINGFACE_CHAT_MODEL=microsoft/DialoGPT-medium
+HUGGINGFACE_CHAT_MODEL=google/gemma-2-2b-it
 ```
 
 ### Programmatic Configuration
@@ -99,20 +99,20 @@ Prescient.configure do |config|
   config.add_provider(:ollama, Prescient::Ollama::Provider,
     url: 'http://localhost:11434',
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b'
+    chat_model: 'llama3.2:3b'
   )
 
   # Add Anthropic
   config.add_provider(:anthropic, Prescient::Anthropic::Provider,
     api_key: ENV['ANTHROPIC_API_KEY'],
-    model: 'claude-3-haiku-20240307'
+    model: 'claude-sonnet-4-20250514'
   )
 
   # Add OpenAI
   config.add_provider(:openai, Prescient::OpenAI::Provider,
     api_key: ENV['OPENAI_API_KEY'],
     embedding_model: 'text-embedding-3-small',
-    chat_model: 'gpt-3.5-turbo'
+    chat_model: 'gpt-4.1-mini'
   )
 end
 ```
@@ -127,19 +127,19 @@ Prescient.configure do |config|
   config.add_provider(:primary, Prescient::Provider::OpenAI,
     api_key: ENV['OPENAI_API_KEY'],
     embedding_model: 'text-embedding-3-small',
-    chat_model: 'gpt-3.5-turbo'
+    chat_model: 'gpt-4.1-mini'
   )
   
   # Configure backup providers
   config.add_provider(:backup1, Prescient::Provider::Anthropic,
     api_key: ENV['ANTHROPIC_API_KEY'],
-    model: 'claude-3-haiku-20240307'
+    model: 'claude-sonnet-4-20250514'
   )
   
   config.add_provider(:backup2, Prescient::Provider::Ollama,
     url: 'http://localhost:11434',
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b'
+    chat_model: 'llama3.2:3b'
   )
   
   # Configure fallback order
@@ -257,7 +257,7 @@ Prescient.configure do |config|
   config.add_provider(:customer_service, Prescient::Provider::OpenAI,
     api_key: ENV['OPENAI_API_KEY'],
     embedding_model: 'text-embedding-3-small',
-    chat_model: 'gpt-3.5-turbo',
+    chat_model: 'gpt-4.1-mini',
     prompt_templates: {
       system_prompt: 'You are a friendly customer service representative.',
       no_context_template: <<~TEMPLATE.strip,
@@ -693,7 +693,7 @@ Before starting, ensure your system meets the minimum requirements for running O
 | Model              | RAM Required | Storage | Notes                             |
 | ------------------ | ------------ | ------- | --------------------------------- |
 | `nomic-embed-text` | 1GB          | 274MB   | Embedding model                   |
-| `llama3.1:8b`      | 8GB          | 4.7GB   | Chat model (8B parameters)        |
+| `llama3.2:3b`      | 2GB          | 2.0GB   | Chat model (3B parameters)        |
 | `llama3.1:70b`     | 64GB+        | 40GB    | Large chat model (70B parameters) |
 | `codellama:7b`     | 8GB          | 3.8GB   | Code generation model             |
 
@@ -711,7 +711,7 @@ Before starting, ensure your system meets the minimum requirements for running O
 - **Docker**: NVIDIA Container Toolkit installed
 - **Performance**: 3-10x faster inference with compatible models
 
-> **💡 Tip**: Start with smaller models like `llama3.1:8b` and upgrade based on your hardware capabilities and performance needs.
+> **💡 Tip**: Start with smaller models like `llama3.2:3b` and upgrade based on your hardware capabilities and performance needs.
 
 ### Quick Start with Docker
 
@@ -787,7 +787,7 @@ services:
 # Ollama Configuration
 OLLAMA_URL=http://localhost:11434
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text
-OLLAMA_CHAT_MODEL=llama3.1:8b
+OLLAMA_CHAT_MODEL=llama3.2:3b
 
 # Optional: Other AI providers
 OPENAI_API_KEY=your_key_here
@@ -804,7 +804,7 @@ curl http://localhost:11434/api/tags
 # Pull a specific model
 curl -X POST http://localhost:11434/api/pull \
   -H "Content-Type: application/json" \
-  -d '{ "name": "llama3.1:8b"}'
+  -d '{ "name": "llama3.2:3b"}'
 
 # Health check
 curl http://localhost:11434/api/version
@@ -854,7 +854,7 @@ iostat -x 1
 df -h
 
 # Manually pull models with retry
-docker exec prescient-ollama ollama pull llama3.1:8b
+docker exec prescient-ollama ollama pull llama3.2:3b
 ```
 
 **GPU Not Detected:**
@@ -879,7 +879,7 @@ docker logs prescient-ollama
 # Test API response time
 time curl -X POST http://localhost:11434/api/generate \
   -H "Content-Type: application/json" \
-  -d '{ "model": "llama3.1:8b", "prompt": "Hello", "stream": false}'
+  -d '{ "model": "llama3.2:3b", "prompt": "Hello", "stream": false}'
 ```
 
 ## Testing
@@ -891,6 +891,24 @@ bundle exec rspec
 ```
 
 ## Development
+
+### Opt-in live provider smoke tests
+
+The default test suite uses mocked provider interactions. To exercise a live
+provider explicitly, set `PRESCIENT_LIVE_SMOKE=1` and select one or more
+providers with `PRESCIENT_LIVE_PROVIDERS`:
+
+```bash
+PRESCIENT_LIVE_SMOKE=1 \
+PRESCIENT_LIVE_PROVIDERS=openai \
+OPENAI_API_KEY=... \
+bundle exec ruby -Itest test/prescient/live_provider_smoke_test.rb
+```
+
+Supported provider names are `ollama`, `anthropic`, `openai`, and
+`huggingface`. The corresponding provider environment variables and model
+overrides are honored. These tests are never live unless both opt-in
+variables are set.
 
 After checking out the repo, run:
 

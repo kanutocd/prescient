@@ -79,7 +79,7 @@ Prescient.configure do |config|
   config.add_provider(:ollama, Prescient::Ollama::Provider,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: ENV.fetch('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text'),
-    chat_model: ENV.fetch('OLLAMA_CHAT_MODEL', 'llama3.1:8b'),
+    chat_model: ENV.fetch('OLLAMA_CHAT_MODEL', 'llama3.2:3b'),
     timeout: 120
   )
 
@@ -88,7 +88,7 @@ Prescient.configure do |config|
     config.add_provider(:openai, Prescient::OpenAI::Provider,
       api_key: ENV['OPENAI_API_KEY'],
       embedding_model: ENV.fetch('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
-      chat_model: ENV.fetch('OPENAI_CHAT_MODEL', 'gpt-3.5-turbo')
+      chat_model: ENV.fetch('OPENAI_CHAT_MODEL', 'gpt-4.1-mini')
     )
   end
 
@@ -96,7 +96,7 @@ Prescient.configure do |config|
   if ENV['ANTHROPIC_API_KEY'].present?
     config.add_provider(:anthropic, Prescient::Anthropic::Provider,
       api_key: ENV['ANTHROPIC_API_KEY'],
-      model: ENV.fetch('ANTHROPIC_MODEL', 'claude-3-haiku-20240307')
+      model: ENV.fetch('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514')
     )
   end
 
@@ -105,7 +105,7 @@ Prescient.configure do |config|
     config.add_provider(:huggingface, Prescient::HuggingFace::Provider,
       api_key: ENV['HUGGINGFACE_API_KEY'],
       embedding_model: ENV.fetch('HUGGINGFACE_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2'),
-      chat_model: ENV.fetch('HUGGINGFACE_CHAT_MODEL', 'microsoft/DialoGPT-medium')
+      chat_model: ENV.fetch('HUGGINGFACE_CHAT_MODEL', 'google/gemma-2-2b-it')
     )
   end
 end
@@ -122,21 +122,21 @@ Rails.application.config.default_ai_provider = :ollama
 # Ollama (Local)
 OLLAMA_URL=http://localhost:11434
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text
-OLLAMA_CHAT_MODEL=llama3.1:8b
+OLLAMA_CHAT_MODEL=llama3.2:3b
 
 # OpenAI (Production)
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-OPENAI_CHAT_MODEL=gpt-3.5-turbo
+OPENAI_CHAT_MODEL=gpt-4.1-mini
 
 # Anthropic (Alternative)
 ANTHROPIC_API_KEY=your_anthropic_api_key
-ANTHROPIC_MODEL=claude-3-haiku-20240307
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
 # HuggingFace (Research)
 HUGGINGFACE_API_KEY=your_huggingface_api_key
 HUGGINGFACE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-HUGGINGFACE_CHAT_MODEL=microsoft/DialoGPT-medium
+HUGGINGFACE_CHAT_MODEL=google/gemma-2-2b-it
 ```
 
 ### 5. Update Controllers

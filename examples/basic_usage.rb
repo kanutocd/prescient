@@ -110,7 +110,7 @@ Prescient.configure do |config|
   config.add_provider(:custom_ollama, Prescient::Provider::Ollama,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b',
+    chat_model: 'llama3.2:3b',
     timeout: 60
   )
 end

@@ -182,13 +182,13 @@ module Prescient
 
       # Add configured fallback providers
       fallback_providers = Prescient.configuration.fallback_providers
-      if fallback_providers && !fallback_providers.empty?
-        providers += fallback_providers.reject { |p| p == @provider_name }
-      else
-        # If no explicit fallbacks configured, try all available providers
-        available = Prescient.configuration.available_providers
-        providers += available.reject { |p| p == @provider_name }
-      end
+      additional_providers = if fallback_providers && !fallback_providers.empty?
+                               fallback_providers.reject { |p| p == @provider_name }
+                             else
+                               # If no explicit fallbacks are configured, probe all configured providers
+                               Prescient.configuration.providers.keys.reject { |p| p == @provider_name }
+                             end
+      providers += additional_providers
 
       providers.uniq
     end

@@ -45,7 +45,7 @@ class HuggingFaceProviderTest < PrescientTest
     ])
 
     @provider.class.expects(:post).with(
-      '/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2',
+      '/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction',
       has_entries(
         headers: {
           'Content-Type'  => 'application/json',
@@ -99,7 +99,7 @@ class HuggingFaceProviderTest < PrescientTest
     end
   end
 
-  def test_generate_embedding_includes_wait_for_model
+  def test_generate_embedding_uses_feature_extraction_payload
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns([[0.1, 0.2, 0.3]])
@@ -107,7 +107,7 @@ class HuggingFaceProviderTest < PrescientTest
     @provider.class.expects(:post).with(
       anything,
       has_entries(
-        body: regexp_matches(/"wait_for_model":true/),
+        body: '{"inputs":"test text"}',
       ),
     ).returns(mock_response)
 
@@ -117,12 +117,12 @@ class HuggingFaceProviderTest < PrescientTest
   def test_generate_response_success_with_array_response
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns([
-      { 'generated_text' => 'This is a test response' },
-    ])
+    mock_response.stubs(:parsed_response).returns({
+      'choices' => [{ 'message' => { 'content' => 'This is a test response' } }],
+    })
 
     @provider.class.expects(:post).with(
-      '/models/microsoft/DialoGPT-medium',
+      '/v1/chat/completions',
       has_entries(
         headers: {
           'Content-Type'  => 'application/json',
@@ -137,14 +137,15 @@ class HuggingFaceProviderTest < PrescientTest
     assert_equal 'microsoft/DialoGPT-medium', result[:model]
     assert_equal 'huggingface', result[:provider]
     assert_nil result[:processing_time]
-    assert_empty(result[:metadata])
+    assert_nil result[:metadata][:usage]
+    assert_nil result[:metadata][:finish_reason]
   end
 
   def test_generate_response_success_with_hash_response
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'generated_text' => 'Hash response format',
+      'choices' => [{ 'message' => { 'content' => 'Hash response format' } }],
     })
 
     @provider.class.expects(:post).returns(mock_response)
@@ -154,7 +155,7 @@ class HuggingFaceProviderTest < PrescientTest
     assert_equal 'Hash response format', result[:response]
   end
 
-  def test_generate_response_with_text_field
+  def test_generate_response_rejects_legacy_text_field
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
@@ -163,17 +164,17 @@ class HuggingFaceProviderTest < PrescientTest
 
     @provider.class.expects(:post).returns(mock_response)
 
-    result = @provider.generate_response('test prompt')
-
-    assert_equal 'Alternative text field', result[:response]
+    assert_raises(Prescient::InvalidResponseError) do
+      @provider.generate_response('test prompt')
+    end
   end
 
   def test_generate_response_with_context_items
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns([
-      { 'generated_text' => 'Response with context' },
-    ])
+    mock_response.stubs(:parsed_response).returns({
+      'choices' => [{ 'message' => { 'content' => 'Response with context' } }],
+    })
 
     @provider.class.expects(:post).returns(mock_response)
 
@@ -189,12 +190,14 @@ class HuggingFaceProviderTest < PrescientTest
   def test_generate_response_with_options
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns([{ 'generated_text' => 'Custom response' }])
+    mock_response.stubs(:parsed_response).returns({
+      'choices' => [{ 'message' => { 'content' => 'Custom response' } }],
+    })
 
     @provider.class.expects(:post).with(
       anything,
       has_entries(
-        body: regexp_matches(/1000.*0\.8.*0\.95.*false/),
+        body: regexp_matches(/1000.*0\.8.*0\.95/),
       ),
     ).returns(mock_response)
 
@@ -235,7 +238,7 @@ class HuggingFaceProviderTest < PrescientTest
     chat_response.stubs(:success?).returns(true)
 
     @provider.class.expects(:post).with(
-      '/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2',
+      '/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction',
       has_entries(
         headers: { 'Authorization' => 'Bearer test-api-key' },
         body:    '{"inputs":"test"}',
@@ -243,7 +246,7 @@ class HuggingFaceProviderTest < PrescientTest
     ).returns(embedding_response)
 
     @provider.class.expects(:post).with(
-      '/models/microsoft/DialoGPT-medium',
+      '/v1/chat/completions',
       has_entries(
         headers: { 'Authorization' => 'Bearer test-api-key' },
       ),
@@ -395,15 +398,17 @@ class HuggingFaceProviderTest < PrescientTest
     @provider.generate_embedding("  test   text  \n")
   end
 
-  def test_wait_for_model_parameter
+  def test_chat_completion_payload
     mock_response = mock('response')
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns([{ 'generated_text' => 'response' }])
+    mock_response.stubs(:parsed_response).returns({
+      'choices' => [{ 'message' => { 'content' => 'response' } }],
+    })
 
     @provider.class.expects(:post).with(
       anything,
       has_entries(
-        body: regexp_matches(/"wait_for_model":true/),
+        body: regexp_matches(/"messages":\[\{"role":"user"/),
       ),
     ).returns(mock_response)
 

@@ -15,7 +15,7 @@ Prescient.configure do |config|
   config.add_provider(:customer_service, Prescient::Provider::Ollama,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b',
+    chat_model: 'llama3.2:3b',
     prompt_templates: {
       system_prompt: 'You are a friendly customer service representative. Be helpful, empathetic, and professional.',
       no_context_template: <<~TEMPLATE.strip,
@@ -73,7 +73,7 @@ Prescient.configure do |config|
   config.add_provider(:tech_docs, Prescient::Provider::Ollama,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b',
+    chat_model: 'llama3.2:3b',
     prompt_templates: {
       system_prompt: 'You are a technical documentation assistant. Provide clear, accurate, and detailed technical explanations with code examples when relevant.',
       no_context_template: <<~TEMPLATE.strip,
@@ -125,7 +125,7 @@ Prescient.configure do |config|
   config.add_provider(:creative, Prescient::Provider::Ollama,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b',
+    chat_model: 'llama3.2:3b',
     prompt_templates: {
       system_prompt: 'You are a creative writing assistant. Help with storytelling, character development, and creative inspiration. Be imaginative and encouraging.',
       no_context_template: <<~TEMPLATE.strip,
@@ -182,7 +182,7 @@ Prescient.configure do |config|
   config.add_provider(:custom_default, Prescient::Provider::Ollama,
     url: ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
     embedding_model: 'nomic-embed-text',
-    chat_model: 'llama3.1:8b',
+    chat_model: 'llama3.2:3b',
     prompt_templates: {
       # Only override the system prompt, keep default templates
       system_prompt: 'You are Sherlock Holmes. Approach every question with deductive reasoning and attention to detail.'

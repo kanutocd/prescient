@@ -65,7 +65,7 @@ services:
         # Pull chat model  
         curl -X POST http://ollama:11434/api/pull \
           -H "Content-Type: application/json" \
-          -d "{\"name\": \"llama3.1:8b\"}"
+          -d "{\"name\": \"llama3.2:3b\"}"
         
         echo "Models pulled successfully!"
       '
@@ -122,7 +122,7 @@ services:
       # Ollama configuration
       - OLLAMA_URL=http://ollama:11434
       - OLLAMA_EMBEDDING_MODEL=nomic-embed-text
-      - OLLAMA_CHAT_MODEL=llama3.1:8b
+      - OLLAMA_CHAT_MODEL=llama3.2:3b
       
       # Optional: Other AI provider configurations
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}

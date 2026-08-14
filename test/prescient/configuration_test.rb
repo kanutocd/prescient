@@ -59,4 +59,30 @@ class ConfigurationTest < PrescientTest
 
     assert_instance_of Prescient::Provider::Ollama, provider
   end
+
+  def test_provider_reuses_registered_provider_instance
+    @config.add_provider(:test, Prescient::Provider::Ollama,
+                         url:             'http://localhost:11434',
+                         embedding_model: 'test-embed',
+                         chat_model:      'test-chat')
+
+    assert_same @config.provider(:test), @config.provider(:test)
+  end
+
+  def test_reregistering_provider_replaces_cached_instance
+    @config.add_provider(:test, Prescient::Provider::Ollama,
+                         url:             'http://localhost:11434',
+                         embedding_model: 'old-embed',
+                         chat_model:      'old-chat')
+    old_provider = @config.provider(:test)
+
+    @config.add_provider(:test, Prescient::Provider::Ollama,
+                         url:             'http://localhost:11434',
+                         embedding_model: 'new-embed',
+                         chat_model:      'new-chat')
+    new_provider = @config.provider(:test)
+
+    refute_same old_provider, new_provider
+    assert_equal 'new-embed', new_provider.options[:embedding_model]
+  end
 end

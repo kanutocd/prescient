@@ -90,6 +90,7 @@ module Prescient
       @retry_delay = 1.0
       @fallback_providers = []
       @providers = {}
+      @provider_instances = {}
     end
 
     # Register a new AI provider
@@ -108,10 +109,12 @@ module Prescient
     #                       api_key: 'sk-...',
     #                       chat_model: 'gpt-4')
     def add_provider(name, provider_class, **options)
-      @providers[name.to_sym] = {
+      provider_name = name.to_sym
+      @providers[provider_name] = {
         class:   provider_class,
         options: options,
       }
+      @provider_instances.delete(provider_name)
     end
 
     # Instantiate a provider by name
@@ -119,10 +122,11 @@ module Prescient
     # @param name [Symbol] The provider name
     # @return [Base, nil] Provider instance or nil if not found
     def provider(name)
-      provider_config = @providers[name.to_sym]
+      provider_name = name.to_sym
+      provider_config = @providers[provider_name]
       return nil unless provider_config
 
-      provider_config[:class].new(**provider_config[:options])
+      @provider_instances[provider_name] ||= provider_config[:class].new(**provider_config[:options])
     end
 
     # Get list of available providers (those that are configured and healthy)
@@ -142,20 +146,20 @@ module Prescient
     config.add_provider(:ollama, Prescient::Provider::Ollama,
                         url:             ENV.fetch('OLLAMA_URL', 'http://localhost:11434'),
                         embedding_model: ENV.fetch('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text'),
-                        chat_model:      ENV.fetch('OLLAMA_CHAT_MODEL', 'llama3.1:8b'))
+                        chat_model:      ENV.fetch('OLLAMA_CHAT_MODEL', 'llama3.2:3b'))
 
     config.add_provider(:anthropic, Prescient::Provider::Anthropic,
                         api_key: ENV.fetch('ANTHROPIC_API_KEY', nil),
-                        model:   ENV.fetch('ANTHROPIC_MODEL', 'claude-3-haiku-20240307'))
+                        model:   ENV.fetch('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'))
 
     config.add_provider(:openai, Prescient::Provider::OpenAI,
                         api_key:         ENV.fetch('OPENAI_API_KEY', nil),
                         embedding_model: ENV.fetch('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
-                        chat_model:      ENV.fetch('OPENAI_CHAT_MODEL', 'gpt-3.5-turbo'))
+                        chat_model:      ENV.fetch('OPENAI_CHAT_MODEL', 'gpt-4.1-mini'))
 
     config.add_provider(:huggingface, Prescient::Provider::HuggingFace,
                         api_key:         ENV.fetch('HUGGINGFACE_API_KEY', nil),
                         embedding_model: ENV.fetch('HUGGINGFACE_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2'),
-                        chat_model:      ENV.fetch('HUGGINGFACE_CHAT_MODEL', 'microsoft/DialoGPT-medium'))
+                        chat_model:      ENV.fetch('HUGGINGFACE_CHAT_MODEL', 'google/gemma-2-2b-it'))
   end
 end

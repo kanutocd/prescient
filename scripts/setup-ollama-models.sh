@@ -5,7 +5,7 @@ set -e
 
 OLLAMA_URL=${OLLAMA_URL:-"http://localhost:11434"}
 EMBEDDING_MODEL=${OLLAMA_EMBEDDING_MODEL:-"nomic-embed-text"}
-CHAT_MODEL=${OLLAMA_CHAT_MODEL:-"llama3.1:8b"}
+CHAT_MODEL=${OLLAMA_CHAT_MODEL:-"llama3.2:3b"}
 
 echo "🚀 Setting up Ollama models for Prescient gem..."
 echo "Ollama URL: $OLLAMA_URL"

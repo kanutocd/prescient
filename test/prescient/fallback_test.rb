@@ -195,12 +195,27 @@ class FallbackTest < PrescientTest
 
     client = Prescient::Client.new(:primary, enable_fallback: true)
 
-    # Mock available_providers to return some providers
-    Prescient.configuration.stubs(:available_providers).returns([:primary, :backup_one, :backup_two])
-
     providers = client.send(:providers_to_try)
 
     assert_equal [:primary, :backup_one, :backup_two], providers
+  end
+
+  def test_fallback_checks_each_provider_health_once
+    Prescient.configure do |config|
+      config.fallback_providers = []
+    end
+    client = Prescient::Client.new(:primary, enable_fallback: true)
+    client.provider.stubs(:available?).returns(true)
+    client.provider.stubs(:generate_embedding).raises(Prescient::ProviderError, 'Primary failed')
+
+    backup_provider = TestProvider.new(test_option: 'backup_one')
+    backup_provider.expects(:available?).once.returns(true)
+    backup_provider.stubs(:generate_embedding).returns([0.7, 0.8, 0.9])
+    Prescient.configuration.stubs(:provider).with(:backup_one).returns(backup_provider)
+
+    result = client.generate_embedding('test text')
+
+    assert_equal [0.7, 0.8, 0.9], result
   end
 
   def test_fallback_preserves_method_arguments
