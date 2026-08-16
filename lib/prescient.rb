@@ -206,6 +206,16 @@ module Prescient
       @tool_instances.delete(tool_name)
     end
 
+    # Register ordered implementations for one logical external tool.
+    # @param name [Symbol] Unique logical capability identifier
+    # @param adapters [Array<Hash>] Adapter class and option configurations
+    # @return [void]
+    def add_tool_group(name, adapters)
+      tool_name = name.to_sym
+      @tools[tool_name] = { adapters: adapters }
+      @tool_instances.delete(tool_name)
+    end
+
     # Instantiate a tool by name.
     # @param name [Symbol, String] Tool name
     # @return [Prescient::Tool::Base, nil] Tool instance or nil
@@ -213,6 +223,16 @@ module Prescient
       tool_name = name.to_sym
       tool_config = @tools[tool_name]
       return nil unless tool_config
+
+      if tool_config[:adapters]
+        @tool_instances[tool_name] ||= Prescient::Tool::Group.new(
+          adapters: tool_config[:adapters].map do |adapter|
+            adapter_options = adapter[:options] # : Hash[Symbol, untyped]
+            adapter[:class].new(**adapter_options)
+          end,
+        )
+        return @tool_instances[tool_name]
+      end
 
       tool_options = tool_config[:options] # : Hash[Symbol, untyped]
       @tool_instances[tool_name] ||= tool_config[:class].new(**tool_options)

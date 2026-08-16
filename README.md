@@ -7,7 +7,7 @@
 [![Security](https://img.shields.io/github/actions/workflow/status/kanutocd/prescient/security.yml?branch=main&event=push&label=Security)](https://github.com/kanutocd/prescient/actions/workflows/security.yml)
 [![License](https://img.shields.io/badge/License-MIT-22C55E)](LICENSE.txt)
 
-Prescient is a boring AI provider gateway for Ruby. Configure your AI providers once, then use them through a consistent Ruby API, CLI, or REST API. Prescient handles provider selection, retries, health checks, and fallback across configured providers, including OpenAI, Anthropic, Ollama, Hugging Face, Google Gemini, Mistral, DeepSeek, and xAI.
+Prescient is a boring AI provider gateway implemented in Ruby. Configure your AI providers once, then use them through a consistent Ruby API, CLI, or REST API. Prescient handles provider selection, retries, health checks, and fallback across configured providers, including OpenAI, Anthropic, Ollama, Hugging Face, Google Gemini, Mistral, DeepSeek, and xAI.
 
 For focused guidance, see the **[examples guide](https://github.com/kanutocd/prescient/tree/main/examples)**,
 **[Rails integration guide](https://github.com/kanutocd/prescient/blob/main/INTEGRATION_GUIDE.md)**, and
@@ -404,6 +404,23 @@ tools:
 The `engine` value can select another SearchApi web or product engine when its
 response uses `organic_results`, such as `bing`, `yahoo`, `yandex`,
 `amazon_search`, or `walmart_search`.
+
+Adapters can be grouped under one logical capability for ordered fallback:
+
+```yaml
+tools:
+  web_search:
+    adapters:
+      - type: searxng
+        url_env: SEARXNG_URL
+      - type: searchapi
+        api_key_env: SEARCHAPI_API_KEY
+        engine: google
+```
+
+Adapters are tried in order. Fallback is limited to transient connection and
+rate-limit failures; invalid configuration, authentication failures, and
+malformed responses are not retried with another adapter.
 
 Run the SearchApi-backed tool:
 

@@ -151,6 +151,31 @@ class ConfigurationLoaderTest < PrescientTest
     assert_equal 'New York', tool.options[:location]
   end
 
+  def test_load_configuration_supports_ordered_tool_adapters
+    configuration = Prescient::ConfigurationLoader.load_hash(
+      {
+        tools: {
+          web_search: {
+            adapters: [
+              { type: 'searxng', url_env: 'SEARXNG_URL' },
+              { type: 'searchapi', api_key_env: 'SEARCHAPI_API_KEY' },
+            ],
+          },
+        },
+      },
+      env: {
+        'SEARXNG_URL' => 'http://search.local:8080',
+        'SEARCHAPI_API_KEY' => 'test-key',
+      },
+    )
+
+    tool = configuration.tool(:web_search)
+
+    assert_instance_of Prescient::Tool::Group, tool
+    assert_instance_of Prescient::Tool::SearXNG, tool.adapters.first
+    assert_instance_of Prescient::Tool::SearchApi, tool.adapters.last
+  end
+
   def test_load_configuration_rejects_unknown_tools
     error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: {})
@@ -206,6 +231,63 @@ class ConfigurationLoaderTest < PrescientTest
       )
     end
     assert_includes plural_error.message, 'configuration keys'
+  end
+
+  def test_load_configuration_rejects_invalid_tool_groups
+    invalid_tools = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_hash({ tools: [] }, source: 'tools.yml')
+    end
+    assert_includes invalid_tools.message, 'tools must be a mapping'
+
+    unknown_key = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_hash(
+        { tools: { search: { adapters: [], unsupported: true, another: true } } },
+        source: nil,
+      )
+    end
+    assert_includes unknown_key.message, 'Unknown tool group configuration key'
+
+    source_unknown_key = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_hash(
+        { tools: { search: { adapters: [], unsupported: true } } },
+        source: 'tools.yml',
+      )
+    end
+    assert_includes source_unknown_key.message, 'in tools.yml'
+
+    empty_group = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash({ tools: { search: { adapters: [] } } }, env: {})
+    end
+    assert_includes empty_group.message, 'non-empty array'
+
+    invalid_group = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash({ tools: { search: { adapters: 'invalid' } } }, env: {})
+    end
+    assert_includes invalid_group.message, 'non-empty array'
+
+    invalid_adapter = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash(
+        { tools: { search: { adapters: ['invalid'] } } },
+        env: {},
+      )
+    end
+    assert_includes invalid_adapter.message, 'must be a mapping'
+
+    missing_adapter_type = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash(
+        { tools: { search: { adapters: [{}] } } },
+        env: {},
+      )
+    end
+    assert_includes missing_adapter_type.message, 'must define type'
+
+    unknown_adapter_key = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash(
+        { tools: { search: { adapters: [{ type: 'searxng', unsupported: true }] } } },
+        env: {},
+      )
+    end
+    assert_includes unknown_adapter_key.message, 'Unknown tool configuration key'
   end
 
   def test_load_configuration_rejects_conflicting_and_missing_tool_environment_values
@@ -276,6 +358,14 @@ class ConfigurationLoaderTest < PrescientTest
     }
     assert_includes unknown_template.message, 'Unknown prompt template keys'
     assert_includes unknown_template.message, 'in config.yml'
+
+    singular_template = assert_raises(Prescient::Error) {
+      Prescient::ConfigurationLoader.load_hash(
+        { providers: { demo: { type: 'ollama', prompt_templates: { first: 'one' } } } },
+        env: {},
+      )
+    }
+    assert_includes singular_template.message, 'Unknown prompt template key for demo'
   end
 
   def test_load_configuration_applies_direct_values_and_provider_numbers

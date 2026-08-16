@@ -13,6 +13,8 @@
 - Added `POST /v1/search` for normalized raw external-tool results without AI generation.
 - Added SearchApi as a hosted web-search adapter with engine, location, language,
   country, API-key, timeout, and result-limit configuration.
+- Added capability groups for ordered tool-adapter fallback on transient
+  connection and rate-limit failures.
 - Documented SearXNG and SearchApi setup and CLI usage side by side.
 - Added explicit `--generate` opt-in behavior to the web-search example.
 - Added `SEARXNG_URL` environment defaults for automatic `web_search` registration.

@@ -158,10 +158,26 @@
     "tool": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type"
+      "anyOf": [
+        {
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "required": [
+            "adapters"
+          ]
+        }
       ],
       "properties": {
+        "adapters": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/tool"
+          }
+        },
         "type": {
           "type": "string",
           "enum": [

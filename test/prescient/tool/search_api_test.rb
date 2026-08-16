@@ -73,6 +73,10 @@ class SearchApiToolTest < PrescientTest
 
     assert_raises(Prescient::ToolInvalidResponseError) { @tool.search('query') }
 
+    response = stub(success?: true, body: '{}', parsed_response: [])
+    HTTParty.stubs(:get).returns(response)
+    assert_raises(Prescient::ToolInvalidResponseError) { @tool.search('query') }
+
     response = stub(success?: true, body: '{}', parsed_response: { 'organic_results' => ['invalid', { 'link' => '' }] })
     HTTParty.stubs(:get).returns(response)
     assert_equal [], @tool.search('query')[:results]

@@ -91,4 +91,33 @@ module Prescient::Tool
       value
     end
   end
+
+  # Ordered implementations for one logical tool capability.
+  class Group < Base
+    # @return [Array<Base>] Ordered capability implementations
+    attr_reader :adapters
+
+    # @param adapters [Array<Base>] Ordered capability implementations
+    def initialize(adapters:)
+      super
+      @adapters = adapters
+      raise Prescient::ToolConfigurationError, 'tool group requires an adapter' if @adapters.empty?
+    end
+
+    # Execute the first successful adapter, falling back only for transient
+    # connection and rate-limit failures.
+    # @param query [String] Search query
+    # @param options [Hash] Per-request options
+    # @return [Hash] Normalized tool result
+    def search(query, **options)
+      failures = []
+      @adapters.each do |adapter|
+        return adapter.search(query, **options)
+      rescue Prescient::ToolConnectionError, Prescient::RateLimitError => e
+        failures << e
+      end
+
+      raise failures.last
+    end
+  end
 end

@@ -1,11 +1,13 @@
 # frozen_string_literal: true
 
-require 'simplecov'
+unless ENV['COVERAGE'] == 'false'
+  require 'simplecov'
 
-SimpleCov.start do
-  enable_coverage :branch
-  add_filter '/test/'
-  minimum_coverage line: 99, branch: 99
+  SimpleCov.start do
+    enable_coverage :branch
+    add_filter '/test/'
+    minimum_coverage line: 99, branch: 99
+  end
 end
 
 require 'bundler/setup'

@@ -125,6 +125,16 @@ class Prescient::CLI
       #   timeout: 10
       #   max_results: 5
 
+      # Capability fallback. Adapters are tried in order, and fallback occurs
+      # only for transient connection or rate-limit failures.
+      # resilient_search:
+      #   adapters:
+      #     - type: searxng
+      #       url_env: SEARXNG_URL
+      #     - type: searchapi
+      #       api_key_env: SEARCHAPI_API_KEY
+      #       engine: google
+
       # Prefer an environment reference when the URL differs by environment
       # or should not be committed. Use `--tool research_search` to select a
       # tool with a custom name.

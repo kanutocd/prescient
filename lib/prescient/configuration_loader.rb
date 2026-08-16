@@ -282,8 +282,12 @@ class Prescient::ConfigurationLoader
       tool_settings = normalize_keys(tool_data)
       validate_tool!(tool_name, tool_settings, source:)
 
-      tool_options = resolve_tool_options(tool_settings, source:)
-      configuration.add_tool(tool_name, tool_class_for(tool_settings.fetch(:type).to_s), **tool_options)
+      if tool_settings.key?(:adapters)
+        configuration.add_tool_group(tool_name, resolve_tool_adapters(tool_settings, source:))
+      else
+        tool_options = resolve_tool_options(tool_settings, source:)
+        configuration.add_tool(tool_name, tool_class_for(tool_settings.fetch(:type).to_s), **tool_options)
+      end
     end
   end
 
@@ -335,8 +339,32 @@ class Prescient::ConfigurationLoader
 
   def validate_tool!(name, tool_data, source:)
     validate_tool_shape!(name, tool_data, source:)
+    return validate_tool_group!(name, tool_data, source:) if tool_data.key?(:adapters)
+
     validate_tool_type!(name, tool_data, source:)
     validate_tool_keys!(name, tool_data, source:)
+  end
+
+  def validate_tool_group!(name, tool_data, source:)
+    unknown_keys = tool_data.keys.map(&:to_s) - ['adapters']
+    unless unknown_keys.empty?
+      source_suffix = " in #{source}" if source
+      raise Prescient::Error,
+            "Unknown tool group configuration key#{'s' if unknown_keys.length > 1} for #{name}: " \
+            "#{unknown_keys.join(', ')}#{source_suffix}"
+    end
+
+    adapters = tool_data[:adapters]
+    unless adapters.is_a?(Array) && adapters.any?
+      raise Prescient::Error, "Tool #{name} adapters must be a non-empty array"
+    end
+
+    adapters.each_with_index do |adapter_data, index|
+      adapter_name = "#{name} adapter #{index + 1}"
+      validate_tool_shape!(adapter_name, adapter_data, source:)
+      validate_tool_type!(adapter_name, adapter_data, source:)
+      validate_tool_keys!(adapter_name, adapter_data, source:)
+    end
   end
 
   def validate_tool_shape!(name, tool_data, source:)
@@ -386,6 +414,16 @@ class Prescient::ConfigurationLoader
     tool_data.each_with_object({}) do |(key, value), options|
       option = resolve_tool_option(tool_data, key, value, source:)
       options[option.first] = option.last if option
+    end
+  end
+
+  def resolve_tool_adapters(tool_data, source:)
+    tool_data[:adapters].map do |adapter_data|
+      tool_type = adapter_data[:type].to_s
+      {
+        class:   tool_class_for(tool_type),
+        options: resolve_tool_options(adapter_data, source:),
+      }
     end
   end
 

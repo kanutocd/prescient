@@ -58,7 +58,19 @@ module Prescient
       def search: (String, **untyped) -> Hash[Symbol, untyped]
     end
 
+    class Group < Base
+      attr_reader adapters: Array[Base]
+      def initialize: (adapters: Array[Base]) -> void
+      def search: (String, **untyped) -> Hash[Symbol, untyped]
+    end
+
     class SearXNG < Base
+      def initialize: (**untyped) -> void
+      def search: (String, ?limit: Integer?, ?timeout: Numeric?) -> Hash[Symbol, untyped]
+    end
+
+    class SearchApi < Base
+      API_URL: String
       def initialize: (**untyped) -> void
       def search: (String, ?limit: Integer?, ?timeout: Numeric?) -> Hash[Symbol, untyped]
     end
@@ -295,6 +307,7 @@ module Prescient
     def add_provider: (Symbol | String, Class, **untyped) -> void
     def provider: (Symbol | String) -> untyped
     def add_tool: (Symbol | String, Class, **untyped) -> void
+    def add_tool_group: (Symbol | String, Array[Hash[Symbol, untyped]]) -> void
     def tool: (Symbol | String) -> untyped
     def available_providers: () -> Array[Symbol]
   end
