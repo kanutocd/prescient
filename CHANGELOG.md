@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.7.0] - 2025-08-17
+
 ### Added
 
 - Added an explicit external-tool contract with a configurable SearXNG web-search adapter.
