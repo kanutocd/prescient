@@ -52,12 +52,18 @@ class CLITest < PrescientTest
 
   def setup
     super
+    @prescient_config = ENV.delete('PRESCIENT_CONFIG')
     Prescient.configure do |config|
       config.default_provider = :test
       config.add_provider(:test, CLIProvider, chat_model: 'configured-model')
       config.add_provider(:offline, CLIProvider, reachable: false, status: 'unavailable')
       config.add_tool(:web_search, CLITool)
     end
+  end
+
+  def teardown
+    ENV['PRESCIENT_CONFIG'] = @prescient_config if @prescient_config
+    super
   end
 
   # rubocop:disable Minitest/MultipleAssertions
