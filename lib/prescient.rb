@@ -3,6 +3,7 @@
 require_relative 'prescient/version'
 require_relative 'prescient/errors'
 Prescient.autoload :Tool, 'prescient/tool'
+Prescient.autoload :DocumentSource, 'prescient/document_source'
 require_relative 'prescient/pgvector'
 require_relative 'prescient/base'
 require_relative 'prescient/provider/ollama'
@@ -36,6 +37,7 @@ require_relative 'prescient/client'
 #   puts embedding.length # => 1536 (for OpenAI text-embedding-3-small)
 module Prescient
   autoload :Tool, 'prescient/tool'
+  autoload :DocumentSource, 'prescient/document_source'
   autoload :API, 'prescient/api'
   autoload :CLI, 'prescient/cli'
 

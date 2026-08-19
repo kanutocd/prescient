@@ -76,6 +76,31 @@ module Prescient
     end
   end
 
+  module DocumentSource
+    DEFAULT_MAX_DOCUMENTS: Integer
+    DEFAULT_MAX_BYTES: Integer
+
+    class Base
+      def initialize: (?max_documents: Integer, ?max_bytes: Integer) -> void
+      def fetch: () -> Array[Hash[String, untyped]]
+    end
+
+    class Memory < Base
+      def initialize: (documents: Array[Hash[String, untyped]] | Hash[String, untyped], ?max_documents: Integer, ?max_bytes: Integer) -> void
+      def fetch: () -> Array[Hash[String, untyped]]
+    end
+
+    class JsonFile < Base
+      def initialize: (path: String, ?max_documents: Integer, ?max_bytes: Integer) -> void
+      def fetch: () -> Array[Hash[String, untyped]]
+    end
+
+    class RedisJson < Base
+      def initialize: (client: untyped, key: String, ?max_documents: Integer, ?max_bytes: Integer) -> void
+      def fetch: () -> Array[Hash[String, untyped]]
+    end
+  end
+
   class Base
     attr_reader options: Hash[Symbol, untyped]
     attr_reader provider_name: String

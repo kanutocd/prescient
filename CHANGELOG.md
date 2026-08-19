@@ -17,6 +17,8 @@
   country, API-key, timeout, and result-limit configuration.
 - Added capability groups for ordered tool-adapter fallback on transient
   connection and rate-limit failures.
+- Added bounded JSON document sources for Ruby, CLI, and REST generation context,
+  including local files, in-memory documents, and injected Redis clients.
 - Documented SearXNG and SearchApi setup and CLI usage side by side.
 - Added explicit `--generate` opt-in behavior to the web-search example.
 - Added `SEARXNG_URL` environment defaults for automatic `web_search` registration.

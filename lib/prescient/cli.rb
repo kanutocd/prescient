@@ -244,12 +244,17 @@ class Prescient::CLI
   end
 
   def generate
-    options = parse_options('Generate a text response', fallback: true)
+    options = parse_options('Generate a text response', fallback: true, documents: true)
     return options if options.is_a?(Integer)
 
     prompt = read_text(options[:arguments], 'prompt')
     client = client_for(options)
-    response = client.generate_response(prompt, **model_options(options))
+    context = if options[:json_file]
+                Prescient::DocumentSource::JsonFile.new(path: options[:json_file]).fetch
+              else
+                []
+              end
+    response = client.generate_response(prompt, context, **model_options(options))
 
     options[:format] == 'json' ? print_json(response) : @output.puts(response[:response])
     0
@@ -362,7 +367,8 @@ class Prescient::CLI
     end
   end
 
-  def parse_options(description, fallback: false, tool: false, limit: false, generate: false)
+  def parse_options(description, fallback: false, tool: false, limit: false, generate: false,
+                    documents: false)
     options = { format: 'text', fallback: fallback }
     parser = OptionParser.new do |parser|
       parser.banner = "Usage: prescient #{@arguments.first || 'command'} [options]"
@@ -370,6 +376,7 @@ class Prescient::CLI
       parser.separator ''
       parser.separator 'Global options:'
       add_common_options(parser, options)
+      add_document_options(parser, options) if documents
       parser.on('--no-fallback', 'Disable provider fallback') { options[:fallback] = false } if fallback
       add_tool_options(parser, options, tool:, limit:, generate:)
       parser.on('-h', '--help', 'Show command help') do
@@ -465,6 +472,12 @@ class Prescient::CLI
     end
     parser.on('--api-key-env NAME', 'Read the API key from this environment variable') do |value|
       options[:api_key_env] = value
+    end
+  end
+
+  def add_document_options(parser, options)
+    parser.on('--json-file PATH', 'Load JSON documents as generation context') do |value|
+      options[:json_file] = value
     end
   end
 
@@ -568,6 +581,7 @@ class Prescient::CLI
         --api-key KEY            Use an API key for the operation
         --api-key-env NAME       Read the API key from an environment variable
         --format FORMAT          Use text or json output
+        --json-file PATH         Load JSON documents as generation context
 
       Search options:
         --tool NAME              Select an external tool for search

@@ -161,6 +161,15 @@ class APITest < PrescientTest
     assert_equal 'hello', APIProvider.last_request[:prompt]
     assert_equal 'override-model', APIProvider.last_request[:options][:model]
 
+    result = body(call('POST', '/v1/generate', body: {
+      prompt:    'summarize',
+      documents: [{ 'title' => 'Ruby' }],
+      provider:  'api_test',
+    }))
+
+    assert_equal 'generated', result['response']
+    assert_equal 'Ruby', APIProvider.last_request[:context].first['title']
+
     embedding = body(call('POST', '/v1/embeddings', body: { input: 'hello', provider: 'api_test' }))
 
     assert_equal [0.1, 0.2, 0.3], embedding['embedding']

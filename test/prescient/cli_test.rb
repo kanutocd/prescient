@@ -186,6 +186,15 @@ class CLITest < PrescientTest
     assert_equal 'from stdin', JSON.parse(output)['response'].sub('response to ', '')
   end
 
+  def test_generate_loads_json_documents_as_context
+    path = write_configuration('[{"title":"Ruby"}]')
+
+    status, output, _errors = run_cli(['generate', '--json-file', path, 'Summarize'])
+
+    assert_equal 0, status
+    assert_equal "response to Summarize\n", output
+  end
+
   def test_generate_supports_chat_model_and_api_key_overrides_without_mutating_configuration
     status, output, _errors = run_cli(
       ['generate', '--chat-model', 'automation-chat', '--api-key', 'temporary-key', 'hello'],

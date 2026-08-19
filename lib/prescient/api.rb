@@ -82,7 +82,11 @@ class Prescient::API
   def generate_response(env, _query, request_id)
     payload = request_payload(env)
     prompt = required_string(payload, 'prompt')
-    context = payload.fetch('context', [])
+    context = if payload.key?('documents')
+                Prescient::DocumentSource::Memory.new(documents: payload['documents']).fetch
+              else
+                payload.fetch('context', [])
+              end
     raise ArgumentError, 'context must be an array' unless context.is_a?(Array)
 
     client = client_for(payload)

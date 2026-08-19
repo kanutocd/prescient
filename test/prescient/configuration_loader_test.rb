@@ -190,6 +190,11 @@ class ConfigurationLoaderTest < PrescientTest
   end
 
   def test_load_configuration_rejects_invalid_tool_shapes_and_keys
+    invalid_tools = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash({ tools: [] }, env: {})
+    end
+    assert_includes invalid_tools.message, 'tools must be a mapping'
+
     invalid_shape = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash({ tools: { search: 'invalid' } }, env: {})
     end

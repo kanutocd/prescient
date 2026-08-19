@@ -584,6 +584,35 @@ client_no_fallback = Prescient::Client.new(:primary, enable_fallback: false)
 response = Prescient.generate_response("Hello", provider: :primary, enable_fallback: true)
 ```
 
+### JSON document context
+
+For small documentation sets, you can load JSON objects from a file instead of
+creating embeddings:
+
+```ruby
+documents = Prescient::DocumentSource::JsonFile.new(path: "docs.json").fetch
+response = Prescient.generate_response("How do I reset my password?", documents)
+```
+
+The CLI supports the same flow with bounded document loading:
+
+```bash
+prescient generate --json-file docs.json "How do I reset my password?"
+```
+
+Redis-backed documents use an injected Redis-compatible client, so Redis remains
+optional for gem consumers:
+
+```ruby
+source = Prescient::DocumentSource::RedisJson.new(client: redis, key: "docs:acme")
+response = Prescient.generate_response("Summarize the docs", source.fetch)
+```
+
+The REST API accepts the same documents inline as `documents` on
+`POST /v1/generate`. Sources enforce document-count and serialized-byte limits;
+use retrieval or embeddings when the documentation no longer fits comfortably
+in the provider's context window.
+
 **Fallback Behavior:**
 - When a provider fails with a persistent error, Prescient automatically tries the next available provider
 - Configured fallback providers are tried in order; the provider operation determines availability
