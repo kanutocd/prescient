@@ -259,6 +259,24 @@ class AgentTest < PrescientTest
     refute events.last[:success]
   end
 
+  def test_reusing_runtime_does_not_leak_state_between_runs
+    client = FakeClient.new(
+      [
+        { response: "```json\n{\"action\":\"accounts\",\"args\":{\"account_id\":\"acct-1\"}}\n```" },
+        { response: "first" },
+        { response: "second" }
+      ]
+    )
+    runtime = Prescient::Agent::Runtime.new(client:, tools: { accounts: CallableTool.new })
+
+    first = runtime.run("check account")
+    second = runtime.run("check another account")
+
+    assert_equal ["accounts"], first.metadata[:actions]
+    assert_empty second.metadata[:actions]
+    assert_equal 1, second.loops_run
+  end
+
   def test_tool_schema_validates_required_and_additional_arguments
     tool = CallableTool.new
     tool.instance_variable_set(

@@ -55,24 +55,27 @@ module Prescient
       public_path = request_target(env).first
       return dispatch(env, request_id) if ["/healthz", "/readyz"].include?(public_path)
 
-      unless authenticated?(env)
+      authentication = authentication_result(env)
+      unless authentication
         return response(401,
                         error_payload("authentication_required", "authentication required",
                                       request_id))
       end
 
-      dispatch(env, request_id)
+      dispatch(env, request_id, principal: authentication == true ? nil : authentication)
     rescue StandardError => e
       handle_exception(e, request_id)
     end
 
     private
 
-    def dispatch(env, request_id)
+    def dispatch(env, request_id, principal: nil)
       method = env.fetch("REQUEST_METHOD", "GET").upcase
       path, query = request_target(env)
       handler = ROUTES[[method, path]]
       return response(404, error_payload("not_found", "route not found", request_id)) unless handler
+
+      return send(handler, env, query, request_id, principal) if handler == :agent_response
 
       send(handler, env, query, request_id)
     end
@@ -129,14 +132,14 @@ module Prescient
       json_response(200, result, request_id)
     end
 
-    def agent_response(env, _query, request_id)
+    def agent_response(env, _query, request_id, principal)
       require "prescient/agent"
       payload = request_payload(env)
       prompt = required_string(payload, "prompt")
-      json_response(200, agent_runtime(payload, env, request_id).run(prompt).to_h, request_id)
+      json_response(200, agent_runtime(payload, env, request_id, principal:).run(prompt).to_h, request_id)
     end
 
-    def agent_runtime(payload, env, request_id)
+    def agent_runtime(payload, env, request_id, principal: nil)
       tools = payload.fetch("tools", [])
       validate_agent_tools(tools)
       configuration = Prescient::Agent::Configuration.new(max_loops: payload.fetch("max_loops", 5))
@@ -147,7 +150,7 @@ module Prescient
         configuration: configuration,
         authorization: @authorization,
         generation_options: model_options(payload),
-        request_context: request_context(env, request_id)
+        request_context: request_context(env, request_id, principal:)
       )
     end
 
@@ -309,22 +312,17 @@ module Prescient
       [path, URI.decode_www_form(query.to_s).to_h]
     end
 
-    def authenticated?(env)
+    def authentication_result(env)
       return true unless @authentication
 
-      @principal = nil
-      result = @authentication.call(env)
-      return false unless result
-
-      @principal = result == true ? nil : result
-      true
+      @authentication.call(env)
     end
 
-    def request_context(env, request_id)
+    def request_context(env, request_id, principal: nil)
       base = {
         request_id: request_id,
         tenant_id: env["HTTP_X_TENANT_ID"],
-        principal: @principal || env["REMOTE_USER"]
+        principal: principal || env["REMOTE_USER"]
       }.compact
       return base unless @request_context
 

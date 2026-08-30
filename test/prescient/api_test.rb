@@ -77,6 +77,23 @@ class APITest < PrescientTest
     end
   end
 
+  class AgentProvider < APIProvider
+    def initialize(**options)
+      super
+      @calls = 0
+    end
+
+    def generate_response(_prompt, _context = [], **_options)
+      @calls += 1
+      response = if @calls.odd?
+                   "```json\n{\"action\":\"web_search\",\"args\":{\"query\":\"Ruby\"}}\n```"
+                 else
+                   "done"
+                 end
+      { response:, provider: "agent-api-test", model: "test-model" }
+    end
+  end
+
   class FailureProvider < APIProvider
     def generate_response(*_args, **_options)
       failure = @options.fetch(:failure)
@@ -209,6 +226,33 @@ class APITest < PrescientTest
 
     assert_equal "generated", result["response"]
     assert_equal [], result["metadata"]["actions"]
+  end
+
+  def test_agent_authentication_principal_is_scoped_to_each_request
+    Prescient.configuration.add_provider(:agent_api_test, AgentProvider)
+    principals = []
+    @api = Prescient::API.new(
+      authentication: lambda { |env|
+        env["HTTP_X_USER"] == "alice" ? { name: "alice" } : true
+      },
+      authorization: lambda { |context:, **|
+        principals << (context[:principal] && context[:principal][:name])
+        true
+      }
+    )
+
+    %w[alice bob].each do |user|
+      response = call(
+        "POST",
+        "/v1/agent",
+        body: { prompt: "search", provider: "agent_api_test", tools: ["web_search"] },
+        headers: { "HTTP_X_USER" => user }
+      )
+
+      assert_equal 200, response.first
+    end
+
+    assert_equal ["alice", nil], principals
   end
 
   def test_agent_endpoint_rejects_invalid_tool_lists
