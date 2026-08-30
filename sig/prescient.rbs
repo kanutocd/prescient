@@ -117,20 +117,30 @@ module Prescient
       def self.serialize: (Exception) -> Hash[Symbol, untyped]
     end
 
+    class SchemaValidator
+      def self.validate!: (Hash[untyped, untyped], untyped) -> untyped
+      def initialize: (Hash[untyped, untyped]) -> void
+      def validate!: (untyped) -> untyped
+    end
+
     class Configuration
       DEFAULT_MAX_LOOPS: Integer
       DEFAULT_MAX_CONTEXT_BYTES: Integer
       DEFAULT_MAX_ACTION_BYTES: Integer
       DEFAULT_MAX_OBSERVATION_BYTES: Integer
+      DEFAULT_MAX_TASK_BYTES: Integer
+      DEFAULT_MAX_RESPONSE_BYTES: Integer
 
       attr_reader max_loops: Integer
       attr_reader max_context_bytes: Integer
       attr_reader max_action_bytes: Integer
       attr_reader max_observation_bytes: Integer
+      attr_reader max_task_bytes: Integer
+      attr_reader max_response_bytes: Integer
 
       attr_reader authorization: Proc?
       attr_reader telemetry: Proc?
-      def initialize: (?max_loops: Integer, ?max_context_bytes: Integer, ?max_action_bytes: Integer, ?max_observation_bytes: Integer, ?authorization: Proc?, ?telemetry: Proc?) -> void
+      def initialize: (?max_loops: Integer, ?max_context_bytes: Integer, ?max_action_bytes: Integer, ?max_observation_bytes: Integer, ?max_task_bytes: Integer, ?max_response_bytes: Integer, ?authorization: Proc?, ?telemetry: Proc?) -> void
     end
 
     class Context
@@ -179,6 +189,11 @@ module Prescient
       def initialize: (?provider: Symbol?, ?client: untyped, ?tools: Hash[Symbol | String, untyped]?, ?tool_names: Array[Symbol | String], ?configuration: Configuration, ?system_prompt: String, ?provider_options: Hash[Symbol, untyped], ?generation_options: Hash[Symbol, untyped], ?authorization: Proc?, ?telemetry: Proc?, ?request_context: Hash[Symbol, untyped]) -> void
       def run: (String) -> Result
     end
+
+    class CLIAdapter
+      def initialize: (?output: untyped, ?errors: untyped) -> void
+      def run: (task: String, client: untyped, ?tool_names: Array[Symbol | String], ?max_loops: Integer, ?format: String, ?provider_options: Hash[Symbol, untyped], ?generation_options: Hash[Symbol, untyped]) -> Integer
+    end
   end
 
   module MCP
@@ -197,6 +212,7 @@ module Prescient
     class Server
       def initialize: (?configuration: Configuration, ?client_factory: Proc?, ?authorization: Proc?) -> void
       def initialize_result: () -> Hash[Symbol, untyped]
+      def dispatch: (Hash[String, untyped], ?context: Hash[Symbol, untyped]) -> Hash[Symbol, untyped]
       def tools: () -> Array[Hash[String, untyped]]
       def resources: () -> Array[Hash[String, untyped]]
       def call_tool: (String | Symbol, ?Hash[String, untyped], ?context: Hash[Symbol, untyped]) -> Hash[Symbol, untyped]
@@ -206,6 +222,11 @@ module Prescient
     class Stdio
       def initialize: (?server: Server, ?input: untyped, ?output: untyped) -> void
       def run: () -> void
+    end
+
+    class Rack
+      def initialize: (authentication: Proc, ?server: Server, ?request_context: Proc?, ?max_body_bytes: Integer) -> void
+      def call: (Hash[String, untyped]) -> Array[untyped]
     end
   end
 
