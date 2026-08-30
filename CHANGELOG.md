@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- Added an optional, bounded Ruby agent runtime with strict single-action tool
+  execution, provider routing through `Prescient::Client`, and safe loop limits.
+
 ## [0.7.0] - 2025-08-17
 
 ### Added

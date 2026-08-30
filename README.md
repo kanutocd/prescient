@@ -613,6 +613,28 @@ The REST API accepts the same documents inline as `documents` on
 use retrieval or embeddings when the documentation no longer fits comfortably
 in the provider's context window.
 
+## Agent runtime
+
+Prescient also provides an optional, bounded agent runtime. It is loaded
+explicitly and can execute allowlisted search tools through the existing
+provider routing:
+
+```ruby
+require "prescient/agent"
+
+agent = Prescient::Agent::Runtime.new(
+  provider:   :openai,
+  tool_names: [:web_search],
+  max_loops:  5
+)
+result = agent.run("Find and summarize the latest Ruby release")
+puts result.response
+```
+
+The runtime supports one validated JSON action per iteration and stops at its
+loop limit. It does not provide arbitrary Ruby, shell, filesystem, browser, or
+database access. The agent namespace is not loaded by `require "prescient"`.
+
 **Fallback Behavior:**
 - When a provider fails with a persistent error, Prescient automatically tries the next available provider
 - Configured fallback providers are tried in order; the provider operation determines availability
