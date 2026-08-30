@@ -10,6 +10,10 @@
   failures before they are returned to the model.
 - Added generic callable agent tools, request-scoped authorization and bounded
   telemetry hooks, the `prescient agent` CLI command, and `POST /v1/agent`.
+- Added a dedicated `Prescient::Agent::CLIAdapter`, schema validation for
+  generic callable tools, and independent task and response byte limits.
+- Added structured failure telemetry, principal propagation, and an
+  authenticated, bounded MCP Rack transport backed by shared JSON-RPC dispatch.
 - Added an optional lazy MCP adapter with capability discovery, safe core
   operations, agent invocation, resources, and newline-delimited JSON-RPC stdio.
 
