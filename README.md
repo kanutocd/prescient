@@ -635,6 +635,28 @@ The runtime supports one validated JSON action per iteration and stops at its
 loop limit. It does not provide arbitrary Ruby, shell, filesystem, browser, or
 database access. The agent namespace is not loaded by `require "prescient"`.
 
+The same bounded runtime is available from the CLI:
+
+```bash
+prescient agent "Summarize the account status" --provider openai --tool accounts
+```
+
+It is also available through `POST /v1/agent`. Supply an explicit `tools` array;
+the REST API does not grant access to configured tools implicitly:
+
+```json
+{"prompt":"Summarize the account status","provider":"openai","tools":[]}
+```
+
+Applications can provide `authorization` and `request_context` hooks to enforce
+tenant/principal policy, and a bounded `telemetry` hook receives only event
+metadata such as loop count, action names, and success status.
+
+For MCP hosts, load the optional dependency-free adapter explicitly with
+`require "prescient/mcp"`, or run `prescient-mcp` for newline-delimited
+JSON-RPC over stdio. MCP exposes only explicitly enabled capabilities and never
+returns credentials or raw provider failure bodies.
+
 **Fallback Behavior:**
 - When a provider fails with a persistent error, Prescient automatically tries the next available provider
 - Configured fallback providers are tried in order; the provider operation determines availability

@@ -8,6 +8,10 @@
   execution, provider routing through `Prescient::Client`, and safe loop limits.
 - Added deterministic agent context compaction and safe serialization of tool
   failures before they are returned to the model.
+- Added generic callable agent tools, request-scoped authorization and bounded
+  telemetry hooks, the `prescient agent` CLI command, and `POST /v1/agent`.
+- Added an optional lazy MCP adapter with capability discovery, safe core
+  operations, agent invocation, resources, and newline-delimited JSON-RPC stdio.
 
 ## [0.7.0] - 2025-08-17
 
