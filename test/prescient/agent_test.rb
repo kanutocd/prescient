@@ -16,6 +16,26 @@ class AgentTest < PrescientTest
     end
   end
 
+  class CallableTool
+    attr_reader :description
+    attr_reader :schema
+
+    def initialize
+      @description = 'Return an account summary.'
+      @schema = { type: 'object', required: ['account_id'] }
+    end
+
+    def call(arguments)
+      { account_id: arguments['account_id'], status: 'due' }
+    end
+  end
+
+  class BareCallableTool
+    def call(_arguments)
+      { result: 'ok' }
+    end
+  end
+
   class FakeClient
     attr_reader :calls
     attr_reader :provider_name
@@ -78,6 +98,64 @@ class AgentTest < PrescientTest
 
     assert_raises(Prescient::Agent::UnauthorizedToolError) do
       Prescient::Agent::Runtime.new(client:, tools: {}).run('task')
+    end
+  end
+
+  def test_invokes_generic_callable_tools
+    client = FakeClient.new(
+      [
+        { response: "```json\n{\"action\":\"accounts\",\"args\":{\"account_id\":\"acct-1\"}}\n```" },
+        { response: 'account is due' },
+      ],
+    )
+
+    result = Prescient::Agent::Runtime.new(client:, tools: { accounts: CallableTool.new }).run('check account')
+
+    assert_equal 'account is due', result.response
+    assert_equal ['accounts'], result.metadata[:actions]
+    assert_includes client.calls.last[:context].last[:content], 'acct-1'
+  end
+
+  def test_authorization_and_telemetry_receive_request_scoped_data
+    events = []
+    client = FakeClient.new(
+      [
+        { response: "```json\n{\"action\":\"accounts\",\"args\":{\"account_id\":\"acct-1\"}}\n```" },
+        { response: 'done' },
+      ],
+    )
+    authorization = ->(tool:, arguments:, context:) {
+      tool == :accounts && arguments['account_id'] == 'acct-1' && context[:tenant_id] == 'tenant-1'
+    }
+    configuration = Prescient::Agent::Configuration.new(authorization:, telemetry: ->(event) { events << event })
+
+    result = Prescient::Agent::Runtime.new(
+      client:, tools: { accounts: CallableTool.new }, configuration:, request_context: { tenant_id: 'tenant-1' },
+    ).run('task')
+
+    assert_predicate result, :success?
+    assert_equal :completed, events.last[:event]
+    assert events.last[:success]
+    assert(events.all? { |event| !event.key?(:prompt) })
+  end
+
+  def test_rejects_non_callable_policy_and_unauthorized_actions
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::Configuration.new(authorization: Object.new)
+    end
+
+    client = FakeClient.new(
+      [{ response: "```json\n{\"action\":\"accounts\",\"args\":{\"account_id\":\"acct-1\"}}\n```" }],
+    )
+    configuration = Prescient::Agent::Configuration.new(authorization: ->(**) { false })
+
+    assert_raises(Prescient::Agent::UnauthorizedToolError) do
+      Prescient::Agent::Runtime.new(
+        client:, tools: { accounts: CallableTool.new }, configuration:,
+      ).run('task')
+    end
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::Runtime.new(client:, tools: {}).run(nil)
     end
   end
 
@@ -169,6 +247,15 @@ class AgentTest < PrescientTest
     end
   end
 
+  def test_parser_rejects_invalid_json_and_invalid_action_arguments
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::Parser.parse("```json\n{invalid}\n```")
+    end
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::Parser.parse("```json\n{\"action\":\"search\",\"args\":[] }\n```")
+    end
+  end
+
   def test_registry_rejects_non_search_tools_and_missing_queries
     assert_raises(Prescient::Agent::ConfigurationError) do
       Prescient::Agent::ToolRegistry.new({ unsupported: Object.new })
@@ -181,5 +268,9 @@ class AgentTest < PrescientTest
     assert_raises(Prescient::Agent::MalformedActionError) do
       registry.invoke(:search, { 'query' => '' })
     end
+
+    bare = Prescient::Agent::ToolRegistry.new(bare: BareCallableTool.new)
+
+    assert_equal({ result: 'ok' }, bare.invoke(:bare, {}))
   end
 end

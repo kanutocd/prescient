@@ -7,6 +7,16 @@ require_relative '../prescient'
 
 # Command-line interface for common Prescient operations.
 class Prescient::CLI
+  # @return [Hash<String, Symbol>] CLI command dispatch table
+  COMMAND_HANDLERS = {
+    'providers' => :providers,
+    'health'    => :health,
+    'generate'  => :generate,
+    'embed'     => :embed,
+    'search'    => :search,
+    'agent'     => :agent,
+    'config'    => :config,
+  }.freeze
   # Supported output formats.
   # @return [Array<String>] Output format names
   FORMATS = ['text', 'json'].freeze
@@ -200,17 +210,12 @@ class Prescient::CLI
   # @param command [String] Command name
   # @return [Integer] Process exit status
   def run_command(command)
-    case command
-    when 'providers' then providers
-    when 'health' then health
-    when 'generate' then generate
-    when 'embed' then embed
-    when 'search' then search
-    when 'config' then config
-    when 'help', '--help', '-h' then print_help(0)
-    else
-      raise UsageError, "unknown command #{command.inspect}; run 'prescient help'"
-    end
+    return print_help(0) if ['help', '--help', '-h'].include?(command)
+
+    handler = COMMAND_HANDLERS[command]
+    raise UsageError, "unknown command #{command.inspect}; run 'prescient help'" unless handler
+
+    send(handler)
   end
 
   private
@@ -299,6 +304,30 @@ class Prescient::CLI
     0
   end
 
+  def agent
+    require 'prescient/agent'
+    options = parse_options('Run a bounded agent task', agent: true)
+    return options if options.is_a?(Integer)
+
+    task = read_text(options[:arguments], 'task')
+    runtime = agent_runtime(options)
+    result = runtime.run(task)
+    options[:format] == 'json' ? print_json(result.to_h) : @output.puts(result.response)
+    0
+  end
+
+  def agent_runtime(options)
+    configuration = Prescient::Agent::Configuration.new(max_loops: options[:max_loops] || 5)
+    Prescient::Agent::Runtime.new(
+      provider:           options[:provider]&.to_sym,
+      client:             client_for(options),
+      tool_names:         options.fetch(:tools, []),
+      configuration:      configuration,
+      provider_options:   provider_options(options),
+      generation_options: model_options(options),
+    )
+  end
+
   def generate_search_response(query, tool_name, options)
     response = Prescient.search_and_generate(
       query,
@@ -368,7 +397,7 @@ class Prescient::CLI
   end
 
   def parse_options(description, fallback: false, tool: false, limit: false, generate: false,
-                    documents: false)
+                    documents: false, agent: false)
     options = { format: 'text', fallback: fallback }
     parser = OptionParser.new do |parser|
       parser.banner = "Usage: prescient #{@arguments.first || 'command'} [options]"
@@ -376,9 +405,7 @@ class Prescient::CLI
       parser.separator ''
       parser.separator 'Global options:'
       add_common_options(parser, options)
-      add_document_options(parser, options) if documents
-      parser.on('--no-fallback', 'Disable provider fallback') { options[:fallback] = false } if fallback
-      add_tool_options(parser, options, tool:, limit:, generate:)
+      add_optional_options(parser, options, fallback:, tool:, limit:, generate:, documents:, agent:)
       parser.on('-h', '--help', 'Show command help') do
         @output.puts parser
         throw :help_shown, 0
@@ -390,6 +417,23 @@ class Prescient::CLI
 
     options[:arguments] = @arguments
     options
+  end
+
+  def add_optional_options(parser, options, fallback:, tool:, limit:, generate:, documents:, agent:)
+    add_document_options(parser, options) if documents
+    parser.on('--no-fallback', 'Disable provider fallback') { options[:fallback] = false } if fallback
+    add_tool_options(parser, options, tool:, limit:, generate:)
+    add_agent_options(parser, options) if agent
+  end
+
+  def add_agent_options(parser, options)
+    parser.separator ''
+    parser.separator 'Agent options:'
+    options[:tools] = []
+    parser.on('--tool NAME', 'Allow a configured tool (repeatable)') do |value|
+      options[:tools] << value.to_sym
+    end
+    parser.on('--max-loops COUNT', Integer, 'Maximum agent iterations') { |value| options[:max_loops] = value }
   end
 
   def add_tool_options(parser, options, tool:, limit:, generate:)
@@ -562,6 +606,7 @@ class Prescient::CLI
         generate TEXT   Generate a text response
         embed TEXT      Generate an embedding
         search TEXT     Search with a configured external tool
+        agent TEXT       Run a bounded agent task
         config validate Validate the current configuration
         config example  Generate an annotated YAML configuration example
 
@@ -587,6 +632,10 @@ class Prescient::CLI
         --tool NAME              Select an external tool for search
         --generate               Use search results as AI provider context
         --limit COUNT            Limit search results
+
+      Agent options:
+        --tool NAME              Allow a configured tool (repeatable)
+        --max-loops COUNT        Maximum agent iterations
     HELP
     status
   end

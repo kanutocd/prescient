@@ -448,6 +448,28 @@ class CLITest < PrescientTest
     assert_includes errors, 'environment variable not set'
   end
 
+  def test_agent_command_runs_with_explicit_tool_and_json_result
+    status, output, errors = run_cli(
+      ['agent', '--provider', 'test', '--tool', 'web_search', '--format', 'json', 'task'],
+    )
+
+    assert_equal 0, status
+    assert_equal 'response to task', JSON.parse(output)['response']
+    assert_empty errors
+
+    status, output, errors = run_cli(['agent', '--provider', 'test', 'task'])
+
+    assert_equal 0, status
+    assert_equal 'response to task', output.strip
+    assert_empty errors
+
+    status, output, errors = run_cli(['agent', '--help'])
+
+    assert_equal 0, status
+    assert_includes output, 'Agent options:'
+    assert_empty errors
+  end
+
   private
 
   def run_cli(arguments, input: StringIO.new)

@@ -29,6 +29,7 @@ class Prescient::API
     ['POST', '/v1/generate']         => :generate_response,
     ['POST', '/v1/search']           => :search_response,
     ['POST', '/v1/search/generate']  => :search_generate_response,
+    ['POST', '/v1/agent']            => :agent_response,
     ['POST', '/v1/embeddings']       => :embeddings_response,
     ['POST', '/v1/embeddings/batch'] => :batch_embeddings_response,
   }.freeze
@@ -36,8 +37,11 @@ class Prescient::API
   # @param authentication [#call, nil] Optional authentication hook
   # @param max_body_bytes [Integer] Maximum accepted request body size
   # @return [void]
-  def initialize(authentication: nil, max_body_bytes: DEFAULT_MAX_BODY_BYTES)
+  def initialize(authentication: nil, authorization: nil, request_context: nil,
+                 max_body_bytes: DEFAULT_MAX_BODY_BYTES)
     @authentication = authentication
+    @authorization = authorization
+    @request_context = request_context
     @max_body_bytes = validate_body_limit(max_body_bytes)
   end
 
@@ -121,6 +125,33 @@ class Prescient::API
 
     result = tool.search(query, limit: search_limit(payload))
     json_response(200, result, request_id)
+  end
+
+  def agent_response(env, _query, request_id)
+    require 'prescient/agent'
+    payload = request_payload(env)
+    prompt = required_string(payload, 'prompt')
+    json_response(200, agent_runtime(payload, env, request_id).run(prompt).to_h, request_id)
+  end
+
+  def agent_runtime(payload, env, request_id)
+    tools = payload.fetch('tools', [])
+    validate_agent_tools(tools)
+    configuration = Prescient::Agent::Configuration.new(max_loops: payload.fetch('max_loops', 5))
+    Prescient::Agent::Runtime.new(
+      provider:           payload['provider']&.to_sym,
+      client:             client_for(payload),
+      tool_names:         tools,
+      configuration:      configuration,
+      authorization:      @authorization,
+      generation_options: model_options(payload),
+      request_context:    request_context(env, request_id),
+    )
+  end
+
+  def validate_agent_tools(tools)
+    valid = tools.is_a?(Array) && tools.all? { |name| name.is_a?(String) && !name.empty? }
+    raise ArgumentError, 'tools must be an array of names' unless valid
   end
 
   def search_tool_name(payload)
@@ -282,6 +313,20 @@ class Prescient::API
     return true unless @authentication
 
     @authentication.call(env) == true
+  end
+
+  def request_context(env, request_id)
+    base = {
+      request_id: request_id,
+      tenant_id:  env['HTTP_X_TENANT_ID'],
+      principal:  env['REMOTE_USER'],
+    }.compact
+    return base unless @request_context
+
+    resolved = @request_context.call(env)
+    raise ArgumentError, 'request context hook must return a mapping' unless resolved.is_a?(Hash)
+
+    base.merge(resolved)
   end
 
   def request_id_for(env)

@@ -5,7 +5,7 @@ module Prescient::Agent
   # Explicit allowlist and invocation boundary for agent tools.
   class ToolRegistry
     # @return [Class] Internal immutable tool descriptor
-    Tool = Struct.new(:name, :description, :callable, keyword_init: true)
+    Tool = Struct.new(:name, :description, :schema, :callable, keyword_init: true)
 
     def initialize(tools)
       @tools = tools.to_h { |name, tool| [name.to_sym, build_tool(name, tool)] }
@@ -27,13 +27,22 @@ module Prescient::Agent
     private
 
     def build_tool(name, tool)
-      raise ConfigurationError, "agent tool does not support search: #{name}" unless tool.respond_to?(:search)
+      unless tool.respond_to?(:search) || tool.respond_to?(:call)
+        raise ConfigurationError, "agent tool does not support invocation: #{name}"
+      end
 
       Tool.new(
         name:        name.to_sym,
-        description: 'Search using the configured external capability.',
-        callable:    ->(arguments) { invoke_search(tool, arguments) },
+        description: tool_description(tool),
+        schema:      tool_schema(tool),
+        callable:    ->(arguments) { invoke_tool(tool, arguments) },
       )
+    end
+
+    def invoke_tool(tool, arguments)
+      return tool.call(arguments) if tool.respond_to?(:call)
+
+      invoke_search(tool, arguments)
     end
 
     def invoke_search(tool, arguments)
@@ -42,6 +51,20 @@ module Prescient::Agent
       raise MalformedActionError, 'search tool requires a non-empty query' unless valid_query
 
       tool.search(query, limit: arguments['limit'] || arguments[:limit])
+    end
+
+    def tool_description(tool)
+      return tool.description if tool.respond_to?(:description)
+
+      return 'Search using the configured external capability.' if tool.respond_to?(:search)
+
+      'Invoke the configured external capability.'
+    end
+
+    def tool_schema(tool)
+      return tool.schema if tool.respond_to?(:schema)
+
+      tool.respond_to?(:search) ? { type: 'object', required: ['query'] } : { type: 'object' }
     end
   end
 end

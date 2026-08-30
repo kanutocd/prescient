@@ -9,7 +9,7 @@ module Prescient::Agent
     # @param tools [Array<ToolRegistry::Tool>] Allowed tools
     # @return [String] Deterministic orchestration prompt
     def self.build(system_instruction:, tools:)
-      tool_text = tools.empty? ? 'None' : tools.map { |tool| "- #{tool.name}: #{tool.description}" }.join("\n")
+      tool_text = tools.empty? ? 'None' : tools.map { |tool| tool_instruction(tool) }.join("\n")
       <<~PROMPT
         #{system_instruction}
 
@@ -21,6 +21,11 @@ module Prescient::Agent
         Never request an unavailable tool. Do not return more than one action.
       PROMPT
     end
+
+    def self.tool_instruction(tool)
+      "- #{tool.name}: #{tool.description} (arguments: #{JSON.generate(tool.schema)})"
+    end
+    private_class_method :tool_instruction
   end
 end
 # rubocop:enable Style/ClassAndModuleChildren

@@ -198,6 +198,31 @@ class APITest < PrescientTest
     assert_equal 'search-model', APIProvider.last_request[:options][:model]
   end
 
+  def test_agent_endpoint_runs_bounded_task_and_passes_request_context
+    authorization = ->(tool:, context:, **) {
+      tool == :accounts && context[:tenant_id] == 'tenant-1'
+    }
+    @api = Prescient::API.new(authorization:)
+    result = body(call('POST', '/v1/agent', body: {
+      prompt: 'summarize accounts', provider: 'api_test', tools: [], max_loops: 2
+    }, headers: { 'HTTP_X_TENANT_ID' => 'tenant-1' }))
+
+    assert_equal 'generated', result['response']
+    assert_equal [], result['metadata']['actions']
+  end
+
+  def test_agent_endpoint_rejects_invalid_tool_lists
+    response = call('POST', '/v1/agent', body: { prompt: 'task', tools: 'search' })
+
+    assert_equal 400, response.first
+    assert_equal 'invalid_request', body(response).dig('error', 'type')
+
+    @api = Prescient::API.new(request_context: ->(_env) { Object.new })
+    invalid_context = call('POST', '/v1/agent', body: { prompt: 'task' })
+
+    assert_equal 400, invalid_context.first
+  end
+
   def test_search_endpoint_returns_normalized_tool_results_without_generation
     result = body(call('POST', '/v1/search', body: {
       query: 'Ruby tools',
