@@ -35,7 +35,17 @@ module Prescient::Agent
     def enforce_limit!
       return if serialized_bytes <= @max_bytes
 
+      compact!
+      return if serialized_bytes <= @max_bytes
+
       raise Prescient::Agent::ConfigurationError, 'agent context exceeds configured size limit'
+    end
+
+    def compact!
+      initial_messages = @messages.first(2)
+      recent_messages = @messages.drop(2).last(2)
+      omitted_message = { role: 'system', content: '[Earlier agent context omitted due to size limit.]' }
+      @messages = initial_messages + [omitted_message] + recent_messages
     end
 
     def serialized_bytes

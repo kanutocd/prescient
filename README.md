@@ -625,7 +625,7 @@ require "prescient/agent"
 agent = Prescient::Agent::Runtime.new(
   provider:   :openai,
   tool_names: [:web_search],
-  max_loops:  5
+  configuration: Prescient::Agent::Configuration.new(max_loops: 5)
 )
 result = agent.run("Find and summarize the latest Ruby release")
 puts result.response

@@ -113,6 +113,10 @@ module Prescient
     class MaxLoopsExceededError < Error
     end
 
+    class ErrorSerializer
+      def self.serialize: (Exception) -> Hash[Symbol, untyped]
+    end
+
     class Configuration
       DEFAULT_MAX_LOOPS: Integer
       DEFAULT_MAX_CONTEXT_BYTES: Integer

@@ -10,6 +10,12 @@ class AgentTest < PrescientTest
     end
   end
 
+  class FailingTool
+    def search(_query, **)
+      raise Prescient::ToolError, 'provider body: secret response payload'
+    end
+  end
+
   class FakeClient
     attr_reader :calls
     attr_reader :provider_name
@@ -49,6 +55,22 @@ class AgentTest < PrescientTest
     assert_equal 'final', result.response
     assert_equal 2, result.loops_run
     assert_includes client.calls.last[:context].last[:content], 'Ruby'
+  end
+
+  def test_serializes_tool_failures_without_exposing_provider_details
+    client = FakeClient.new(
+      [
+        { response: "```json\n{\"action\":\"search\",\"args\":{\"query\":\"Ruby\"}}\n```" },
+        { response: 'final' },
+      ],
+    )
+
+    Prescient::Agent::Runtime.new(client:, tools: { search: FailingTool.new }).run('find Ruby')
+
+    observation = client.calls.last[:context].last[:content]
+
+    assert_includes observation, 'tool_failure'
+    refute_includes observation, 'secret response payload'
   end
 
   def test_rejects_unallowed_tool
@@ -113,6 +135,29 @@ class AgentTest < PrescientTest
     assert_raises(Prescient::Agent::ConfigurationError) do
       context.append(role: 'user', content: 'x' * 200)
     end
+  end
+
+  def test_context_compacts_older_turns_with_an_omission_marker
+    context = Prescient::Agent::Context.new(system_prompt: 'system', task: 'task', max_bytes: 500)
+    3.times do |index|
+      context.append(role: 'assistant', content: "action #{index} #{'x' * 50}")
+      context.append(role: 'user', content: "observation #{index} #{'y' * 50}")
+    end
+
+    assert_operator JSON.generate(context.to_a).bytesize, :<=, 500
+    assert_includes context.messages.map { |message| message[:content] },
+                    '[Earlier agent context omitted due to size limit.]'
+    assert_includes context.messages.last[:content], 'observation 2'
+  end
+
+  def test_error_serializer_uses_safe_messages_for_core_errors
+    serialized = Prescient::Agent::ErrorSerializer.serialize(
+      Prescient::ConnectionError.new('raw provider body: secret'),
+    )
+
+    assert_equal 'provider_unavailable', serialized[:error][:category]
+    assert_equal 'The requested operation failed.', serialized[:error][:message]
+    refute_includes JSON.generate(serialized), 'secret'
   end
 
   def test_parser_returns_nil_without_an_action_and_rejects_oversize_actions

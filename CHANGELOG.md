@@ -6,6 +6,8 @@
 
 - Added an optional, bounded Ruby agent runtime with strict single-action tool
   execution, provider routing through `Prescient::Client`, and safe loop limits.
+- Added deterministic agent context compaction and safe serialization of tool
+  failures before they are returned to the model.
 
 ## [0.7.0] - 2025-08-17
 

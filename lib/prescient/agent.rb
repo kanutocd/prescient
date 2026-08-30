@@ -8,6 +8,7 @@ end
 
 require_relative 'agent/configuration'
 require_relative 'agent/errors'
+require_relative 'agent/error_serializer'
 require_relative 'agent/result'
 require_relative 'agent/context'
 require_relative 'agent/parser'

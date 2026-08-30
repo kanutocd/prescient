@@ -40,11 +40,19 @@ module Prescient::Agent
       action = Parser.parse(response[:response], max_bytes: @configuration.max_action_bytes)
       return false unless action
 
-      observation = @registry.invoke(action[:name], action[:arguments])
+      observation = invoke_tool(action)
       observation_text = JSON.generate(observation).byteslice(0, @configuration.max_observation_bytes)
       context.append(role: 'assistant', content: response[:response])
       context.append(role: 'user', content: "Observation: #{observation_text}")
       true
+    end
+
+    def invoke_tool(action)
+      @registry.invoke(action[:name], action[:arguments])
+    rescue Prescient::Error => e
+      raise if e.is_a?(Prescient::Agent::Error)
+
+      ErrorSerializer.serialize(e)
     end
 
     def validate_task(task)
