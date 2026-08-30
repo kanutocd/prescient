@@ -41,6 +41,7 @@ module Prescient
   autoload :DocumentSource, 'prescient/document_source'
   autoload :API, 'prescient/api'
   autoload :CLI, 'prescient/cli'
+  autoload :MCP, 'prescient/mcp'
 
   # Configure Prescient with custom settings and providers
   #
