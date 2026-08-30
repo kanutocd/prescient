@@ -18,30 +18,30 @@ module Prescient::MCP
           @output.puts(JSON.generate(handle(request)))
           @output.flush
         rescue JSON::ParserError
-          @output.puts(JSON.generate(error_response(nil, -32_700, 'invalid JSON')))
+          @output.puts(JSON.generate(error_response(nil, -32_700, "invalid JSON")))
         end
       end
 
       private
 
       def handle(request)
-        id = request['id']
-        result = case request['method']
-                 when 'initialize' then @server.initialize_result
-                 when 'tools/list' then { tools: @server.tools }
-                 when 'tools/call'
-                   @server.call_tool(request.dig('params', 'name'), request.dig('params', 'arguments') || {})
-                 when 'resources/list' then { resources: @server.resources }
-                 when 'resources/read' then @server.read_resource(request.dig('params', 'uri'))
-                 else return error_response(id, -32_601, 'method not found')
+        id = request["id"]
+        result = case request["method"]
+                 when "initialize" then @server.initialize_result
+                 when "tools/list" then { tools: @server.tools }
+                 when "tools/call"
+                   @server.call_tool(request.dig("params", "name"), request.dig("params", "arguments") || {})
+                 when "resources/list" then { resources: @server.resources }
+                 when "resources/read" then @server.read_resource(request.dig("params", "uri"))
+                 else return error_response(id, -32_601, "method not found")
                  end
-        { jsonrpc: '2.0', id:, result: }
+        { jsonrpc: "2.0", id:, result: }
       rescue StandardError => e
         error_response(id, -32_600, e.message)
       end
 
       def error_response(id, code, message)
-        { jsonrpc: '2.0', id:, error: { code:, message: } }
+        { jsonrpc: "2.0", id:, error: { code:, message: } }
       end
     end
 end

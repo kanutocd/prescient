@@ -1,22 +1,22 @@
 # frozen_string_literal: true
 
-require_relative 'prescient/version'
-require_relative 'prescient/errors'
-Prescient.autoload :Tool, 'prescient/tool'
-Prescient.autoload :DocumentSource, 'prescient/document_source'
-Prescient.autoload :Agent, 'prescient/agent'
-require_relative 'prescient/pgvector'
-require_relative 'prescient/base'
-require_relative 'prescient/provider/ollama'
-require_relative 'prescient/provider/anthropic'
-require_relative 'prescient/provider/openai'
-require_relative 'prescient/provider/huggingface'
-require_relative 'prescient/provider/gemini'
-require_relative 'prescient/provider/mistral'
-require_relative 'prescient/provider/deepseek'
-require_relative 'prescient/provider/xai'
-require_relative 'prescient/configuration_loader'
-require_relative 'prescient/client'
+require_relative "prescient/version"
+require_relative "prescient/errors"
+Prescient.autoload :Tool, "prescient/tool"
+Prescient.autoload :DocumentSource, "prescient/document_source"
+Prescient.autoload :Agent, "prescient/agent"
+require_relative "prescient/pgvector"
+require_relative "prescient/base"
+require_relative "prescient/provider/ollama"
+require_relative "prescient/provider/anthropic"
+require_relative "prescient/provider/openai"
+require_relative "prescient/provider/huggingface"
+require_relative "prescient/provider/gemini"
+require_relative "prescient/provider/mistral"
+require_relative "prescient/provider/deepseek"
+require_relative "prescient/provider/xai"
+require_relative "prescient/configuration_loader"
+require_relative "prescient/client"
 
 # Main Prescient module for AI provider abstraction
 #
@@ -36,12 +36,13 @@ require_relative 'prescient/client'
 # @example Embedding generation
 #   embedding = client.generate_embedding("Some text to embed")
 #   puts embedding.length # => 1536 (for OpenAI text-embedding-3-small)
+# rubocop:disable Metrics/ModuleLength
 module Prescient
-  autoload :Tool, 'prescient/tool'
-  autoload :DocumentSource, 'prescient/document_source'
-  autoload :API, 'prescient/api'
-  autoload :CLI, 'prescient/cli'
-  autoload :MCP, 'prescient/mcp'
+  autoload :Tool, "prescient/tool"
+  autoload :DocumentSource, "prescient/document_source"
+  autoload :API, "prescient/api"
+  autoload :CLI, "prescient/cli"
+  autoload :MCP, "prescient/mcp"
 
   # Configure Prescient with custom settings and providers
   #
@@ -64,7 +65,7 @@ module Prescient
   #
   # @return [Configuration] The current configuration
   def self.configuration
-    @_configuration ||= Configuration.new
+    @configuration ||= Configuration.new
   end
 
   # Look up a configured external tool.
@@ -78,7 +79,7 @@ module Prescient
   #
   # @return [Configuration] New configuration instance
   def self.reset_configuration!
-    @_configuration = Configuration.new
+    @configuration = Configuration.new
   end
 
   # Load configuration from a YAML file and replace the current configuration.
@@ -91,7 +92,7 @@ module Prescient
   # @param env [Hash] Environment variables used while loading configuration
   # @return [Configuration] The loaded configuration
   def self.load_configuration(path = nil, env: ENV)
-    effective_path = path || env['PRESCIENT_CONFIG']
+    effective_path = path || env["PRESCIENT_CONFIG"]
     configuration = if effective_path
                       ConfigurationLoader.load_file(effective_path, env:)
                     else
@@ -101,7 +102,7 @@ module Prescient
                       end
                     end
 
-    @_configuration = configuration
+    @configuration = configuration
   end
 
   # Configuration class for managing Prescient settings and providers
@@ -110,7 +111,7 @@ module Prescient
   # provider registration and instantiation.
   class Configuration
     # @return [Array<Symbol>] Built-in provider option keys removed from output
-    DEFAULT_SENSITIVE_KEYS = [:api_key, :password, :token, :secret].freeze
+    DEFAULT_SENSITIVE_KEYS = %i[api_key password token secret].freeze
 
     # @return [Symbol] The default provider to use when none specified
     attr_accessor :default_provider
@@ -177,8 +178,8 @@ module Prescient
     def add_provider(name, provider_class, **options)
       provider_name = name.to_sym
       @providers[provider_name] = {
-        class:   provider_class,
-        options: options,
+        class: provider_class,
+        options: options
       }
       @provider_instances.delete(provider_name)
     end
@@ -204,8 +205,8 @@ module Prescient
     def add_tool(name, tool_class, **options)
       tool_name = name.to_sym
       @tools[tool_name] = {
-        class:   tool_class,
-        options: options,
+        class: tool_class,
+        options: options
       }
       @tool_instances.delete(tool_name)
     end
@@ -233,7 +234,7 @@ module Prescient
           adapters: tool_config[:adapters].map do |adapter|
             adapter_options = adapter[:options] # : Hash[Symbol, untyped]
             adapter[:class].new(**adapter_options)
-          end,
+          end
         )
         return @tool_instances[tool_name]
       end
@@ -272,105 +273,105 @@ module Prescient
     end
 
     def configure_default_tools(config, env)
-      return unless env['SEARXNG_URL']
+      return unless env["SEARXNG_URL"]
 
-      config.add_tool(:web_search, Prescient::Tool::SearXNG, url: env['SEARXNG_URL'])
+      config.add_tool(:web_search, Prescient::Tool::SearXNG, url: env["SEARXNG_URL"])
     end
 
     def configure_ollama(config, env)
       config.add_provider(
         :ollama,
         Prescient::Provider::Ollama,
-        url:             env.fetch('OLLAMA_URL', 'http://localhost:11434'),
-        embedding_model: env.fetch('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text'),
-        chat_model:      env.fetch('OLLAMA_CHAT_MODEL', 'llama3.2:3b'),
+        url: env.fetch("OLLAMA_URL", "http://localhost:11434"),
+        embedding_model: env.fetch("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"),
+        chat_model: env.fetch("OLLAMA_CHAT_MODEL", "llama3.2:3b")
       )
     end
 
     def configure_openai(config, env)
-      return unless env['OPENAI_API_KEY']
+      return unless env["OPENAI_API_KEY"]
 
       config.add_provider(
         :openai,
         Prescient::Provider::OpenAI,
-        api_key:         env['OPENAI_API_KEY'],
-        embedding_model: env.fetch('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
-        chat_model:      env.fetch('OPENAI_CHAT_MODEL', 'gpt-4.1-mini'),
+        api_key: env["OPENAI_API_KEY"],
+        embedding_model: env.fetch("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+        chat_model: env.fetch("OPENAI_CHAT_MODEL", "gpt-4.1-mini")
       )
     end
 
     def configure_anthropic(config, env)
-      return unless env['ANTHROPIC_API_KEY']
+      return unless env["ANTHROPIC_API_KEY"]
 
       config.add_provider(
         :anthropic,
         Prescient::Provider::Anthropic,
-        api_key: env['ANTHROPIC_API_KEY'],
-        model:   env.fetch('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+        api_key: env["ANTHROPIC_API_KEY"],
+        model: env.fetch("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
       )
     end
 
     def configure_gemini(config, env)
-      return unless env['GEMINI_API_KEY']
+      return unless env["GEMINI_API_KEY"]
 
       config.add_provider(
         :gemini,
         Prescient::Provider::Gemini,
-        api_key:         env['GEMINI_API_KEY'],
-        embedding_model: env.fetch('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001'),
-        chat_model:      env.fetch('GEMINI_CHAT_MODEL', 'gemini-2.5-flash'),
+        api_key: env["GEMINI_API_KEY"],
+        embedding_model: env.fetch("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
+        chat_model: env.fetch("GEMINI_CHAT_MODEL", "gemini-2.5-flash")
       )
     end
 
     def configure_huggingface(config, env)
-      return unless env['HUGGINGFACE_API_KEY']
+      return unless env["HUGGINGFACE_API_KEY"]
 
       config.add_provider(
         :huggingface,
         Prescient::Provider::HuggingFace,
-        api_key:         env['HUGGINGFACE_API_KEY'],
+        api_key: env["HUGGINGFACE_API_KEY"],
         embedding_model: env.fetch(
-          'HUGGINGFACE_EMBEDDING_MODEL',
-          'sentence-transformers/all-MiniLM-L6-v2',
+          "HUGGINGFACE_EMBEDDING_MODEL",
+          "sentence-transformers/all-MiniLM-L6-v2"
         ),
-        chat_model:      env.fetch(
-          'HUGGINGFACE_CHAT_MODEL',
-          'google/gemma-2-2b-it',
-        ),
+        chat_model: env.fetch(
+          "HUGGINGFACE_CHAT_MODEL",
+          "google/gemma-2-2b-it"
+        )
       )
     end
 
     def configure_deepseek(config, env)
-      return unless env['DEEPSEEK_API_KEY']
+      return unless env["DEEPSEEK_API_KEY"]
 
       config.add_provider(
         :deepseek,
         Prescient::Provider::DeepSeek,
-        api_key:    env['DEEPSEEK_API_KEY'],
-        chat_model: env.fetch('DEEPSEEK_CHAT_MODEL', 'deepseek-v4-flash'),
+        api_key: env["DEEPSEEK_API_KEY"],
+        chat_model: env.fetch("DEEPSEEK_CHAT_MODEL", "deepseek-v4-flash")
       )
     end
 
     def configure_xai(config, env)
-      return unless env['XAI_API_KEY']
+      return unless env["XAI_API_KEY"]
 
       config.add_provider(
         :xai,
         Prescient::Provider::XAI,
-        api_key:    env['XAI_API_KEY'],
-        chat_model: env.fetch('XAI_CHAT_MODEL', 'grok-4.5'),
+        api_key: env["XAI_API_KEY"],
+        chat_model: env.fetch("XAI_CHAT_MODEL", "grok-4.5")
       )
     end
 
     def configure_mistral(config, env)
-      return unless env['MISTRAL_API_KEY']
+      return unless env["MISTRAL_API_KEY"]
 
       config.add_provider(
         :mistral,
         Prescient::Provider::Mistral,
-        api_key:         env['MISTRAL_API_KEY'],
-        embedding_model: env.fetch('MISTRAL_EMBEDDING_MODEL', 'mistral-embed'),
-        chat_model:      env.fetch('MISTRAL_CHAT_MODEL', 'mistral-large-latest'),
+        api_key: env["MISTRAL_API_KEY"],
+        embedding_model: env.fetch("MISTRAL_EMBEDDING_MODEL", "mistral-embed"),
+        chat_model: env.fetch("MISTRAL_CHAT_MODEL", "mistral-large-latest")
       )
     end
   end
@@ -381,3 +382,4 @@ module Prescient
     configure_default_tools(config, ENV)
   end
 end
+# rubocop:enable Metrics/ModuleLength

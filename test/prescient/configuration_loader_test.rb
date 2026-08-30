@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'tempfile'
-require 'test_helper'
+require "tempfile"
+require "test_helper"
 
 class ConfigurationLoaderTest < PrescientTest
   def test_class_helpers_load_yaml_hash_and_file
@@ -19,7 +19,7 @@ class ConfigurationLoaderTest < PrescientTest
     from_yaml = Prescient::ConfigurationLoader.load_yaml(File.read(path), env: {})
     from_hash = Prescient::ConfigurationLoader.load_hash(
       YAML.safe_load_file(path, permitted_classes: [], permitted_symbols: [], aliases: true),
-      env: {},
+      env: {}
     )
     from_file = Prescient::ConfigurationLoader.load_file(path, env: {})
 
@@ -49,12 +49,12 @@ class ConfigurationLoaderTest < PrescientTest
     configuration = Prescient.load_configuration(
       path,
       env: {
-        'PRESCIENT_DEFAULT_PROVIDER' => 'demo',
-        'PRESCIENT_TIMEOUT'          => '45',
-        'OPENAI_API_KEY'             => 'loader-key',
-        'OPENAI_CHAT_MODEL'          => 'gpt-4.1-mini',
-        'EMBEDDING_MODEL'            => 'text-embedding-3-small',
-      },
+        "PRESCIENT_DEFAULT_PROVIDER" => "demo",
+        "PRESCIENT_TIMEOUT" => "45",
+        "OPENAI_API_KEY" => "loader-key",
+        "OPENAI_CHAT_MODEL" => "gpt-4.1-mini",
+        "EMBEDDING_MODEL" => "text-embedding-3-small"
+      }
     )
 
     assert_equal :demo, configuration.default_provider
@@ -65,9 +65,9 @@ class ConfigurationLoaderTest < PrescientTest
     provider = configuration.provider(:demo)
 
     assert_instance_of Prescient::Provider::OpenAI, provider
-    assert_equal 'loader-key', provider.options[:api_key]
-    assert_equal 'gpt-4.1-mini', provider.options[:chat_model]
-    assert_equal 'text-embedding-3-small', provider.options[:embedding_model]
+    assert_equal "loader-key", provider.options[:api_key]
+    assert_equal "gpt-4.1-mini", provider.options[:chat_model]
+    assert_equal "text-embedding-3-small", provider.options[:embedding_model]
   end
 
   def test_load_configuration_without_path_uses_environment_defaults
@@ -82,31 +82,30 @@ class ConfigurationLoaderTest < PrescientTest
       {
         providers: {
           demo: {
-            type:             'openai',
-            api_key:          'key',
-            chat_model:       'chat-model',
-            embedding_model:  'embedding-model',
+            type: "openai",
+            api_key: "key",
+            chat_model: "chat-model",
+            embedding_model: "embedding-model",
             prompt_templates: {
-              system_prompt:         'Be concise.',
-              no_context_template:   '%<system_prompt>s\nUser: %<query>s',
-              with_context_template: '%<system_prompt>s\nContext: %<context>s\nUser: %<query>s',
-            },
-          },
-        },
+              system_prompt: "Be concise.",
+              no_context_template: '%<system_prompt>s\nUser: %<query>s',
+              with_context_template: '%<system_prompt>s\nContext: %<context>s\nUser: %<query>s'
+            }
+          }
+        }
       },
-      env: {},
+      env: {}
     )
 
-    assert_equal 'Be concise.', configuration.provider(:demo).options.dig(:prompt_templates, :system_prompt)
+    assert_equal "Be concise.", configuration.provider(:demo).options.dig(:prompt_templates, :system_prompt)
     assert_equal '%<system_prompt>s\nUser: %<query>s',
                  configuration.provider(:demo).options.dig(:prompt_templates, :no_context_template)
   end
 
-  # rubocop:disable Layout/HashAlignment, Style/BlockDelimiters, Minitest/MultipleAssertions, Minitest/AssertInDelta, Minitest/EmptyLineBeforeAssertionMethods
   def test_load_configuration_supports_tools_and_environment_references
     env = {
-      'SEARXNG_URL' => 'http://search.local:8080',
-      'SEARCH_LIMIT' => '7',
+      "SEARXNG_URL" => "http://search.local:8080",
+      "SEARCH_LIMIT" => "7"
     }
     configuration = Prescient::ConfigurationLoader.load_yaml(<<~YAML, env:)
       version: 1
@@ -123,9 +122,9 @@ class ConfigurationLoaderTest < PrescientTest
     tool = configuration.tool(:web_search)
 
     assert_instance_of Prescient::Tool::SearXNG, tool
-    assert_equal 'http://search.local:8080', tool.options[:url]
+    assert_equal "http://search.local:8080", tool.options[:url]
     assert_equal 7, tool.options[:max_results]
-    assert_equal ['general', 'news'], tool.options[:categories]
+    assert_equal %w[general news], tool.options[:categories]
   end
 
   def test_load_configuration_supports_searchapi_tools
@@ -133,22 +132,22 @@ class ConfigurationLoaderTest < PrescientTest
       {
         tools: {
           web_search: {
-            type: 'searchapi',
-            api_key_env: 'SEARCHAPI_API_KEY',
-            engine: 'google',
-            location: 'New York',
-          },
-        },
+            type: "searchapi",
+            api_key_env: "SEARCHAPI_API_KEY",
+            engine: "google",
+            location: "New York"
+          }
+        }
       },
-      env: { 'SEARCHAPI_API_KEY' => 'test-key' },
+      env: { "SEARCHAPI_API_KEY" => "test-key" }
     )
 
     tool = configuration.tool(:web_search)
 
     assert_instance_of Prescient::Tool::SearchApi, tool
-    assert_equal 'test-key', tool.options[:api_key]
-    assert_equal 'google', tool.options[:engine]
-    assert_equal 'New York', tool.options[:location]
+    assert_equal "test-key", tool.options[:api_key]
+    assert_equal "google", tool.options[:engine]
+    assert_equal "New York", tool.options[:location]
   end
 
   def test_load_configuration_supports_ordered_tool_adapters
@@ -157,16 +156,16 @@ class ConfigurationLoaderTest < PrescientTest
         tools: {
           web_search: {
             adapters: [
-              { type: 'searxng', url_env: 'SEARXNG_URL' },
-              { type: 'searchapi', api_key_env: 'SEARCHAPI_API_KEY' },
-            ],
-          },
-        },
+              { type: "searxng", url_env: "SEARXNG_URL" },
+              { type: "searchapi", api_key_env: "SEARCHAPI_API_KEY" }
+            ]
+          }
+        }
       },
       env: {
-        'SEARXNG_URL' => 'http://search.local:8080',
-        'SEARCHAPI_API_KEY' => 'test-key',
-      },
+        "SEARXNG_URL" => "http://search.local:8080",
+        "SEARCHAPI_API_KEY" => "test-key"
+      }
     )
 
     tool = configuration.tool(:web_search)
@@ -186,191 +185,191 @@ class ConfigurationLoaderTest < PrescientTest
       YAML
     end
 
-    assert_includes error.message, 'Unknown tool type'
+    assert_includes error.message, "Unknown tool type"
   end
 
   def test_load_configuration_rejects_invalid_tool_shapes_and_keys
     invalid_tools = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash({ tools: [] }, env: {})
     end
-    assert_includes invalid_tools.message, 'tools must be a mapping'
+    assert_includes invalid_tools.message, "tools must be a mapping"
 
     invalid_shape = assert_raises(Prescient::Error) do
-      Prescient::ConfigurationLoader.load_hash({ tools: { search: 'invalid' } }, env: {})
+      Prescient::ConfigurationLoader.load_hash({ tools: { search: "invalid" } }, env: {})
     end
-    assert_includes invalid_shape.message, 'must be a mapping'
+    assert_includes invalid_shape.message, "must be a mapping"
 
     missing_type = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash({ tools: { search: {} } }, env: {})
     end
-    assert_includes missing_type.message, 'must define type'
+    assert_includes missing_type.message, "must define type"
 
     unknown_key = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
-        { tools: { search: { type: 'searxng', unsupported: true } } },
-        env: {},
+        { tools: { search: { type: "searxng", unsupported: true } } },
+        env: {}
       )
     end
-    assert_includes unknown_key.message, 'Unknown tool configuration key'
+    assert_includes unknown_key.message, "Unknown tool configuration key"
 
     source_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.new({}).load_hash(
-        { tools: { search: 'invalid' } },
-        source: 'tools.yml',
+        { tools: { search: "invalid" } },
+        source: "tools.yml"
       )
     end
-    assert_includes source_error.message, 'in tools.yml'
+    assert_includes source_error.message, "in tools.yml"
 
     source_type_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.new({}).load_hash(
         { tools: { search: {} } },
-        source: 'tools.yml',
+        source: "tools.yml"
       )
     end
-    assert_includes source_type_error.message, 'in tools.yml'
+    assert_includes source_type_error.message, "in tools.yml"
 
     plural_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.new({}).load_hash(
-        { tools: { search: { type: 'searxng', first: true, second: true } } },
-        source: 'tools.yml',
+        { tools: { search: { type: "searxng", first: true, second: true } } },
+        source: "tools.yml"
       )
     end
-    assert_includes plural_error.message, 'configuration keys'
+    assert_includes plural_error.message, "configuration keys"
   end
 
   def test_load_configuration_rejects_invalid_tool_groups
     invalid_tools = assert_raises(Prescient::Error) do
-      Prescient::ConfigurationLoader.new({}).load_hash({ tools: [] }, source: 'tools.yml')
+      Prescient::ConfigurationLoader.new({}).load_hash({ tools: [] }, source: "tools.yml")
     end
-    assert_includes invalid_tools.message, 'tools must be a mapping'
+    assert_includes invalid_tools.message, "tools must be a mapping"
 
     unknown_key = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.new({}).load_hash(
         { tools: { search: { adapters: [], unsupported: true, another: true } } },
-        source: nil,
+        source: nil
       )
     end
-    assert_includes unknown_key.message, 'Unknown tool group configuration key'
+    assert_includes unknown_key.message, "Unknown tool group configuration key"
 
     source_unknown_key = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.new({}).load_hash(
         { tools: { search: { adapters: [], unsupported: true } } },
-        source: 'tools.yml',
+        source: "tools.yml"
       )
     end
-    assert_includes source_unknown_key.message, 'in tools.yml'
+    assert_includes source_unknown_key.message, "in tools.yml"
 
     empty_group = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash({ tools: { search: { adapters: [] } } }, env: {})
     end
-    assert_includes empty_group.message, 'non-empty array'
+    assert_includes empty_group.message, "non-empty array"
 
     invalid_group = assert_raises(Prescient::Error) do
-      Prescient::ConfigurationLoader.load_hash({ tools: { search: { adapters: 'invalid' } } }, env: {})
+      Prescient::ConfigurationLoader.load_hash({ tools: { search: { adapters: "invalid" } } }, env: {})
     end
-    assert_includes invalid_group.message, 'non-empty array'
+    assert_includes invalid_group.message, "non-empty array"
 
     invalid_adapter = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
-        { tools: { search: { adapters: ['invalid'] } } },
-        env: {},
+        { tools: { search: { adapters: ["invalid"] } } },
+        env: {}
       )
     end
-    assert_includes invalid_adapter.message, 'must be a mapping'
+    assert_includes invalid_adapter.message, "must be a mapping"
 
     missing_adapter_type = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
         { tools: { search: { adapters: [{}] } } },
-        env: {},
+        env: {}
       )
     end
-    assert_includes missing_adapter_type.message, 'must define type'
+    assert_includes missing_adapter_type.message, "must define type"
 
     unknown_adapter_key = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
-        { tools: { search: { adapters: [{ type: 'searxng', unsupported: true }] } } },
-        env: {},
+        { tools: { search: { adapters: [{ type: "searxng", unsupported: true }] } } },
+        env: {}
       )
     end
-    assert_includes unknown_adapter_key.message, 'Unknown tool configuration key'
+    assert_includes unknown_adapter_key.message, "Unknown tool configuration key"
   end
 
   def test_load_configuration_rejects_conflicting_and_missing_tool_environment_values
     conflict = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
-        { tools: { search: { type: 'searxng', url: 'http://one', url_env: 'URL' } } },
-        env: { 'URL' => 'http://two' },
+        { tools: { search: { type: "searxng", url: "http://one", url_env: "URL" } } },
+        env: { "URL" => "http://two" }
       )
     end
-    assert_includes conflict.message, 'cannot combine'
+    assert_includes conflict.message, "cannot combine"
 
     missing = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
-        { tools: { search: { type: 'searxng', url_env: 'MISSING' } } },
-        env: {},
+        { tools: { search: { type: "searxng", url_env: "MISSING" } } },
+        env: {}
       )
     end
-    assert_includes missing.message, 'Environment variable not set: MISSING'
+    assert_includes missing.message, "Environment variable not set: MISSING"
 
     configuration = Prescient::ConfigurationLoader.load_hash(
       {
         tools: {
           search: {
-            type: 'searxng',
-            url: 'http://search.local',
-            timeout: '2.5',
-            max_response_bytes: '1024',
-            url_env: nil,
-          },
-        },
+            type: "searxng",
+            url: "http://search.local",
+            timeout: "2.5",
+            max_response_bytes: "1024",
+            url_env: nil
+          }
+        }
       },
-      env: {},
+      env: {}
     )
-    assert_equal 2.5, configuration.tools[:search][:options][:timeout]
+
+    assert_in_delta(2.5, configuration.tools[:search][:options][:timeout])
     assert_equal 1024, configuration.tools[:search][:options][:max_response_bytes]
 
     unknown_type = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.new({}).load_hash(
-        { tools: { search: { type: 'imaginary' } } },
-        source: 'tools.yml',
+        { tools: { search: { type: "imaginary" } } },
+        source: "tools.yml"
       )
     end
-    assert_includes unknown_type.message, 'in tools.yml'
+    assert_includes unknown_type.message, "in tools.yml"
   end
-  # rubocop:enable Layout/HashAlignment, Style/BlockDelimiters, Minitest/MultipleAssertions, Minitest/AssertInDelta, Minitest/EmptyLineBeforeAssertionMethods
 
   def test_load_configuration_rejects_invalid_prompt_templates
-    invalid_templates = assert_raises(Prescient::Error) {
+    invalid_templates = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
-        { providers: { demo: { type: 'ollama', prompt_templates: 'invalid' } } },
-        env: {},
+        { providers: { demo: { type: "ollama", prompt_templates: "invalid" } } },
+        env: {}
       )
-    }
-    assert_includes invalid_templates.message, 'must be a mapping'
+    end
+    assert_includes invalid_templates.message, "must be a mapping"
 
-    unknown_template = assert_raises(Prescient::Error) {
+    unknown_template = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.new({}).load_hash(
         {
           providers: {
             demo: {
-              type:             'ollama',
-              prompt_templates: { first: 'one', second: 'two' },
-            },
-          },
+              type: "ollama",
+              prompt_templates: { first: "one", second: "two" }
+            }
+          }
         },
-        source: 'config.yml',
+        source: "config.yml"
       )
-    }
-    assert_includes unknown_template.message, 'Unknown prompt template keys'
-    assert_includes unknown_template.message, 'in config.yml'
+    end
+    assert_includes unknown_template.message, "Unknown prompt template keys"
+    assert_includes unknown_template.message, "in config.yml"
 
-    singular_template = assert_raises(Prescient::Error) {
+    singular_template = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
-        { providers: { demo: { type: 'ollama', prompt_templates: { first: 'one' } } } },
-        env: {},
+        { providers: { demo: { type: "ollama", prompt_templates: { first: "one" } } } },
+        env: {}
       )
-    }
-    assert_includes singular_template.message, 'Unknown prompt template key for demo'
+    end
+    assert_includes singular_template.message, "Unknown prompt template key for demo"
   end
 
   def test_load_configuration_applies_direct_values_and_provider_numbers
@@ -399,7 +398,7 @@ class ConfigurationLoaderTest < PrescientTest
     assert_equal 60, configuration.timeout
     assert_equal 4, configuration.retry_attempts
     assert_in_delta(2.5, configuration.retry_delay)
-    assert_equal [:openai, :anthropic], configuration.fallback_providers
+    assert_equal %i[openai anthropic], configuration.fallback_providers
     assert_equal [:workspace_secret], configuration.sensitive_keys
 
     provider = configuration.provider(:ollama)
@@ -411,64 +410,64 @@ class ConfigurationLoaderTest < PrescientTest
   def test_load_yaml_reports_source_specific_errors
     loader = Prescient::ConfigurationLoader.new({})
 
-    syntax_error = assert_raises(Prescient::Error) {
-      loader.load_yaml("version: [\n", source: 'config.yml')
-    }
+    syntax_error = assert_raises(Prescient::Error) do
+      loader.load_yaml("version: [\n", source: "config.yml")
+    end
 
-    assert_includes syntax_error.message, 'in config.yml'
+    assert_includes syntax_error.message, "in config.yml"
 
-    version_error = assert_raises(Prescient::Error) {
-      loader.load_yaml("version: 2\n", source: 'config.yml')
-    }
+    version_error = assert_raises(Prescient::Error) do
+      loader.load_yaml("version: 2\n", source: "config.yml")
+    end
 
-    assert_includes version_error.message, 'in config.yml'
+    assert_includes version_error.message, "in config.yml"
 
-    root_error = assert_raises(Prescient::Error) {
-      loader.load_hash([], source: 'config.yml')
-    }
+    root_error = assert_raises(Prescient::Error) do
+      loader.load_hash([], source: "config.yml")
+    end
 
-    assert_includes root_error.message, 'in config.yml'
+    assert_includes root_error.message, "in config.yml"
   end
 
   def test_load_configuration_rejects_unknown_keys_and_provider_types
     loader = Prescient::ConfigurationLoader.new({})
 
-    unknown_key_error = assert_raises(Prescient::Error) {
-      loader.load_yaml(<<~YAML, source: 'config.yml')
+    unknown_key_error = assert_raises(Prescient::Error) do
+      loader.load_yaml(<<~YAML, source: "config.yml")
         version: 1
         unexpected: true
       YAML
-    }
+    end
 
-    assert_includes unknown_key_error.message, 'Unknown configuration key'
-    assert_includes unknown_key_error.message, 'in config.yml'
+    assert_includes unknown_key_error.message, "Unknown configuration key"
+    assert_includes unknown_key_error.message, "in config.yml"
 
-    unknown_provider_error = assert_raises(Prescient::Error) {
-      loader.load_yaml(<<~YAML, source: 'config.yml')
+    unknown_provider_error = assert_raises(Prescient::Error) do
+      loader.load_yaml(<<~YAML, source: "config.yml")
         version: 1
         providers:
           demo:
             type: imaginary
       YAML
-    }
+    end
 
-    assert_includes unknown_provider_error.message, 'Unknown provider type'
-    assert_includes unknown_provider_error.message, 'in config.yml'
+    assert_includes unknown_provider_error.message, "Unknown provider type"
+    assert_includes unknown_provider_error.message, "in config.yml"
   end
 
   def test_load_configuration_rejects_conflicting_env_and_plain_values
-    top_level_error = assert_raises(Prescient::Error) {
+    top_level_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: {})
         version: 1
         default_provider: ollama
         default_provider_env: PRESCIENT_DEFAULT_PROVIDER
       YAML
-    }
+    end
 
-    assert_includes top_level_error.message, 'cannot combine'
+    assert_includes top_level_error.message, "cannot combine"
 
-    provider_error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: { 'OPENAI_API_KEY' => 'key' })
+    provider_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: { "OPENAI_API_KEY" => "key" })
         version: 1
         providers:
           demo:
@@ -478,87 +477,84 @@ class ConfigurationLoaderTest < PrescientTest
             chat_model: gpt-4.1-mini
             embedding_model: text-embedding-3-small
       YAML
-    }
+    end
 
-    assert_includes provider_error.message, 'cannot combine'
+    assert_includes provider_error.message, "cannot combine"
   end
 
   def test_load_configuration_rejects_missing_environment_variables
-    error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: 'config.yml')
+    error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: "config.yml")
         version: 1
         timeout_env: MISSING_TIMEOUT
       YAML
-    }
+    end
 
-    assert_includes error.message, 'Environment variable not set'
-    assert_includes error.message, 'in config.yml'
+    assert_includes error.message, "Environment variable not set"
+    assert_includes error.message, "in config.yml"
   end
 
-  # rubocop:disable Minitest/MultipleAssertions
   def test_load_configuration_rejects_invalid_yaml_version_root_and_provider_shape
-    invalid_yaml_error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.new({}).load_yaml("version: [\n", source: 'config.yml')
-    }
+    invalid_yaml_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_yaml("version: [\n", source: "config.yml")
+    end
 
-    assert_includes invalid_yaml_error.message, 'Invalid YAML configuration'
-    assert_includes invalid_yaml_error.message, 'config.yml'
+    assert_includes invalid_yaml_error.message, "Invalid YAML configuration"
+    assert_includes invalid_yaml_error.message, "config.yml"
 
-    invalid_root_error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.new({}).load_hash([], source: 'config.yml')
-    }
+    invalid_root_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_hash([], source: "config.yml")
+    end
 
-    assert_includes invalid_root_error.message, 'must be a mapping'
-    assert_includes invalid_root_error.message, 'in config.yml'
+    assert_includes invalid_root_error.message, "must be a mapping"
+    assert_includes invalid_root_error.message, "in config.yml"
 
-    invalid_providers_error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: 'config.yml')
+    invalid_providers_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: "config.yml")
         version: 1
         providers: []
       YAML
-    }
+    end
 
-    assert_includes invalid_providers_error.message, 'providers must be a mapping'
-    assert_includes invalid_providers_error.message, 'in config.yml'
+    assert_includes invalid_providers_error.message, "providers must be a mapping"
+    assert_includes invalid_providers_error.message, "in config.yml"
 
-    unsupported_version_error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: 'config.yml')
+    unsupported_version_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: "config.yml")
         version: 2
       YAML
-    }
+    end
 
-    assert_includes unsupported_version_error.message, 'Unsupported configuration version'
-    assert_includes unsupported_version_error.message, 'in config.yml'
+    assert_includes unsupported_version_error.message, "Unsupported configuration version"
+    assert_includes unsupported_version_error.message, "in config.yml"
   end
-  # rubocop:enable Minitest/MultipleAssertions
 
-  # rubocop:disable Minitest/MultipleAssertions
   def test_load_configuration_rejects_missing_provider_type_and_file_errors
-    missing_type_error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: 'config.yml')
+    missing_type_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: "config.yml")
         version: 1
         providers:
           demo:
             chat_model: gpt-4.1-mini
       YAML
-    }
+    end
 
-    assert_includes missing_type_error.message, 'must define type'
-    assert_includes missing_type_error.message, 'in config.yml'
+    assert_includes missing_type_error.message, "must define type"
+    assert_includes missing_type_error.message, "in config.yml"
 
-    provider_shape_error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: 'config.yml')
+    provider_shape_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: "config.yml")
         version: 1
         providers:
           demo: []
       YAML
-    }
+    end
 
-    assert_includes provider_shape_error.message, 'must be a mapping'
-    assert_includes provider_shape_error.message, 'in config.yml'
+    assert_includes provider_shape_error.message, "must be a mapping"
+    assert_includes provider_shape_error.message, "in config.yml"
 
-    unknown_provider_key_error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: 'config.yml')
+    unknown_provider_key_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: "config.yml")
         version: 1
         providers:
           demo:
@@ -567,37 +563,36 @@ class ConfigurationLoaderTest < PrescientTest
             embedding_model: text-embedding-3-small
             bogus: true
       YAML
-    }
+    end
 
-    assert_includes unknown_provider_key_error.message, 'Unknown provider configuration key'
-    assert_includes unknown_provider_key_error.message, 'in config.yml'
+    assert_includes unknown_provider_key_error.message, "Unknown provider configuration key"
+    assert_includes unknown_provider_key_error.message, "in config.yml"
 
-    missing_file = Tempfile.new(['prescient-config-missing', '.yml'])
+    missing_file = Tempfile.new(["prescient-config-missing", ".yml"])
     missing_path = missing_file.path
     missing_file.close!
 
-    file_error = assert_raises(Prescient::Error) {
+    file_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_file(missing_path, env: {})
-    }
+    end
 
-    assert_includes file_error.message, 'Configuration file not found'
+    assert_includes file_error.message, "Configuration file not found"
   end
-  # rubocop:enable Minitest/MultipleAssertions
 
   def test_load_configuration_rejects_null_default_provider
-    error = assert_raises(Prescient::Error) {
+    error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: {})
         version: 1
         default_provider: null
       YAML
-    }
+    end
 
-    assert_includes error.message, 'default_provider'
+    assert_includes error.message, "default_provider"
   end
 
   def test_load_configuration_reports_missing_interpolated_environment_variable_with_source
-    error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: 'config.yml')
+    error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.new({}).load_yaml(<<~YAML, source: "config.yml")
         version: 1
         providers:
           demo:
@@ -606,17 +601,17 @@ class ConfigurationLoaderTest < PrescientTest
             chat_model: ${MISSING_CHAT_MODEL}
             embedding_model: text-embedding-3-small
       YAML
-    }
+    end
 
-    assert_includes error.message, 'Environment variable not set'
-    assert_includes error.message, 'config.yml'
+    assert_includes error.message, "Environment variable not set"
+    assert_includes error.message, "config.yml"
   end
 
   def test_load_configuration_supports_array_env_references_and_string_interpolation
     env = {
-      'PRESCIENT_FALLBACKS' => '[openai, anthropic]',
-      'PRESCIENT_TIMEOUT'   => '33',
-      'PRESCIENT_MODEL'     => 'llama3.2:3b',
+      "PRESCIENT_FALLBACKS" => "[openai, anthropic]",
+      "PRESCIENT_TIMEOUT" => "33",
+      "PRESCIENT_MODEL" => "llama3.2:3b"
     }
 
     configuration = Prescient::ConfigurationLoader.load_yaml(<<~YAML, env:)
@@ -631,14 +626,13 @@ class ConfigurationLoaderTest < PrescientTest
           embedding_model: nomic-embed-text
     YAML
 
-    assert_equal [:openai, :anthropic], configuration.fallback_providers
+    assert_equal %i[openai anthropic], configuration.fallback_providers
     assert_equal 33, configuration.timeout
-    assert_equal 'llama3.2:3b', configuration.provider(:ollama).options[:chat_model]
+    assert_equal "llama3.2:3b", configuration.provider(:ollama).options[:chat_model]
   end
 
-  # rubocop:disable Minitest/MultipleAssertions
   def test_loader_covers_nested_values_coercion_and_validation_edges
-    configuration = Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: { 'NESTED_MODEL' => 'nested-model', 'EMPTY_VALUE' => '' })
+    configuration = Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: { "NESTED_MODEL" => "nested-model", "EMPTY_VALUE" => "" })
       providers:
         ollama:
           type: ollama
@@ -653,9 +647,9 @@ class ConfigurationLoaderTest < PrescientTest
           api_key_env:
     YAML
 
-    assert_equal 'nested-model', configuration.provider(:ollama).options[:context_configs][:document][:model]
+    assert_equal "nested-model", configuration.provider(:ollama).options[:context_configs][:document][:model]
 
-    empty_value_configuration = Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: { 'EMPTY_VALUE' => '' })
+    empty_value_configuration = Prescient::ConfigurationLoader.load_yaml(<<~YAML, env: { "EMPTY_VALUE" => "" })
       providers:
         ollama:
           type: ollama
@@ -665,57 +659,56 @@ class ConfigurationLoaderTest < PrescientTest
           api_key_env: EMPTY_VALUE
     YAML
 
-    assert_equal '', empty_value_configuration.provider(:ollama).options[:api_key]
+    assert_equal "", empty_value_configuration.provider(:ollama).options[:api_key]
 
     integer_configuration = Prescient::ConfigurationLoader.load_hash({ timeout: 2.5 }, env: {})
 
     assert_equal 2, integer_configuration.timeout
 
-    plural_key_error = assert_raises(Prescient::Error) {
+    plural_key_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash({ unexpected_one: true, unexpected_two: true }, env: {})
-    }
-    assert_includes plural_key_error.message, 'keys'
+    end
+    assert_includes plural_key_error.message, "keys"
 
-    plural_provider_key_error = assert_raises(Prescient::Error) {
+    plural_provider_key_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
-        { providers: { demo: { type: 'ollama', unknown_one: true, unknown_two: true } } }, env: {}
+        { providers: { demo: { type: "ollama", unknown_one: true, unknown_two: true } } }, env: {}
       )
-    }
-    assert_includes plural_provider_key_error.message, 'keys'
+    end
+    assert_includes plural_provider_key_error.message, "keys"
 
-    nested_conflict_error = assert_raises(Prescient::Error) {
+    nested_conflict_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
-        { providers: { demo: { type: 'ollama', context_configs: { model: 'one', model_env: 'TWO' } } } }, env: {}
+        { providers: { demo: { type: "ollama", context_configs: { model: "one", model_env: "TWO" } } } }, env: {}
       )
-    }
-    assert_includes nested_conflict_error.message, 'cannot combine'
+    end
+    assert_includes nested_conflict_error.message, "cannot combine"
 
-    invalid_env_name_error = assert_raises(Prescient::Error) {
+    invalid_env_name_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash({ timeout_env: nil }, env: {})
-    }
-    assert_includes invalid_env_name_error.message, 'Environment variable name'
+    end
+    assert_includes invalid_env_name_error.message, "Environment variable name"
 
-    invalid_integer_error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.load_hash({ timeout: 'not-an-integer' }, env: {})
-    }
-    assert_includes invalid_integer_error.message, 'timeout must be an integer'
+    invalid_integer_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash({ timeout: "not-an-integer" }, env: {})
+    end
+    assert_includes invalid_integer_error.message, "timeout must be an integer"
 
-    invalid_float_error = assert_raises(Prescient::Error) {
-      Prescient::ConfigurationLoader.load_hash({ retry_delay: 'not-a-number' }, env: {})
-    }
-    assert_includes invalid_float_error.message, 'retry_delay must be a number'
+    invalid_float_error = assert_raises(Prescient::Error) do
+      Prescient::ConfigurationLoader.load_hash({ retry_delay: "not-a-number" }, env: {})
+    end
+    assert_includes invalid_float_error.message, "retry_delay must be a number"
 
-    source_less_root_error = assert_raises(Prescient::Error) {
+    source_less_root_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash([])
-    }
-    refute_includes source_less_root_error.message, ' in '
+    end
+    refute_includes source_less_root_error.message, " in "
 
-    source_less_version_error = assert_raises(Prescient::Error) {
+    source_less_version_error = assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash({ version: 2 })
-    }
-    refute_includes source_less_version_error.message, ' in '
+    end
+    refute_includes source_less_version_error.message, " in "
   end
-  # rubocop:enable Minitest/MultipleAssertions
 
   def test_loader_covers_source_less_error_messages
     assert_raises(Prescient::Error) do
@@ -731,14 +724,14 @@ class ConfigurationLoaderTest < PrescientTest
       Prescient::ConfigurationLoader.load_hash({ providers: { demo: {} } }, env: {})
     end
     assert_raises(Prescient::Error) do
-      Prescient::ConfigurationLoader.load_hash({ providers: { demo: { type: 'imaginary' } } }, env: {})
+      Prescient::ConfigurationLoader.load_hash({ providers: { demo: { type: "imaginary" } } }, env: {})
     end
     assert_raises(Prescient::Error) do
-      Prescient::ConfigurationLoader.load_hash({ timeout_env: 'MISSING_TIMEOUT' }, env: {})
+      Prescient::ConfigurationLoader.load_hash({ timeout_env: "MISSING_TIMEOUT" }, env: {})
     end
     assert_raises(Prescient::Error) do
       Prescient::ConfigurationLoader.load_hash(
-        { providers: { demo: { type: 'ollama', chat_model: '${MISSING_MODEL}' } } }, env: {}
+        { providers: { demo: { type: "ollama", chat_model: "${MISSING_MODEL}" } } }, env: {}
       )
     end
   end
@@ -754,15 +747,15 @@ class ConfigurationLoaderTest < PrescientTest
           embedding_model: nomic-embed-text
     YAML
 
-    status, output, _errors = run_cli(["--config=#{config_path}", 'config', 'validate'])
+    status, output, _errors = run_cli(["--config=#{config_path}", "config", "validate"])
 
     assert_equal 0, status
     assert_equal "configuration valid\n", output
 
-    status, _output, errors = run_cli(['--config'])
+    status, _output, errors = run_cli(["--config"])
 
     assert_equal 2, status
-    assert_includes errors, 'requires a path'
+    assert_includes errors, "requires a path"
   end
 
   def test_cli_honors_prescient_config_environment_variable
@@ -776,27 +769,27 @@ class ConfigurationLoaderTest < PrescientTest
           embedding_model: nomic-embed-text
     YAML
 
-    ENV['PRESCIENT_CONFIG'] = config_path
+    ENV["PRESCIENT_CONFIG"] = config_path
 
-    status, output, _errors = run_cli(['config', 'validate'])
+    status, output, _errors = run_cli(%w[config validate])
 
     assert_equal 0, status
     assert_equal "configuration valid\n", output
   ensure
-    ENV.delete('PRESCIENT_CONFIG')
+    ENV.delete("PRESCIENT_CONFIG")
   end
 
   def test_schema_file_is_present_and_versioned
     schema = JSON.parse(File.read(Prescient::ConfigurationLoader.schema_path))
 
-    assert_equal 1, schema['properties']['version']['const']
-    assert_equal 'Prescient Configuration', schema['title']
+    assert_equal 1, schema["properties"]["version"]["const"]
+    assert_equal "Prescient Configuration", schema["title"]
   end
 
   private
 
   def write_configuration(content)
-    file = Tempfile.new(['prescient-config', '.yml'])
+    file = Tempfile.new(["prescient-config", ".yml"])
     file.write(content)
     file.flush
     file.close

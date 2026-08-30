@@ -1,44 +1,42 @@
 # frozen_string_literal: true
 
-require 'test_helper'
-require 'prescient/agent'
+require "test_helper"
+require "prescient/agent"
 
 class AgentTest < PrescientTest
   class FakeTool
     def search(query, limit: nil)
-      { query: query, limit: limit, result: 'found' }
+      { query: query, limit: limit, result: "found" }
     end
   end
 
   class FailingTool
     def search(_query, **)
-      raise Prescient::ToolError, 'provider body: secret response payload'
+      raise Prescient::ToolError, "provider body: secret response payload"
     end
   end
 
   class CallableTool
-    attr_reader :description
-    attr_reader :schema
+    attr_reader :description, :schema
 
     def initialize
-      @description = 'Return an account summary.'
-      @schema = { type: 'object', required: ['account_id'] }
+      @description = "Return an account summary."
+      @schema = { type: "object", required: ["account_id"] }
     end
 
     def call(arguments)
-      { account_id: arguments['account_id'], status: 'due' }
+      { account_id: arguments["account_id"], status: "due" }
     end
   end
 
   class BareCallableTool
     def call(_arguments)
-      { result: 'ok' }
+      { result: "ok" }
     end
   end
 
   class FakeClient
-    attr_reader :calls
-    attr_reader :provider_name
+    attr_reader :calls, :provider_name
 
     def initialize(responses)
       @responses = responses
@@ -53,11 +51,11 @@ class AgentTest < PrescientTest
   end
 
   def test_returns_final_response_without_tool_call
-    client = FakeClient.new([{ response: 'done', provider: 'fake', model: 'model' }])
-    result = Prescient::Agent::Runtime.new(client:, tools: {}).run('task')
+    client = FakeClient.new([{ response: "done", provider: "fake", model: "model" }])
+    result = Prescient::Agent::Runtime.new(client:, tools: {}).run("task")
 
     assert_predicate result, :success?
-    assert_equal 'done', result.response
+    assert_equal "done", result.response
     assert_equal 1, result.loops_run
   end
 
@@ -65,39 +63,39 @@ class AgentTest < PrescientTest
     client = FakeClient.new(
       [
         { response: "Thought\n```json\n{\"action\":\"search\",\"args\":{\"query\":\"Ruby\",\"limit\":1}}\n```" },
-        { response: 'final', provider: 'fake', model: 'model' },
-      ],
+        { response: "final", provider: "fake", model: "model" }
+      ]
     )
     runtime = Prescient::Agent::Runtime.new(client:, tools: { search: FakeTool.new })
 
-    result = runtime.run('find Ruby')
+    result = runtime.run("find Ruby")
 
-    assert_equal 'final', result.response
+    assert_equal "final", result.response
     assert_equal 2, result.loops_run
-    assert_includes client.calls.last[:context].last[:content], 'Ruby'
+    assert_includes client.calls.last[:context].last[:content], "Ruby"
   end
 
   def test_serializes_tool_failures_without_exposing_provider_details
     client = FakeClient.new(
       [
         { response: "```json\n{\"action\":\"search\",\"args\":{\"query\":\"Ruby\"}}\n```" },
-        { response: 'final' },
-      ],
+        { response: "final" }
+      ]
     )
 
-    Prescient::Agent::Runtime.new(client:, tools: { search: FailingTool.new }).run('find Ruby')
+    Prescient::Agent::Runtime.new(client:, tools: { search: FailingTool.new }).run("find Ruby")
 
     observation = client.calls.last[:context].last[:content]
 
-    assert_includes observation, 'tool_failure'
-    refute_includes observation, 'secret response payload'
+    assert_includes observation, "tool_failure"
+    refute_includes observation, "secret response payload"
   end
 
   def test_rejects_unallowed_tool
     client = FakeClient.new([{ response: "```json\n{\"action\":\"unknown\",\"args\":{}}\n```" }])
 
     assert_raises(Prescient::Agent::UnauthorizedToolError) do
-      Prescient::Agent::Runtime.new(client:, tools: {}).run('task')
+      Prescient::Agent::Runtime.new(client:, tools: {}).run("task")
     end
   end
 
@@ -105,15 +103,15 @@ class AgentTest < PrescientTest
     client = FakeClient.new(
       [
         { response: "```json\n{\"action\":\"accounts\",\"args\":{\"account_id\":\"acct-1\"}}\n```" },
-        { response: 'account is due' },
-      ],
+        { response: "account is due" }
+      ]
     )
 
-    result = Prescient::Agent::Runtime.new(client:, tools: { accounts: CallableTool.new }).run('check account')
+    result = Prescient::Agent::Runtime.new(client:, tools: { accounts: CallableTool.new }).run("check account")
 
-    assert_equal 'account is due', result.response
-    assert_equal ['accounts'], result.metadata[:actions]
-    assert_includes client.calls.last[:context].last[:content], 'acct-1'
+    assert_equal "account is due", result.response
+    assert_equal ["accounts"], result.metadata[:actions]
+    assert_includes client.calls.last[:context].last[:content], "acct-1"
   end
 
   def test_authorization_and_telemetry_receive_request_scoped_data
@@ -121,17 +119,17 @@ class AgentTest < PrescientTest
     client = FakeClient.new(
       [
         { response: "```json\n{\"action\":\"accounts\",\"args\":{\"account_id\":\"acct-1\"}}\n```" },
-        { response: 'done' },
-      ],
+        { response: "done" }
+      ]
     )
-    authorization = ->(tool:, arguments:, context:) {
-      tool == :accounts && arguments['account_id'] == 'acct-1' && context[:tenant_id] == 'tenant-1'
+    authorization = lambda { |tool:, arguments:, context:|
+      tool == :accounts && arguments["account_id"] == "acct-1" && context[:tenant_id] == "tenant-1"
     }
     configuration = Prescient::Agent::Configuration.new(authorization:, telemetry: ->(event) { events << event })
 
     result = Prescient::Agent::Runtime.new(
-      client:, tools: { accounts: CallableTool.new }, configuration:, request_context: { tenant_id: 'tenant-1' },
-    ).run('task')
+      client:, tools: { accounts: CallableTool.new }, configuration:, request_context: { tenant_id: "tenant-1" }
+    ).run("task")
 
     assert_predicate result, :success?
     assert_equal :completed, events.last[:event]
@@ -145,14 +143,14 @@ class AgentTest < PrescientTest
     end
 
     client = FakeClient.new(
-      [{ response: "```json\n{\"action\":\"accounts\",\"args\":{\"account_id\":\"acct-1\"}}\n```" }],
+      [{ response: "```json\n{\"action\":\"accounts\",\"args\":{\"account_id\":\"acct-1\"}}\n```" }]
     )
     configuration = Prescient::Agent::Configuration.new(authorization: ->(**) { false })
 
     assert_raises(Prescient::Agent::UnauthorizedToolError) do
       Prescient::Agent::Runtime.new(
-        client:, tools: { accounts: CallableTool.new }, configuration:,
-      ).run('task')
+        client:, tools: { accounts: CallableTool.new }, configuration:
+      ).run("task")
     end
     assert_raises(Prescient::Agent::ConfigurationError) do
       Prescient::Agent::Runtime.new(client:, tools: {}).run(nil)
@@ -163,7 +161,7 @@ class AgentTest < PrescientTest
     client = FakeClient.new([{ response: "```json\n{\"action\":\"search\"}\n```" }])
 
     assert_raises(Prescient::Agent::MalformedActionError) do
-      Prescient::Agent::Runtime.new(client:, tools: { search: FakeTool.new }).run('task')
+      Prescient::Agent::Runtime.new(client:, tools: { search: FakeTool.new }).run("task")
     end
   end
 
@@ -174,8 +172,8 @@ class AgentTest < PrescientTest
 
     assert_raises(Prescient::Agent::MaxLoopsExceededError) do
       Prescient::Agent::Runtime.new(
-        client:, tools: { search: FakeTool.new }, configuration:,
-      ).run('task')
+        client:, tools: { search: FakeTool.new }, configuration:
+      ).run("task")
     end
   end
 
@@ -197,7 +195,7 @@ class AgentTest < PrescientTest
       Prescient::Agent::Configuration.new(max_context_bytes: -1)
     end
     assert_raises(Prescient::Agent::ConfigurationError) do
-      Prescient::Agent::Configuration.new(max_action_bytes: 'large')
+      Prescient::Agent::Configuration.new(max_action_bytes: "large")
     end
     assert_raises(Prescient::Agent::ConfigurationError) do
       Prescient::Agent::Configuration.new(max_observation_bytes: nil)
@@ -206,40 +204,40 @@ class AgentTest < PrescientTest
 
   def test_context_rejects_initial_and_appended_overflow
     assert_raises(Prescient::Agent::ConfigurationError) do
-      Prescient::Agent::Context.new(system_prompt: 'x', task: 'y', max_bytes: 1)
+      Prescient::Agent::Context.new(system_prompt: "x", task: "y", max_bytes: 1)
     end
 
-    context = Prescient::Agent::Context.new(system_prompt: 'x', task: 'y', max_bytes: 100)
+    context = Prescient::Agent::Context.new(system_prompt: "x", task: "y", max_bytes: 100)
     assert_raises(Prescient::Agent::ConfigurationError) do
-      context.append(role: 'user', content: 'x' * 200)
+      context.append(role: "user", content: "x" * 200)
     end
   end
 
   def test_context_compacts_older_turns_with_an_omission_marker
-    context = Prescient::Agent::Context.new(system_prompt: 'system', task: 'task', max_bytes: 500)
+    context = Prescient::Agent::Context.new(system_prompt: "system", task: "task", max_bytes: 500)
     3.times do |index|
-      context.append(role: 'assistant', content: "action #{index} #{'x' * 50}")
-      context.append(role: 'user', content: "observation #{index} #{'y' * 50}")
+      context.append(role: "assistant", content: "action #{index} #{"x" * 50}")
+      context.append(role: "user", content: "observation #{index} #{"y" * 50}")
     end
 
     assert_operator JSON.generate(context.to_a).bytesize, :<=, 500
     assert_includes context.messages.map { |message| message[:content] },
-                    '[Earlier agent context omitted due to size limit.]'
-    assert_includes context.messages.last[:content], 'observation 2'
+                    "[Earlier agent context omitted due to size limit.]"
+    assert_includes context.messages.last[:content], "observation 2"
   end
 
   def test_error_serializer_uses_safe_messages_for_core_errors
     serialized = Prescient::Agent::ErrorSerializer.serialize(
-      Prescient::ConnectionError.new('raw provider body: secret'),
+      Prescient::ConnectionError.new("raw provider body: secret")
     )
 
-    assert_equal 'provider_unavailable', serialized[:error][:category]
-    assert_equal 'The requested operation failed.', serialized[:error][:message]
-    refute_includes JSON.generate(serialized), 'secret'
+    assert_equal "provider_unavailable", serialized[:error][:category]
+    assert_equal "The requested operation failed.", serialized[:error][:message]
+    refute_includes JSON.generate(serialized), "secret"
   end
 
   def test_parser_returns_nil_without_an_action_and_rejects_oversize_actions
-    assert_nil Prescient::Agent::Parser.parse('final answer')
+    assert_nil Prescient::Agent::Parser.parse("final answer")
     action = "```json\n{\"action\":\"search\",\"args\":{\"query\":\"Ruby\"}}\n```"
 
     assert_raises(Prescient::Agent::MalformedActionError) do
@@ -266,11 +264,11 @@ class AgentTest < PrescientTest
       registry.invoke(:search, {})
     end
     assert_raises(Prescient::Agent::MalformedActionError) do
-      registry.invoke(:search, { 'query' => '' })
+      registry.invoke(:search, { "query" => "" })
     end
 
     bare = Prescient::Agent::ToolRegistry.new(bare: BareCallableTool.new)
 
-    assert_equal({ result: 'ok' }, bare.invoke(:bare, {}))
+    assert_equal({ result: "ok" }, bare.invoke(:bare, {}))
   end
 end

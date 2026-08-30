@@ -1,60 +1,60 @@
 # frozen_string_literal: true
 
-require 'test_helper'
+require "test_helper"
 
 class HuggingFaceProviderTest < PrescientTest
   def setup
     super
     @provider = Prescient::Provider::HuggingFace.new(
-      api_key:         'test-api-key',
-      embedding_model: 'sentence-transformers/all-MiniLM-L6-v2',
-      chat_model:      'microsoft/DialoGPT-medium',
-      timeout:         30,
+      api_key: "test-api-key",
+      embedding_model: "sentence-transformers/all-MiniLM-L6-v2",
+      chat_model: "microsoft/DialoGPT-medium",
+      timeout: 30
     )
   end
 
   def test_initialize_sets_configuration
-    assert_equal 'test-api-key', @provider.options[:api_key]
-    assert_equal 'sentence-transformers/all-MiniLM-L6-v2', @provider.options[:embedding_model]
-    assert_equal 'microsoft/DialoGPT-medium', @provider.options[:chat_model]
+    assert_equal "test-api-key", @provider.options[:api_key]
+    assert_equal "sentence-transformers/all-MiniLM-L6-v2", @provider.options[:embedding_model]
+    assert_equal "microsoft/DialoGPT-medium", @provider.options[:chat_model]
     assert_equal 30, @provider.options[:timeout]
   end
 
   def test_initialize_validates_required_options
     assert_raises(Prescient::Error) do
-      Prescient::Provider::HuggingFace.new(embedding_model: 'test')
+      Prescient::Provider::HuggingFace.new(embedding_model: "test")
     end
 
     assert_raises(Prescient::Error) do
-      Prescient::Provider::HuggingFace.new(api_key: 'test')
+      Prescient::Provider::HuggingFace.new(api_key: "test")
     end
   end
 
   def test_embedding_dimensions_constant
-    assert_equal 384, Prescient::Provider::HuggingFace::EMBEDDING_DIMENSIONS['sentence-transformers/all-MiniLM-L6-v2']
-    assert_equal 768, Prescient::Provider::HuggingFace::EMBEDDING_DIMENSIONS['sentence-transformers/all-mpnet-base-v2']
-    assert_equal 1024, Prescient::Provider::HuggingFace::EMBEDDING_DIMENSIONS['sentence-transformers/all-roberta-large-v1']
+    assert_equal 384, Prescient::Provider::HuggingFace::EMBEDDING_DIMENSIONS["sentence-transformers/all-MiniLM-L6-v2"]
+    assert_equal 768, Prescient::Provider::HuggingFace::EMBEDDING_DIMENSIONS["sentence-transformers/all-mpnet-base-v2"]
+    assert_equal 1024, Prescient::Provider::HuggingFace::EMBEDDING_DIMENSIONS["sentence-transformers/all-roberta-large-v1"]
   end
 
   def test_generate_embedding_success_with_nested_array
     # HuggingFace returns nested arrays
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns([
-      Array.new(384) { |i| i * 0.001 },
-    ])
+                                                    Array.new(384) { |i| i * 0.001 }
+                                                  ])
 
     @provider.class.expects(:post).with(
-      '/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction',
+      "/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction",
       has_entries(
         headers: {
-          'Content-Type'  => 'application/json',
-          'Authorization' => 'Bearer test-api-key',
-        },
-      ),
+          "Content-Type" => "application/json",
+          "Authorization" => "Bearer test-api-key"
+        }
+      )
     ).returns(mock_response)
 
-    result = @provider.generate_embedding('test text')
+    result = @provider.generate_embedding("test text")
 
     assert_equal 384, result.length
     assert_instance_of Float, result.first
@@ -62,208 +62,208 @@ class HuggingFaceProviderTest < PrescientTest
 
   def test_generate_embedding_success_with_flat_array
     # Some models return flat arrays
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns(Array.new(384) { |i| i * 0.001 })
 
     @provider.class.expects(:post).returns(mock_response)
 
-    result = @provider.generate_embedding('test text')
+    result = @provider.generate_embedding("test text")
 
     assert_equal 384, result.length
   end
 
   def test_generate_embedding_rejects_invalid_dimensions
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns([[0.1, 0.2, 0.3]]) # Too few dimensions
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::InvalidResponseError) do
-      @provider.generate_embedding('test text')
+      @provider.generate_embedding("test text")
     end
   end
 
   def test_generate_embedding_requires_dimensions_for_unknown_models
     provider = Prescient::Provider::HuggingFace.new(
-      api_key: 'test-api-key', embedding_model: 'custom/embedding', chat_model: 'custom/chat',
+      api_key: "test-api-key", embedding_model: "custom/embedding", chat_model: "custom/chat"
     )
     response = stub(success?: true, parsed_response: [[0.1]])
     provider.class.expects(:post).returns(response)
 
-    assert_raises(Prescient::Error) { provider.generate_embedding('test text') }
+    assert_raises(Prescient::Error) { provider.generate_embedding("test text") }
   end
 
   def test_generate_embedding_handles_invalid_response
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns('invalid')
+    mock_response.stubs(:parsed_response).returns("invalid")
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::InvalidResponseError) do
-      @provider.generate_embedding('test text')
+      @provider.generate_embedding("test text")
     end
   end
 
   def test_generate_embedding_uses_feature_extraction_payload
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns([Array.new(384, 0.1)])
 
     @provider.class.expects(:post).with(
       anything,
       has_entries(
-        body: '{"inputs":"test text"}',
-      ),
+        body: '{"inputs":"test text"}'
+      )
     ).returns(mock_response)
 
-    @provider.generate_embedding('test text')
+    @provider.generate_embedding("test text")
   end
 
   def test_generate_response_success_with_array_response
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'choices' => [{ 'message' => { 'content' => 'This is a test response' } }],
-    })
+                                                    "choices" => [{ "message" => { "content" => "This is a test response" } }]
+                                                  })
 
     @provider.class.expects(:post).with(
-      '/v1/chat/completions',
+      "/v1/chat/completions",
       has_entries(
         headers: {
-          'Content-Type'  => 'application/json',
-          'Authorization' => 'Bearer test-api-key',
-        },
-      ),
+          "Content-Type" => "application/json",
+          "Authorization" => "Bearer test-api-key"
+        }
+      )
     ).returns(mock_response)
 
-    result = @provider.generate_response('test prompt')
+    result = @provider.generate_response("test prompt")
 
-    assert_equal 'This is a test response', result[:response]
-    assert_equal 'microsoft/DialoGPT-medium', result[:model]
-    assert_equal 'huggingface', result[:provider]
+    assert_equal "This is a test response", result[:response]
+    assert_equal "microsoft/DialoGPT-medium", result[:model]
+    assert_equal "huggingface", result[:provider]
     assert_nil result[:processing_time]
     assert_nil result[:metadata][:usage]
     assert_nil result[:metadata][:finish_reason]
   end
 
   def test_generate_response_success_with_hash_response
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'choices' => [{ 'message' => { 'content' => 'Hash response format' } }],
-    })
+                                                    "choices" => [{ "message" => { "content" => "Hash response format" } }]
+                                                  })
 
     @provider.class.expects(:post).returns(mock_response)
 
-    result = @provider.generate_response('test prompt')
+    result = @provider.generate_response("test prompt")
 
-    assert_equal 'Hash response format', result[:response]
+    assert_equal "Hash response format", result[:response]
   end
 
   def test_generate_response_rejects_legacy_text_field
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'text' => 'Alternative text field',
-    })
+                                                    "text" => "Alternative text field"
+                                                  })
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::InvalidResponseError) do
-      @provider.generate_response('test prompt')
+      @provider.generate_response("test prompt")
     end
   end
 
   def test_generate_response_with_context_items
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'choices' => [{ 'message' => { 'content' => 'Response with context' } }],
-    })
+                                                    "choices" => [{ "message" => { "content" => "Response with context" } }]
+                                                  })
 
     @provider.class.expects(:post).returns(mock_response)
 
     context_items = [
-      { 'title' => 'Test Doc', 'content' => 'Test content' },
+      { "title" => "Test Doc", "content" => "Test content" }
     ]
 
-    result = @provider.generate_response('test prompt', context_items)
+    result = @provider.generate_response("test prompt", context_items)
 
-    assert_equal 'Response with context', result[:response]
+    assert_equal "Response with context", result[:response]
   end
 
   def test_generate_response_with_options
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'choices' => [{ 'message' => { 'content' => 'Custom response' } }],
-    })
+                                                    "choices" => [{ "message" => { "content" => "Custom response" } }]
+                                                  })
 
     @provider.class.expects(:post).with(
       anything,
       has_entries(
-        body: regexp_matches(/1000.*0\.8.*0\.95/),
-      ),
+        body: regexp_matches(/1000.*0\.8.*0\.95/)
+      )
     ).returns(mock_response)
 
-    @provider.generate_response('test', [], max_tokens: 1000, temperature: 0.8, top_p: 0.95)
+    @provider.generate_response("test", [], max_tokens: 1000, temperature: 0.8, top_p: 0.95)
   end
 
   def test_generate_response_handles_missing_text
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns([{ 'something_else' => 'no text field' }])
+    mock_response.stubs(:parsed_response).returns([{ "something_else" => "no text field" }])
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::InvalidResponseError) do
-      @provider.generate_response('test prompt')
+      @provider.generate_response("test prompt")
     end
   end
 
   def test_generate_response_handles_unrecognized_response_shape
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns('invalid')
+    mock_response.stubs(:parsed_response).returns("invalid")
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::InvalidResponseError) do
-      @provider.generate_response('test prompt')
+      @provider.generate_response("test prompt")
     end
   end
 
   def test_health_check_success
     # Mock embedding model health check
-    embedding_response = mock('embedding_response')
+    embedding_response = mock("embedding_response")
     embedding_response.stubs(:success?).returns(true)
 
     # Mock chat model health check
-    chat_response = mock('chat_response')
+    chat_response = mock("chat_response")
     chat_response.stubs(:success?).returns(true)
-    chat_response.stubs(:parsed_response).returns({ 'data' => [{ 'id' => 'microsoft/DialoGPT-medium' }] })
+    chat_response.stubs(:parsed_response).returns({ "data" => [{ "id" => "microsoft/DialoGPT-medium" }] })
 
     @provider.class.expects(:get).with(
-      'https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2',
+      "https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2",
       has_entries(
-        headers: { 'Authorization' => 'Bearer test-api-key' },
-      ),
+        headers: { "Authorization" => "Bearer test-api-key" }
+      )
     ).returns(embedding_response)
 
     @provider.class.expects(:get).with(
-      '/v1/models',
+      "/v1/models",
       has_entries(
-        headers: { 'Authorization' => 'Bearer test-api-key' },
-      ),
+        headers: { "Authorization" => "Bearer test-api-key" }
+      )
     ).returns(chat_response)
 
     result = @provider.health_check
 
-    assert_equal 'healthy', result[:status]
-    assert_equal 'huggingface', result[:provider]
+    assert_equal "healthy", result[:status]
+    assert_equal "huggingface", result[:provider]
     assert result[:embedding_model][:available]
     assert result[:chat_model][:available]
     assert result[:ready]
@@ -271,42 +271,42 @@ class HuggingFaceProviderTest < PrescientTest
 
   def test_health_check_partial_availability
     # Embedding works, chat fails
-    embedding_response = mock('embedding_response')
+    embedding_response = mock("embedding_response")
     embedding_response.stubs(:success?).returns(true)
 
-    chat_response = mock('chat_response')
+    chat_response = mock("chat_response")
     chat_response.stubs(:success?).returns(false)
-    chat_response.stubs(:parsed_response).returns({ 'data' => [] })
+    chat_response.stubs(:parsed_response).returns({ "data" => [] })
 
     @provider.class.expects(:get).twice.returns(embedding_response, chat_response)
 
     result = @provider.health_check
 
-    assert_equal 'partial', result[:status]
+    assert_equal "partial", result[:status]
     assert result[:embedding_model][:available]
     refute result[:chat_model][:available]
     refute result[:ready]
   end
 
   def test_health_check_handles_connection_errors
-    @provider.class.expects(:get).raises(Prescient::ConnectionError.new('Connection failed'))
+    @provider.class.expects(:get).raises(Prescient::ConnectionError.new("Connection failed"))
 
     result = @provider.health_check
 
-    assert_equal 'unavailable', result[:status]
-    assert_equal 'huggingface', result[:provider]
-    assert_equal 'Prescient::ConnectionError', result[:error]
-    assert_equal 'Connection failed', result[:message]
+    assert_equal "unavailable", result[:status]
+    assert_equal "huggingface", result[:provider]
+    assert_equal "Prescient::ConnectionError", result[:error]
+    assert_equal "Connection failed", result[:message]
     refute result[:ready]
   end
 
   def test_health_check_handles_provider_errors
-    @provider.class.expects(:get).raises(Prescient::AuthenticationError.new('Invalid key'))
+    @provider.class.expects(:get).raises(Prescient::AuthenticationError.new("Invalid key"))
 
     result = @provider.health_check
 
-    assert_equal 'unavailable', result[:status]
-    assert_equal 'Prescient::AuthenticationError', result[:error]
+    assert_equal "unavailable", result[:status]
+    assert_equal "Prescient::AuthenticationError", result[:error]
     refute result[:ready]
   end
 
@@ -315,112 +315,112 @@ class HuggingFaceProviderTest < PrescientTest
 
     assert_equal 2, result.length
 
-    embedding_model = result.find { |m| m[:type] == 'embedding' }
+    embedding_model = result.find { |m| m[:type] == "embedding" }
 
     assert embedding_model
-    assert_equal 'sentence-transformers/all-MiniLM-L6-v2', embedding_model[:name]
+    assert_equal "sentence-transformers/all-MiniLM-L6-v2", embedding_model[:name]
     assert_equal 384, embedding_model[:dimensions]
 
-    chat_model = result.find { |m| m[:type] == 'text-generation' }
+    chat_model = result.find { |m| m[:type] == "text-generation" }
 
     assert chat_model
-    assert_equal 'microsoft/DialoGPT-medium', chat_model[:name]
+    assert_equal "microsoft/DialoGPT-medium", chat_model[:name]
   end
 
   def test_error_handling_for_different_status_codes
     # Test bad request
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(false)
     mock_response.stubs(:code).returns(400)
-    mock_response.stubs(:body).returns('Bad request')
+    mock_response.stubs(:body).returns("Bad request")
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::Error) do
-      @provider.generate_embedding('test')
+      @provider.generate_embedding("test")
     end
 
     # Test authentication error
     mock_response.stubs(:code).returns(401)
-    mock_response.stubs(:body).returns('Authentication failed')
+    mock_response.stubs(:body).returns("Authentication failed")
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::AuthenticationError) do
-      @provider.generate_embedding('test')
+      @provider.generate_embedding("test")
     end
 
     # Test rate limiting
     mock_response.stubs(:code).returns(429)
-    mock_response.stubs(:body).returns('Rate limit exceeded')
+    mock_response.stubs(:body).returns("Rate limit exceeded")
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::RateLimitError) do
-      @provider.generate_embedding('test')
+      @provider.generate_embedding("test")
     end
 
     # Test service unavailable with model loading
     mock_response.stubs(:code).returns(503)
-    mock_response.stubs(:parsed_response).returns({ 'error' => 'Model is loading, please try again later' })
+    mock_response.stubs(:parsed_response).returns({ "error" => "Model is loading, please try again later" })
 
     @provider.class.expects(:post).returns(mock_response)
 
-    error = assert_raises(Prescient::Error) {
-      @provider.generate_embedding('test')
-    }
+    error = assert_raises(Prescient::Error) do
+      @provider.generate_embedding("test")
+    end
 
-    assert_includes error.message, 'Model is loading'
+    assert_includes error.message, "Model is loading"
 
     # Test general service unavailable
-    mock_response.stubs(:parsed_response).returns({ 'error' => 'Service temporarily unavailable' })
+    mock_response.stubs(:parsed_response).returns({ "error" => "Service temporarily unavailable" })
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::Error) do
-      @provider.generate_embedding('test')
+      @provider.generate_embedding("test")
     end
 
     # Test server error
     mock_response.stubs(:code).returns(500)
-    mock_response.stubs(:body).returns('Internal server error')
+    mock_response.stubs(:body).returns("Internal server error")
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::Error) do
-      @provider.generate_embedding('test')
+      @provider.generate_embedding("test")
     end
   end
 
   def test_clean_text_preprocessing
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns([Array.new(384, 0.1)])
 
     @provider.class.expects(:post).with(
       anything,
       has_entries(
-        body: regexp_matches(/"inputs":"test text"/),
-      ),
+        body: regexp_matches(/"inputs":"test text"/)
+      )
     ).returns(mock_response)
 
     @provider.generate_embedding("  test   text  \n")
   end
 
   def test_chat_completion_payload
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'choices' => [{ 'message' => { 'content' => 'response' } }],
-    })
+                                                    "choices" => [{ "message" => { "content" => "response" } }]
+                                                  })
 
     @provider.class.expects(:post).with(
       anything,
       has_entries(
-        body: regexp_matches(/"messages":\[\{"role":"user"/),
-      ),
+        body: regexp_matches(/"messages":\[\{"role":"user"/)
+      )
     ).returns(mock_response)
 
-    @provider.generate_response('test')
+    @provider.generate_response("test")
   end
 end

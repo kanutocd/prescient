@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'test_helper'
+require "test_helper"
 
 class AiProvidersTest < PrescientTest
   def test_configure_yields_configuration_object
@@ -42,9 +42,9 @@ class AiProvidersTest < PrescientTest
   def test_client_returns_client_instance
     Prescient.configure do |config|
       config.add_provider(:test, Prescient::Provider::Ollama,
-                          url:             'http://localhost:11434',
-                          embedding_model: 'test-embed',
-                          chat_model:      'test-chat')
+                          url: "http://localhost:11434",
+                          embedding_model: "test-embed",
+                          chat_model: "test-chat")
     end
 
     client = Prescient.client(:test)
@@ -55,9 +55,9 @@ class AiProvidersTest < PrescientTest
   def test_client_uses_default_provider_when_no_provider_specified
     Prescient.configure do |config|
       config.add_provider(:test, Prescient::Provider::Ollama,
-                          url:             'http://localhost:11434',
-                          embedding_model: 'test-embed',
-                          chat_model:      'test-chat')
+                          url: "http://localhost:11434",
+                          embedding_model: "test-embed",
+                          chat_model: "test-chat")
       config.default_provider = :test
     end
 
@@ -70,10 +70,10 @@ class AiProvidersTest < PrescientTest
     setup_test_provider
 
     client_double = Minitest::Mock.new
-    client_double.expect :generate_embedding, [1, 2, 3], ['test'], temperature: 0.5
+    client_double.expect :generate_embedding, [1, 2, 3], ["test"], temperature: 0.5
 
     Prescient.stub :client, client_double do
-      result = Prescient.generate_embedding('test', temperature: 0.5)
+      result = Prescient.generate_embedding("test", temperature: 0.5)
 
       assert_equal [1, 2, 3], result
     end
@@ -85,12 +85,12 @@ class AiProvidersTest < PrescientTest
     setup_test_provider
 
     client_double = Minitest::Mock.new
-    client_double.expect :generate_response, { response: 'test response' }, ['prompt', ['context']], temperature: 0.7
+    client_double.expect :generate_response, { response: "test response" }, ["prompt", ["context"]], temperature: 0.7
 
     Prescient.stub :client, client_double do
-      result = Prescient.generate_response('prompt', ['context'], temperature: 0.7)
+      result = Prescient.generate_response("prompt", ["context"], temperature: 0.7)
 
-      assert_equal({ response: 'test response' }, result)
+      assert_equal({ response: "test response" }, result)
     end
 
     client_double.verify
@@ -100,12 +100,12 @@ class AiProvidersTest < PrescientTest
     setup_test_provider
 
     client_double = Minitest::Mock.new
-    client_double.expect :health_check, { status: 'healthy' }
+    client_double.expect :health_check, { status: "healthy" }
 
     Prescient.stub :client, client_double do
       result = Prescient.health_check
 
-      assert_equal({ status: 'healthy' }, result)
+      assert_equal({ status: "healthy" }, result)
     end
 
     client_double.verify
@@ -116,9 +116,9 @@ class AiProvidersTest < PrescientTest
   def setup_test_provider
     Prescient.configure do |config|
       config.add_provider(:test, Prescient::Provider::Ollama,
-                          url:             'http://localhost:11434',
-                          embedding_model: 'test-embed',
-                          chat_model:      'test-chat')
+                          url: "http://localhost:11434",
+                          embedding_model: "test-embed",
+                          chat_model: "test-chat")
       config.default_provider = :test
     end
   end

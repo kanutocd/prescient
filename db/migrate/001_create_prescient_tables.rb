@@ -2,11 +2,10 @@
 
 # Rails migration for Prescient gem vector database tables
 # Copy this file to your Rails db/migrate directory and adjust the timestamp
-
 class CreatePrescientTables < ActiveRecord::Migration[7.0]
   def up
     # Enable pgvector extension
-    enable_extension 'vector'
+    enable_extension "vector"
 
     # Documents table to store original content
     create_table :documents do |t|
@@ -76,14 +75,14 @@ class CreatePrescientTables < ActiveRecord::Migration[7.0]
     add_index :documents, :metadata, using: :gin
 
     add_index :document_embeddings, :document_id
-    add_index :document_embeddings, [:embedding_provider, :embedding_model], name: 'idx_doc_embeddings_provider_model'
+    add_index :document_embeddings, %i[embedding_provider embedding_model], name: "idx_doc_embeddings_provider_model"
     add_index :document_embeddings, :embedding_dimensions
 
-    add_index :document_chunks, [:document_id, :chunk_index], unique: true
+    add_index :document_chunks, %i[document_id chunk_index], unique: true
 
     add_index :chunk_embeddings, :chunk_id
     add_index :chunk_embeddings, :document_id
-    add_index :chunk_embeddings, [:embedding_provider, :embedding_model], name: 'idx_chunk_embeddings_provider_model'
+    add_index :chunk_embeddings, %i[embedding_provider embedding_model], name: "idx_chunk_embeddings_provider_model"
 
     add_index :search_queries, :created_at
     add_index :query_results, :query_id
@@ -94,30 +93,30 @@ class CreatePrescientTables < ActiveRecord::Migration[7.0]
 
     # Vector indexes for document embeddings
     execute <<-SQL
-      CREATE INDEX idx_document_embeddings_cosine#{' '}
-      ON document_embeddings#{' '}
+      CREATE INDEX idx_document_embeddings_cosine#{" "}
+      ON document_embeddings#{" "}
       USING hnsw (embedding vector_cosine_ops)
       WITH (m = 16, ef_construction = 64);
     SQL
 
     execute <<-SQL
-      CREATE INDEX idx_document_embeddings_l2#{' '}
-      ON document_embeddings#{' '}
+      CREATE INDEX idx_document_embeddings_l2#{" "}
+      ON document_embeddings#{" "}
       USING hnsw (embedding vector_l2_ops)
       WITH (m = 16, ef_construction = 64);
     SQL
 
     # Vector indexes for chunk embeddings
     execute <<-SQL
-      CREATE INDEX idx_chunk_embeddings_cosine#{' '}
-      ON chunk_embeddings#{' '}
+      CREATE INDEX idx_chunk_embeddings_cosine#{" "}
+      ON chunk_embeddings#{" "}
       USING hnsw (embedding vector_cosine_ops)
       WITH (m = 16, ef_construction = 64);
     SQL
 
     execute <<-SQL
-      CREATE INDEX idx_chunk_embeddings_l2#{' '}
-      ON chunk_embeddings#{' '}
+      CREATE INDEX idx_chunk_embeddings_l2#{" "}
+      ON chunk_embeddings#{" "}
       USING hnsw (embedding vector_l2_ops)
       WITH (m = 16, ef_construction = 64);
     SQL
@@ -150,9 +149,9 @@ class CreatePrescientTables < ActiveRecord::Migration[7.0]
     drop_table :document_embeddings
     drop_table :documents
 
-    execute 'DROP FUNCTION IF EXISTS cosine_similarity(vector, vector);'
-    execute 'DROP FUNCTION IF EXISTS euclidean_distance(vector, vector);'
+    execute "DROP FUNCTION IF EXISTS cosine_similarity(vector, vector);"
+    execute "DROP FUNCTION IF EXISTS euclidean_distance(vector, vector);"
 
-    disable_extension 'vector'
+    disable_extension "vector"
   end
 end

@@ -3,9 +3,7 @@
 module Prescient
   # Base error class for all Prescient-specific errors
   class Error < StandardError
-    attr_reader :provider
-    attr_reader :operation
-    attr_reader :status
+    attr_reader :provider, :operation, :status
 
     def initialize(message = nil, provider: nil, operation: nil, status: nil)
       super(message)

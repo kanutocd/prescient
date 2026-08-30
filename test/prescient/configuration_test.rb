@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'test_helper'
+require "test_helper"
 
 class ConfigurationTest < PrescientTest
   def setup
@@ -19,47 +19,47 @@ class ConfigurationTest < PrescientTest
   end
 
   def test_sensitive_keys_normalizes_custom_keys
-    @config.sensitive_keys = ['credit_card', :private_key, :credit_card]
+    @config.sensitive_keys = ["credit_card", :private_key, :credit_card]
 
-    assert_equal [:credit_card, :private_key], @config.sensitive_keys
+    assert_equal %i[credit_card private_key], @config.sensitive_keys
   end
 
   def test_add_provider_adds_provider_configuration
-    @config.add_provider(:test, Prescient::Provider::Ollama, url: 'http://test')
+    @config.add_provider(:test, Prescient::Provider::Ollama, url: "http://test")
 
     expected = {
-      class:   Prescient::Provider::Ollama,
-      options: { url: 'http://test' },
+      class: Prescient::Provider::Ollama,
+      options: { url: "http://test" }
     }
 
     assert_equal expected, @config.providers[:test]
   end
 
   def test_add_tool_adds_and_caches_tool_configuration
-    @config.add_tool(:web_search, Prescient::Tool::SearXNG, url: 'http://localhost:8080')
+    @config.add_tool(:web_search, Prescient::Tool::SearXNG, url: "http://localhost:8080")
 
-    assert_equal({ class: Prescient::Tool::SearXNG, options: { url: 'http://localhost:8080' } },
+    assert_equal({ class: Prescient::Tool::SearXNG, options: { url: "http://localhost:8080" } },
                  @config.tools[:web_search])
     assert_instance_of Prescient::Tool::SearXNG, @config.tool(:web_search)
     assert_same @config.tool(:web_search), @config.tool(:web_search)
   end
 
   def test_add_provider_converts_provider_name_to_symbol
-    @config.add_provider('test', Prescient::Provider::Ollama, url: 'http://test')
+    @config.add_provider("test", Prescient::Provider::Ollama, url: "http://test")
 
     assert @config.providers.key?(:test)
   end
 
   def test_provider_returns_provider_instance_with_options
     @config.add_provider(:test, Prescient::Provider::Ollama,
-                         url:             'http://localhost:11434',
-                         embedding_model: 'test-embed',
-                         chat_model:      'test-chat')
+                         url: "http://localhost:11434",
+                         embedding_model: "test-embed",
+                         chat_model: "test-chat")
 
     provider = @config.provider(:test)
 
     assert_instance_of Prescient::Provider::Ollama, provider
-    assert_equal 'http://localhost:11434', provider.options[:url]
+    assert_equal "http://localhost:11434", provider.options[:url]
   end
 
   def test_provider_returns_nil_for_non_existent_provider
@@ -68,39 +68,39 @@ class ConfigurationTest < PrescientTest
 
   def test_provider_converts_provider_name_to_symbol
     @config.add_provider(:test, Prescient::Provider::Ollama,
-                         url:             'http://localhost:11434',
-                         embedding_model: 'test-embed',
-                         chat_model:      'test-chat')
+                         url: "http://localhost:11434",
+                         embedding_model: "test-embed",
+                         chat_model: "test-chat")
 
-    provider = @config.provider('test')
+    provider = @config.provider("test")
 
     assert_instance_of Prescient::Provider::Ollama, provider
   end
 
   def test_provider_reuses_registered_provider_instance
     @config.add_provider(:test, Prescient::Provider::Ollama,
-                         url:             'http://localhost:11434',
-                         embedding_model: 'test-embed',
-                         chat_model:      'test-chat')
+                         url: "http://localhost:11434",
+                         embedding_model: "test-embed",
+                         chat_model: "test-chat")
 
     assert_same @config.provider(:test), @config.provider(:test)
   end
 
   def test_reregistering_provider_replaces_cached_instance
     @config.add_provider(:test, Prescient::Provider::Ollama,
-                         url:             'http://localhost:11434',
-                         embedding_model: 'old-embed',
-                         chat_model:      'old-chat')
+                         url: "http://localhost:11434",
+                         embedding_model: "old-embed",
+                         chat_model: "old-chat")
     old_provider = @config.provider(:test)
 
     @config.add_provider(:test, Prescient::Provider::Ollama,
-                         url:             'http://localhost:11434',
-                         embedding_model: 'new-embed',
-                         chat_model:      'new-chat')
+                         url: "http://localhost:11434",
+                         embedding_model: "new-embed",
+                         chat_model: "new-chat")
     new_provider = @config.provider(:test)
 
     refute_same old_provider, new_provider
-    assert_equal 'new-embed', new_provider.options[:embedding_model]
+    assert_equal "new-embed", new_provider.options[:embedding_model]
   end
 
   def test_default_configuration_registers_openai_when_api_key_is_present
@@ -114,15 +114,15 @@ class ConfigurationTest < PrescientTest
         abort "OpenAI provider was not registered" unless provider
         abort "Unexpected API key" unless provider[:options]&.fetch(:api_key, "") == "test-openai-key"
       RUBY
-      unset: [
-        'OPENAI_API_KEY',
-        'ANTHROPIC_API_KEY',
-        'HUGGINGFACE_API_KEY',
-        'GEMINI_API_KEY',
-        'MISTRAL_API_KEY',
-        'DEEPSEEK_API_KEY',
-        'XAI_API_KEY',
-      ],
+      unset: %w[
+        OPENAI_API_KEY
+        ANTHROPIC_API_KEY
+        HUGGINGFACE_API_KEY
+        GEMINI_API_KEY
+        MISTRAL_API_KEY
+        DEEPSEEK_API_KEY
+        XAI_API_KEY
+      ]
     )
 
     assert_empty output
@@ -138,7 +138,7 @@ class ConfigurationTest < PrescientTest
         abort 'web search tool was not registered' unless tool
         abort 'unexpected SearXNG URL' unless tool[:options][:url] == 'http://localhost:8080'
       RUBY
-      unset: ['SEARXNG_URL'],
+      unset: ["SEARXNG_URL"]
     )
 
     assert_empty output
@@ -156,30 +156,30 @@ class ConfigurationTest < PrescientTest
         abort "Hugging Face provider was not registered" unless provider
         abort "Unexpected API key" unless provider[:options]&.fetch(:api_key, "") == "test-huggingface-key"
       RUBY
-      unset: [
-        'OPENAI_API_KEY',
-        'ANTHROPIC_API_KEY',
-        'HUGGINGFACE_API_KEY',
-        'GEMINI_API_KEY',
-        'MISTRAL_API_KEY',
-        'DEEPSEEK_API_KEY',
-        'XAI_API_KEY',
-      ],
+      unset: %w[
+        OPENAI_API_KEY
+        ANTHROPIC_API_KEY
+        HUGGINGFACE_API_KEY
+        GEMINI_API_KEY
+        MISTRAL_API_KEY
+        DEEPSEEK_API_KEY
+        XAI_API_KEY
+      ]
     )
 
     assert_empty output
   end
 
   def test_default_configuration_handles_provider_api_key_combinations
-    [{}, { 'OPENAI_API_KEY' => 'openai-key' }, { 'ANTHROPIC_API_KEY' => 'anthropic-key' },
-     { 'HUGGINGFACE_API_KEY' => 'huggingface-key' }, { 'GEMINI_API_KEY' => 'gemini-key' },
-     { 'MISTRAL_API_KEY' => 'mistral-key' }, { 'DEEPSEEK_API_KEY' => 'deepseek-key' },
-     { 'XAI_API_KEY' => 'xai-key' }].each do |env|
+    [{}, { "OPENAI_API_KEY" => "openai-key" }, { "ANTHROPIC_API_KEY" => "anthropic-key" },
+     { "HUGGINGFACE_API_KEY" => "huggingface-key" }, { "GEMINI_API_KEY" => "gemini-key" },
+     { "MISTRAL_API_KEY" => "mistral-key" }, { "DEEPSEEK_API_KEY" => "deepseek-key" },
+     { "XAI_API_KEY" => "xai-key" }].each do |env|
       config = Prescient::Configuration.new
 
       Prescient.send(:configure_default_providers, config, env)
 
-      assert_equal [:ollama, *env.keys.map { |name| name.delete_suffix('_API_KEY').downcase.to_sym }].sort,
+      assert_equal [:ollama, *env.keys.map { |name| name.delete_suffix("_API_KEY").downcase.to_sym }].sort,
                    config.providers.keys.sort
     end
   end

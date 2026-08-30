@@ -4,11 +4,7 @@
 module Prescient::Agent
   # Immutable summary of one agent run.
   class Result
-    attr_reader :response
-    attr_reader :provider
-    attr_reader :model
-    attr_reader :loops_run
-    attr_reader :metadata
+    attr_reader :response, :provider, :model, :loops_run, :metadata
 
     def initialize(response:, provider:, model:, loops_run:, success: true, metadata: {})
       @response = response
@@ -27,12 +23,12 @@ module Prescient::Agent
     # @return [Hash] Result data
     def to_h
       {
-        response:  @response,
-        provider:  @provider,
-        model:     @model,
+        response: @response,
+        provider: @provider,
+        model: @model,
         loops_run: @loops_run,
-        success:   success?,
-        metadata:  @metadata,
+        success: success?,
+        metadata: @metadata
       }
     end
   end

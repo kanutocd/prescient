@@ -25,11 +25,11 @@ module Prescient::Agent
     def parse(text)
       match = text.to_s.match(ACTION_PATTERN)
       return nil unless match
-      raise MalformedActionError, 'agent action exceeds configured size limit' if match[1].bytesize > @max_bytes
+      raise MalformedActionError, "agent action exceeds configured size limit" if match[1].bytesize > @max_bytes
 
       payload = JSON.parse(match[1])
       validate_payload(payload)
-      { name: payload.fetch('action').to_sym, arguments: payload.fetch('args') }
+      { name: payload.fetch("action").to_sym, arguments: payload.fetch("args") }
     rescue JSON::ParserError => e
       raise MalformedActionError, "agent action contains invalid JSON: #{e.message}"
     end
@@ -37,12 +37,12 @@ module Prescient::Agent
     private
 
     def validate_payload(payload)
-      unless payload.is_a?(Hash) && payload.keys.sort == ['action', 'args']
-        raise MalformedActionError, 'agent action must contain only action and args'
+      unless payload.is_a?(Hash) && payload.keys.sort == %w[action args]
+        raise MalformedActionError, "agent action must contain only action and args"
       end
-      return if payload['action'].is_a?(String) && !payload['action'].empty? && payload['args'].is_a?(Hash)
+      return if payload["action"].is_a?(String) && !payload["action"].empty? && payload["args"].is_a?(Hash)
 
-      raise MalformedActionError, 'agent action must define a name and object args'
+      raise MalformedActionError, "agent action must define a name and object args"
     end
   end
 end

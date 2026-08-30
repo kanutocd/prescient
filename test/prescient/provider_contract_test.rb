@@ -1,59 +1,59 @@
 # frozen_string_literal: true
 
-require 'test_helper'
+require "test_helper"
 
 class ProviderContractTest < PrescientTest
   PROVIDER_CLASSES = {
-    ollama:      Prescient::Provider::Ollama,
-    anthropic:   Prescient::Provider::Anthropic,
-    openai:      Prescient::Provider::OpenAI,
+    ollama: Prescient::Provider::Ollama,
+    anthropic: Prescient::Provider::Anthropic,
+    openai: Prescient::Provider::OpenAI,
     huggingface: Prescient::Provider::HuggingFace,
-    gemini:      Prescient::Provider::Gemini,
-    mistral:     Prescient::Provider::Mistral,
-    deepseek:    Prescient::Provider::DeepSeek,
-    xai:         Prescient::Provider::XAI,
+    gemini: Prescient::Provider::Gemini,
+    mistral: Prescient::Provider::Mistral,
+    deepseek: Prescient::Provider::DeepSeek,
+    xai: Prescient::Provider::XAI
   }.freeze
 
   PROVIDER_CONFIGS = {
-    ollama:      {
-      url:             'http://localhost:11434',
-      embedding_model: 'nomic-embed-text',
-      chat_model:      'llama3.2:3b',
+    ollama: {
+      url: "http://localhost:11434",
+      embedding_model: "nomic-embed-text",
+      chat_model: "llama3.2:3b"
     },
-    anthropic:   {
-      api_key: 'test-api-key',
-      model:   'claude-3-haiku-20240307',
+    anthropic: {
+      api_key: "test-api-key",
+      model: "claude-3-haiku-20240307"
     },
-    openai:      {
-      api_key:         'test-api-key',
-      embedding_model: 'text-embedding-3-small',
-      chat_model:      'gpt-4.1-mini',
+    openai: {
+      api_key: "test-api-key",
+      embedding_model: "text-embedding-3-small",
+      chat_model: "gpt-4.1-mini"
     },
     huggingface: {
-      api_key:         'test-api-key',
-      embedding_model: 'sentence-transformers/all-MiniLM-L6-v2',
-      chat_model:      'google/gemma-2-2b-it',
+      api_key: "test-api-key",
+      embedding_model: "sentence-transformers/all-MiniLM-L6-v2",
+      chat_model: "google/gemma-2-2b-it"
     },
-    gemini:      {
-      api_key:         'test-api-key',
-      embedding_model: 'gemini-embedding-001',
-      chat_model:      'gemini-2.5-flash',
+    gemini: {
+      api_key: "test-api-key",
+      embedding_model: "gemini-embedding-001",
+      chat_model: "gemini-2.5-flash"
     },
-    mistral:     {
-      api_key:         'test-api-key',
-      embedding_model: 'mistral-embed',
-      chat_model:      'mistral-large-latest',
+    mistral: {
+      api_key: "test-api-key",
+      embedding_model: "mistral-embed",
+      chat_model: "mistral-large-latest"
     },
-    deepseek:    {
-      api_key:    'test-api-key',
-      chat_model: 'deepseek-v4-flash',
+    deepseek: {
+      api_key: "test-api-key",
+      chat_model: "deepseek-v4-flash"
     },
-    xai:         {
-      api_key:    'test-api-key',
-      chat_model: 'grok-4.5',
-    },
+    xai: {
+      api_key: "test-api-key",
+      chat_model: "grok-4.5"
+    }
   }.freeze
-  HEALTH_STATUSES = ['healthy', 'partial', 'unhealthy', 'unavailable'].freeze
+  HEALTH_STATUSES = %w[healthy partial unhealthy unavailable].freeze
   BOOLEAN_VALUES = [true, false].freeze
 
   def test_all_providers_expose_the_common_contract
@@ -71,7 +71,7 @@ class ProviderContractTest < PrescientTest
     PROVIDER_CONFIGS.each do |name, options|
       provider = PROVIDER_CLASSES.fetch(name).new(**options)
       provider.stubs(:health_check).returns(
-        { status: 'unhealthy', provider: name.to_s, reachable: true, ready: false },
+        { status: "unhealthy", provider: name.to_s, reachable: true, ready: false }
       )
 
       assert_predicate provider, :available?, "#{name} should be available when reachable"
@@ -82,7 +82,7 @@ class ProviderContractTest < PrescientTest
     PROVIDER_CONFIGS.each do |name, options|
       provider = PROVIDER_CLASSES.fetch(name).new(**options)
       provider.stubs(:health_check).returns(
-        { status: 'healthy', provider: name.to_s, reachable: false, ready: false },
+        { status: "healthy", provider: name.to_s, reachable: false, ready: false }
       )
 
       refute_predicate provider, :available?, "#{name} should be unavailable when unreachable"
@@ -93,10 +93,10 @@ class ProviderContractTest < PrescientTest
     PROVIDER_CONFIGS.each do |name, options|
       provider = PROVIDER_CLASSES.fetch(name).new(**options)
       health = {
-        status:    'healthy',
-        provider:  name.to_s,
+        status: "healthy",
+        provider: name.to_s,
         reachable: true,
-        ready:     true,
+        ready: true
       }
       provider.stubs(:health_check).returns(health)
 

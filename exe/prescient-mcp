@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'prescient'
-require 'prescient/mcp'
+require "prescient"
+require "prescient/mcp"
 
 Prescient::MCP::Stdio.new.run

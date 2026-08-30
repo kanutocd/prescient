@@ -1,53 +1,53 @@
 # frozen_string_literal: true
 
-require 'test_helper'
+require "test_helper"
 
 class OllamaProviderTest < PrescientTest
   def setup
     super
     @provider = Prescient::Provider::Ollama.new(
-      url:                  'http://localhost:11434',
-      embedding_model:      'nomic-embed-text',
+      url: "http://localhost:11434",
+      embedding_model: "nomic-embed-text",
       embedding_dimensions: 768,
-      chat_model:           'llama3.1:8b',
-      timeout:              30,
+      chat_model: "llama3.1:8b",
+      timeout: 30
     )
   end
 
   def test_initialize_sets_configuration
-    assert_equal 'http://localhost:11434', @provider.options[:url]
-    assert_equal 'nomic-embed-text', @provider.options[:embedding_model]
-    assert_equal 'llama3.1:8b', @provider.options[:chat_model]
+    assert_equal "http://localhost:11434", @provider.options[:url]
+    assert_equal "nomic-embed-text", @provider.options[:embedding_model]
+    assert_equal "llama3.1:8b", @provider.options[:chat_model]
     assert_equal 30, @provider.options[:timeout]
     assert_equal 768, @provider.options[:embedding_dimensions]
   end
 
   def test_initialize_validates_required_options
     assert_raises(Prescient::Error) do
-      Prescient::Provider::Ollama.new(embedding_model: 'test')
+      Prescient::Provider::Ollama.new(embedding_model: "test")
     end
 
     assert_raises(Prescient::Error) do
-      Prescient::Provider::Ollama.new(url: 'http://localhost:11434')
+      Prescient::Provider::Ollama.new(url: "http://localhost:11434")
     end
   end
 
   def test_generate_embedding_success
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'embeddings' => [Array.new(768) { |i| i * 0.001 }],
-    })
+                                                    "embeddings" => [Array.new(768) { |i| i * 0.001 }]
+                                                  })
 
     @provider.class.expects(:post).with(
-      '/api/embed',
+      "/api/embed",
       has_entries(
-        headers: { 'Content-Type' => 'application/json' },
-        body:    regexp_matches(/"model":"nomic-embed-text".*"input":"test text"/),
-      ),
+        headers: { "Content-Type" => "application/json" },
+        body: regexp_matches(/"model":"nomic-embed-text".*"input":"test text"/)
+      )
     ).returns(mock_response)
 
-    result = @provider.generate_embedding('test text')
+    result = @provider.generate_embedding("test text")
 
     assert_equal 768, result.length
     assert_instance_of Float, result.first
@@ -55,276 +55,276 @@ class OllamaProviderTest < PrescientTest
 
   def test_generate_embedding_accepts_model_specific_dimensions_without_a_configured_size
     provider = Prescient::Provider::Ollama.new(
-      url:             'http://localhost:11434',
-      embedding_model: 'custom-embed',
-      chat_model:      'llama3.1:8b',
+      url: "http://localhost:11434",
+      embedding_model: "custom-embed",
+      chat_model: "llama3.1:8b"
     )
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns({ 'embeddings' => [[0.1, 0.2, 0.3]] })
+    mock_response.stubs(:parsed_response).returns({ "embeddings" => [[0.1, 0.2, 0.3]] })
     provider.class.expects(:post).returns(mock_response)
 
-    assert_equal [0.1, 0.2, 0.3], provider.generate_embedding('test text')
+    assert_equal [0.1, 0.2, 0.3], provider.generate_embedding("test text")
   end
 
   def test_generate_embedding_rejects_short_vectors
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'embeddings' => [Array.new(767) { |i| i * 0.1 }],
-    })
+                                                    "embeddings" => [Array.new(767) { |i| i * 0.1 }]
+                                                  })
 
     @provider.class.expects(:post).returns(mock_response)
 
-    error = assert_raises(Prescient::InvalidResponseError) {
-      @provider.generate_embedding('test text')
-    }
+    error = assert_raises(Prescient::InvalidResponseError) do
+      @provider.generate_embedding("test text")
+    end
 
-    assert_includes error.message, 'expected 768, got 767'
+    assert_includes error.message, "expected 768, got 767"
   end
 
   def test_generate_embedding_rejects_long_vectors
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'embeddings' => [Array.new(769) { |i| i * 0.1 }],
-    })
+                                                    "embeddings" => [Array.new(769) { |i| i * 0.1 }]
+                                                  })
 
     @provider.class.expects(:post).returns(mock_response)
 
-    error = assert_raises(Prescient::InvalidResponseError) {
-      @provider.generate_embedding('test text')
-    }
+    error = assert_raises(Prescient::InvalidResponseError) do
+      @provider.generate_embedding("test text")
+    end
 
-    assert_includes error.message, 'expected 768, got 769'
+    assert_includes error.message, "expected 768, got 769"
   end
 
   def test_generate_embedding_handles_missing_response
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({})
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::InvalidResponseError) do
-      @provider.generate_embedding('test text')
+      @provider.generate_embedding("test text")
     end
   end
 
   def test_generate_embedding_handles_invalid_response_shape
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns({ 'embeddings' => [0.1, 0.2] })
+    mock_response.stubs(:parsed_response).returns({ "embeddings" => [0.1, 0.2] })
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::InvalidResponseError) do
-      @provider.generate_embedding('test text')
+      @provider.generate_embedding("test text")
     end
   end
 
   def test_generate_embedding_handles_http_errors
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(false)
     mock_response.stubs(:code).returns(404)
-    mock_response.stubs(:message).returns('Not Found')
+    mock_response.stubs(:message).returns("Not Found")
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::ModelNotAvailableError) do
-      @provider.generate_embedding('test text')
+      @provider.generate_embedding("test text")
     end
   end
 
   def test_generate_response_success
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'response'          => 'This is a test response',
-      'total_duration'    => 1_500_000_000,
-      'eval_count'        => 25,
-      'eval_duration'     => 1_000_000_000,
-      'prompt_eval_count' => 10,
-    })
+                                                    "response" => "This is a test response",
+                                                    "total_duration" => 1_500_000_000,
+                                                    "eval_count" => 25,
+                                                    "eval_duration" => 1_000_000_000,
+                                                    "prompt_eval_count" => 10
+                                                  })
 
     @provider.class.expects(:post).returns(mock_response)
 
-    result = @provider.generate_response('test prompt')
+    result = @provider.generate_response("test prompt")
 
-    assert_equal 'This is a test response', result[:response]
-    assert_equal 'llama3.1:8b', result[:model]
-    assert_equal 'ollama', result[:provider]
+    assert_equal "This is a test response", result[:response]
+    assert_equal "llama3.1:8b", result[:model]
+    assert_equal "ollama", result[:provider]
     assert_in_delta 1.5, result[:processing_time]
     assert_equal 25, result[:metadata][:eval_count]
   end
 
   def test_generate_response_with_context_items
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns({ 'response' => 'Response with context' })
+    mock_response.stubs(:parsed_response).returns({ "response" => "Response with context" })
 
     @provider.class.expects(:post).returns(mock_response)
 
     context_items = [
-      { 'title' => 'Test Doc', 'content' => 'Test content' },
+      { "title" => "Test Doc", "content" => "Test content" }
     ]
 
-    result = @provider.generate_response('test prompt', context_items)
+    result = @provider.generate_response("test prompt", context_items)
 
-    assert_equal 'Response with context', result[:response]
+    assert_equal "Response with context", result[:response]
   end
 
   def test_generate_response_handles_missing_response
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({})
 
     @provider.class.expects(:post).returns(mock_response)
 
     assert_raises(Prescient::InvalidResponseError) do
-      @provider.generate_response('test prompt')
+      @provider.generate_response("test prompt")
     end
   end
 
   def test_generate_response_with_options
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
-    mock_response.stubs(:parsed_response).returns({ 'response' => 'Custom response' })
+    mock_response.stubs(:parsed_response).returns({ "response" => "Custom response" })
 
     # Verify options are passed correctly
     @provider.class.expects(:post).with(
-      '/api/generate',
-      has_entries(body: regexp_matches(/num_predict.*1000/)),
+      "/api/generate",
+      has_entries(body: regexp_matches(/num_predict.*1000/))
     ).returns(mock_response)
 
-    @provider.generate_response('test', [], max_tokens: 1000, temperature: 0.8, top_p: 0.95)
+    @provider.generate_response("test", [], max_tokens: 1000, temperature: 0.8, top_p: 0.95)
   end
 
   def test_health_check_success
-    mock_models_response = mock('models_response')
+    mock_models_response = mock("models_response")
     mock_models_response.stubs(:success?).returns(true)
     mock_models_response.stubs(:parsed_response).returns({
-      'models' => [
-        { 'name' => 'nomic-embed-text', 'size' => 274_000_000 },
-        { 'name' => 'llama3.1:8b', 'size' => 4_700_000_000 },
-      ],
-    })
+                                                           "models" => [
+                                                             { "name" => "nomic-embed-text", "size" => 274_000_000 },
+                                                             { "name" => "llama3.1:8b", "size" => 4_700_000_000 }
+                                                           ]
+                                                         })
 
     @provider.class.expects(:get).returns(mock_models_response)
 
     result = @provider.health_check
 
-    assert_equal 'healthy', result[:status]
-    assert_equal 'ollama', result[:provider]
-    assert_equal 'http://localhost:11434', result[:url]
-    assert_includes result[:models_available], 'nomic-embed-text'
-    assert_includes result[:models_available], 'llama3.1:8b'
+    assert_equal "healthy", result[:status]
+    assert_equal "ollama", result[:provider]
+    assert_equal "http://localhost:11434", result[:url]
+    assert_includes result[:models_available], "nomic-embed-text"
+    assert_includes result[:models_available], "llama3.1:8b"
 
     assert_equal(result[:models_available], @provider.available_models.map { |model| model[:name] })
   end
 
   def test_health_check_handles_errors
-    @provider.class.expects(:get).raises(StandardError.new('Connection failed'))
+    @provider.class.expects(:get).raises(StandardError.new("Connection failed"))
 
     result = @provider.health_check
 
-    assert_equal 'unavailable', result[:status]
-    assert_equal 'ollama', result[:provider]
-    assert_equal 'Prescient::Error', result[:error]
-    assert_equal 'Unexpected error: Connection failed', result[:message]
+    assert_equal "unavailable", result[:status]
+    assert_equal "ollama", result[:provider]
+    assert_equal "Prescient::Error", result[:error]
+    assert_equal "Unexpected error: Connection failed", result[:message]
     refute result[:ready]
   end
 
   def test_available_models_success
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({
-      'models' => [
-        {
-          'name'        => 'nomic-embed-text',
-          'size'        => 274_000_000,
-          'modified_at' => '2024-01-01T00:00:00Z',
-          'digest'      => 'abc123',
-        },
-      ],
-    })
+                                                    "models" => [
+                                                      {
+                                                        "name" => "nomic-embed-text",
+                                                        "size" => 274_000_000,
+                                                        "modified_at" => "2024-01-01T00:00:00Z",
+                                                        "digest" => "abc123"
+                                                      }
+                                                    ]
+                                                  })
 
     @provider.class.expects(:get).returns(mock_response)
 
     result = @provider.available_models
 
     assert_equal 1, result.length
-    assert_equal 'nomic-embed-text', result.first[:name]
+    assert_equal "nomic-embed-text", result.first[:name]
     assert_equal 274_000_000, result.first[:size]
     assert result.first[:embedding]
     refute result.first[:chat]
   end
 
   def test_pull_model_success
-    mock_response = mock('response')
+    mock_response = mock("response")
     mock_response.stubs(:success?).returns(true)
     mock_response.stubs(:parsed_response).returns({})
 
     @provider.class.expects(:post).with(
-      '/api/pull',
+      "/api/pull",
       has_entries(
-        headers: { 'Content-Type' => 'application/json' },
-        body:    '{"name":"test-model"}',
-        timeout: 300,
-      ),
+        headers: { "Content-Type" => "application/json" },
+        body: '{"name":"test-model"}',
+        timeout: 300
+      )
     ).returns(mock_response)
 
-    result = @provider.pull_model('test-model')
+    result = @provider.pull_model("test-model")
 
     assert result[:success]
-    assert_equal 'test-model', result[:model]
-    assert_includes result[:message], 'pulled successfully'
+    assert_equal "test-model", result[:model]
+    assert_includes result[:message], "pulled successfully"
   end
 
   def test_clean_text_helper
     # Test the inherited clean_text method
-    assert_equal '', @provider.send(:clean_text, nil)
-    assert_equal '', @provider.send(:clean_text, '')
-    assert_equal 'hello world', @provider.send(:clean_text, '  hello    world  ')
+    assert_equal "", @provider.send(:clean_text, nil)
+    assert_equal "", @provider.send(:clean_text, "")
+    assert_equal "hello world", @provider.send(:clean_text, "  hello    world  ")
 
     # Test length limiting
-    long_text = 'a' * 10000
+    long_text = "a" * 10_000
     cleaned = @provider.send(:clean_text, long_text)
 
     assert_equal 8000, cleaned.length
   end
 
   def test_build_prompt_without_context
-    prompt = @provider.send(:build_prompt, 'What is Ruby?')
+    prompt = @provider.send(:build_prompt, "What is Ruby?")
 
-    assert_includes prompt, 'What is Ruby?'
-    assert_includes prompt, 'helpful AI assistant'
+    assert_includes prompt, "What is Ruby?"
+    assert_includes prompt, "helpful AI assistant"
   end
 
   def test_build_prompt_with_context
     context_items = [
-      { 'title' => 'Ruby Guide', 'content' => 'Ruby is a programming language' },
+      { "title" => "Ruby Guide", "content" => "Ruby is a programming language" }
     ]
 
-    prompt = @provider.send(:build_prompt, 'What is Ruby?', context_items)
+    prompt = @provider.send(:build_prompt, "What is Ruby?", context_items)
 
-    assert_includes prompt, 'What is Ruby?'
-    assert_includes prompt, 'Ruby Guide'
-    assert_includes prompt, 'Ruby is a programming language'
+    assert_includes prompt, "What is Ruby?"
+    assert_includes prompt, "Ruby Guide"
+    assert_includes prompt, "Ruby is a programming language"
   end
 
   def test_error_handling_wrapper
     # Test that handle_errors properly wraps exceptions
-    result = @provider.send(:handle_errors) { 'success' }
+    result = @provider.send(:handle_errors) { "success" }
 
-    assert_equal 'success', result
+    assert_equal "success", result
 
     assert_raises(Prescient::ConnectionError) do
-      @provider.send(:handle_errors) { raise Net::ReadTimeout, 'timeout' }
+      @provider.send(:handle_errors) { raise Net::ReadTimeout, "timeout" }
     end
 
     assert_raises(Prescient::InvalidResponseError) do
-      @provider.send(:handle_errors) { raise JSON::ParserError, 'invalid json' }
+      @provider.send(:handle_errors) { raise JSON::ParserError, "invalid json" }
     end
   end
 end

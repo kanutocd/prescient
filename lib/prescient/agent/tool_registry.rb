@@ -32,10 +32,10 @@ module Prescient::Agent
       end
 
       Tool.new(
-        name:        name.to_sym,
+        name: name.to_sym,
         description: tool_description(tool),
-        schema:      tool_schema(tool),
-        callable:    ->(arguments) { invoke_tool(tool, arguments) },
+        schema: tool_schema(tool),
+        callable: ->(arguments) { invoke_tool(tool, arguments) }
       )
     end
 
@@ -46,25 +46,25 @@ module Prescient::Agent
     end
 
     def invoke_search(tool, arguments)
-      query = arguments['query'] || arguments[:query]
+      query = arguments["query"] || arguments[:query]
       valid_query = query.is_a?(String) && !query.strip.empty?
-      raise MalformedActionError, 'search tool requires a non-empty query' unless valid_query
+      raise MalformedActionError, "search tool requires a non-empty query" unless valid_query
 
-      tool.search(query, limit: arguments['limit'] || arguments[:limit])
+      tool.search(query, limit: arguments["limit"] || arguments[:limit])
     end
 
     def tool_description(tool)
       return tool.description if tool.respond_to?(:description)
 
-      return 'Search using the configured external capability.' if tool.respond_to?(:search)
+      return "Search using the configured external capability." if tool.respond_to?(:search)
 
-      'Invoke the configured external capability.'
+      "Invoke the configured external capability."
     end
 
     def tool_schema(tool)
       return tool.schema if tool.respond_to?(:schema)
 
-      tool.respond_to?(:search) ? { type: 'object', required: ['query'] } : { type: 'object' }
+      tool.respond_to?(:search) ? { type: "object", required: ["query"] } : { type: "object" }
     end
   end
 end

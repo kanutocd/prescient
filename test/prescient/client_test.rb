@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'test_helper'
+require "test_helper"
 
 class ClientTest < PrescientTest
   def setup
@@ -8,7 +8,7 @@ class ClientTest < PrescientTest
     # Setup a test provider
     Prescient.configure do |config|
       config.add_provider(:test_provider, TestProvider,
-                          test_option: 'test_value')
+                          test_option: "test_value")
     end
 
     @client = Prescient::Client.new(:test_provider, enable_fallback: false)
@@ -29,103 +29,103 @@ class ClientTest < PrescientTest
       Prescient::Client.new(:nonexistent_provider)
     end
 
-    error = assert_raises(Prescient::Error) {
+    error = assert_raises(Prescient::Error) do
       Prescient::Client.new(:nonexistent_provider)
-    }
+    end
 
-    assert_includes error.message, 'Provider not configured'
-    assert_includes error.message, 'nonexistent_provider'
+    assert_includes error.message, "Provider not configured"
+    assert_includes error.message, "nonexistent_provider"
 
-    error = assert_raises(Prescient::Error) {
-      Prescient::Client.new(:nonexistent_provider, provider_options: { api_key: 'temporary' })
-    }
+    error = assert_raises(Prescient::Error) do
+      Prescient::Client.new(:nonexistent_provider, provider_options: { api_key: "temporary" })
+    end
 
-    assert_includes error.message, 'Provider not configured'
+    assert_includes error.message, "Provider not configured"
   end
 
   def test_generate_embedding_delegates_to_provider
-    @client.provider.expects(:generate_embedding).with('test text', temperature: 0.5).returns([0.1, 0.2, 0.3])
+    @client.provider.expects(:generate_embedding).with("test text", temperature: 0.5).returns([0.1, 0.2, 0.3])
 
-    result = @client.generate_embedding('test text', temperature: 0.5)
+    result = @client.generate_embedding("test text", temperature: 0.5)
 
     assert_equal [0.1, 0.2, 0.3], result
   end
 
   def test_generate_embedding_handles_provider_errors
-    skip 'Mocha mock expectation setup issue - functionality works in integration tests'
+    skip "Mocha mock expectation setup issue - functionality works in integration tests"
 
-    @client.provider.expects(:generate_embedding).with(any_parameters).raises(Prescient::ConnectionError.new('Connection failed'))
+    @client.provider.expects(:generate_embedding).with(any_parameters).raises(Prescient::ConnectionError.new("Connection failed"))
 
     assert_raises(Prescient::ConnectionError) do
-      @client.generate_embedding('test text')
+      @client.generate_embedding("test text")
     end
   end
 
   def test_generate_response_delegates_to_provider
     expected_response = {
-      response: 'Test response',
-      model:    'test-model',
-      provider: 'test',
+      response: "Test response",
+      model: "test-model",
+      provider: "test"
     }
 
     @client.provider.expects(:generate_response).with(
-      'test prompt',
-      ['context'],
-      temperature: 0.7,
+      "test prompt",
+      ["context"],
+      temperature: 0.7
     ).returns(expected_response)
 
-    result = @client.generate_response('test prompt', ['context'], temperature: 0.7)
+    result = @client.generate_response("test prompt", ["context"], temperature: 0.7)
 
     assert_equal expected_response, result
   end
 
   def test_generate_response_without_context
-    @client.provider.expects(:generate_response).with('test prompt', []).returns({ response: 'response' })
+    @client.provider.expects(:generate_response).with("test prompt", []).returns({ response: "response" })
 
-    @client.generate_response('test prompt')
+    @client.generate_response("test prompt")
   end
 
   def test_search_and_generate_explicitly_feeds_normalized_results_to_provider
     Prescient.configuration.add_tool(:web_search, TestTool)
-    context = [{ title: 'Result', url: 'https://example.test', snippet: 'Context' }]
-    @client.provider.expects(:generate_response).with('Ruby query', context).returns({ response: 'Answer' })
+    context = [{ title: "Result", url: "https://example.test", snippet: "Context" }]
+    @client.provider.expects(:generate_response).with("Ruby query", context).returns({ response: "Answer" })
 
-    result = Prescient.search_and_generate('Ruby query', provider: :test_provider)
+    result = Prescient.search_and_generate("Ruby query", provider: :test_provider)
 
-    assert_equal({ response: 'Answer' }, result)
+    assert_equal({ response: "Answer" }, result)
   end
 
   def test_search_and_generate_rejects_unconfigured_tools
-    error = assert_raises(Prescient::ToolConfigurationError) {
-      Prescient.search_and_generate('Ruby query', tool: :missing, provider: :test_provider)
-    }
+    error = assert_raises(Prescient::ToolConfigurationError) do
+      Prescient.search_and_generate("Ruby query", tool: :missing, provider: :test_provider)
+    end
 
-    assert_includes error.message, 'tool not configured: missing'
+    assert_includes error.message, "tool not configured: missing"
   end
 
   def test_search_and_generate_rejects_malformed_tool_results
     Prescient.configuration.add_tool(:web_search, MalformedTool)
 
     assert_raises(Prescient::ToolInvalidResponseError) do
-      Prescient.search_and_generate('Ruby query', provider: :test_provider)
+      Prescient.search_and_generate("Ruby query", provider: :test_provider)
     end
   end
 
   def test_generate_response_handles_provider_errors
-    skip 'Mocha mock expectation setup issue - functionality works in integration tests'
+    skip "Mocha mock expectation setup issue - functionality works in integration tests"
 
-    @client.provider.expects(:generate_response).with(any_parameters).raises(Prescient::RateLimitError.new('Rate limited'))
+    @client.provider.expects(:generate_response).with(any_parameters).raises(Prescient::RateLimitError.new("Rate limited"))
 
     assert_raises(Prescient::RateLimitError) do
-      @client.generate_response('test prompt')
+      @client.generate_response("test prompt")
     end
   end
 
   def test_health_check_delegates_to_provider
     expected_health = {
-      status:   'healthy',
-      provider: 'test',
-      ready:    true,
+      status: "healthy",
+      provider: "test",
+      ready: true
     }
 
     @client.provider.expects(:health_check).returns(expected_health)
@@ -148,17 +148,17 @@ class ClientTest < PrescientTest
   def test_provider_info_returns_comprehensive_information
     # Mock provider methods
     @client.provider.stubs(:available?).returns(true)
-    @client.provider.stubs(:options).returns({ test_option: 'test_value', api_key: 'secret' })
+    @client.provider.stubs(:options).returns({ test_option: "test_value", api_key: "secret" })
 
     result = @client.provider_info
 
     assert_equal :test_provider, result[:name]
-    assert_equal 'TestProvider', result[:class]
+    assert_equal "TestProvider", result[:class]
     assert result[:available]
 
     # Should exclude sensitive information
     refute_includes result[:options].keys, :api_key
-    assert_equal 'test_value', result[:options][:test_option]
+    assert_equal "test_value", result[:options][:test_option]
   end
 
   def test_provider_info_handles_unavailable_provider
@@ -173,12 +173,12 @@ class ClientTest < PrescientTest
   def test_provider_info_sanitizes_sensitive_data
     @client.provider.stubs(:available?).returns(true)
     @client.provider.stubs(:options).returns({
-      api_key:       'secret-key',
-      password:      'secret-password',
-      token:         'secret-token',
-      secret:        'secret-value',
-      normal_option: 'visible-value',
-    })
+                                               api_key: "secret-key",
+                                               password: "secret-password",
+                                               token: "secret-token",
+                                               secret: "secret-value",
+                                               normal_option: "visible-value"
+                                             })
 
     result = @client.provider_info
 
@@ -189,28 +189,28 @@ class ClientTest < PrescientTest
     refute_includes result[:options].keys, :secret
 
     # Should include non-sensitive keys
-    assert_equal 'visible-value', result[:options][:normal_option]
+    assert_equal "visible-value", result[:options][:normal_option]
   end
 
   def test_provider_info_sanitizes_nested_and_configured_sensitive_data
-    Prescient.configuration.sensitive_keys = ['workspace_secret', 'api_token']
+    Prescient.configuration.sensitive_keys = %w[workspace_secret api_token]
     @client.provider.stubs(:available?).returns(true)
     @client.provider.stubs(:options).returns({
-      workspace_secret: 'hidden',
-      nested:           {
-        api_token: 'hidden',
-        visible:   'shown',
-      },
-      values:           [{ secret: 'hidden', visible: 'shown' }],
-    })
+                                               workspace_secret: "hidden",
+                                               nested: {
+                                                 api_token: "hidden",
+                                                 visible: "shown"
+                                               },
+                                               values: [{ secret: "hidden", visible: "shown" }]
+                                             })
 
     options = @client.provider_info[:options]
 
     refute options.key?(:workspace_secret)
     refute options[:nested].key?(:api_token)
-    assert_equal 'shown', options[:nested][:visible]
+    assert_equal "shown", options[:nested][:visible]
     refute options[:values].first.key?(:secret)
-    assert_equal 'shown', options[:values].first[:visible]
+    assert_equal "shown", options[:values].first[:visible]
   end
 
   def test_unknown_methods_raise_no_method_error
@@ -233,10 +233,10 @@ class ClientTest < PrescientTest
 
   def test_retry_logic_on_transient_errors
     # Simulate transient error followed by success
-    @client.provider.expects(:generate_embedding).twice.raises(Prescient::ConnectionError.new('Timeout')).then.returns([0.1, 0.2, 0.3])
+    @client.provider.expects(:generate_embedding).twice.raises(Prescient::ConnectionError.new("Timeout")).then.returns([0.1, 0.2, 0.3])
 
     # Should retry and succeed
-    result = @client.generate_embedding('test text')
+    result = @client.generate_embedding("test text")
 
     assert_equal [0.1, 0.2, 0.3], result
   end
@@ -244,21 +244,21 @@ class ClientTest < PrescientTest
   def test_context_item_processing
     # Test different context item formats
     context_items = [
-      'simple string',
-      { title: 'Document 1', content: 'Content 1' },
-      { 'title' => 'Document 2', 'content' => 'Content 2' },
+      "simple string",
+      { title: "Document 1", content: "Content 1" },
+      { "title" => "Document 2", "content" => "Content 2" }
     ]
 
     @client.provider.expects(:generate_response).with(
-      'test prompt',
-      context_items,
-    ).returns({ response: 'response' })
+      "test prompt",
+      context_items
+    ).returns({ response: "response" })
 
-    @client.generate_response('test prompt', context_items)
+    @client.generate_response("test prompt", context_items)
   end
 
   def test_error_propagation
-    skip 'Mocha mock expectation setup issue - functionality works in integration tests'
+    skip "Mocha mock expectation setup issue - functionality works in integration tests"
 
     # Test that different error types are properly propagated
     error_types = [
@@ -266,14 +266,14 @@ class ClientTest < PrescientTest
       Prescient::AuthenticationError,
       Prescient::RateLimitError,
       Prescient::ModelNotAvailableError,
-      Prescient::InvalidResponseError,
+      Prescient::InvalidResponseError
     ]
 
     error_types.each do |error_class|
-      @client.provider.expects(:generate_embedding).with(any_parameters).raises(error_class.new('Test error'))
+      @client.provider.expects(:generate_embedding).with(any_parameters).raises(error_class.new("Test error"))
 
       assert_raises(error_class) do
-        @client.generate_embedding('test')
+        @client.generate_embedding("test")
       end
     end
   end
@@ -282,11 +282,11 @@ class ClientTest < PrescientTest
     @client.stubs(:providers_to_try).returns([:missing])
     @client.stubs(:provider_for).returns(nil)
 
-    error = assert_raises(Prescient::Error) {
-      @client.send(:with_fallback_handling, :generate_response, 'test')
-    }
+    error = assert_raises(Prescient::Error) do
+      @client.send(:with_fallback_handling, :generate_response, "test")
+    end
 
-    assert_equal 'No available providers for generate_response', error.message
+    assert_equal "No available providers for generate_response", error.message
   end
 
   # Test provider class for testing
@@ -297,17 +297,17 @@ class ClientTest < PrescientTest
 
     def generate_response(_prompt, _context_items = [], **_options)
       {
-        response: 'Test response',
-        model:    'test-model',
-        provider: 'test',
+        response: "Test response",
+        model: "test-model",
+        provider: "test"
       }
     end
 
     def health_check
       {
-        status:   'healthy',
-        provider: 'test',
-        ready:    true,
+        status: "healthy",
+        provider: "test",
+        ready: true
       }
     end
 
@@ -316,7 +316,7 @@ class ClientTest < PrescientTest
     end
 
     def custom_method(*args)
-      "custom_result_#{args.join('_')}"
+      "custom_result_#{args.join("_")}"
     end
 
     protected
@@ -328,7 +328,7 @@ class ClientTest < PrescientTest
 
   class TestTool < Prescient::Tool::Base
     def search(_query, limit: nil)
-      { results: [{ title: 'Result', url: 'https://example.test', snippet: 'Context' }].first(limit || 1) }
+      { results: [{ title: "Result", url: "https://example.test", snippet: "Context" }].first(limit || 1) }
     end
   end
 

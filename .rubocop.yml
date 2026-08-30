@@ -25,7 +25,8 @@ AllCops:
     - 'Rakefile'
     - 'examples/**/*'
 
-# === LAYOUT & FORMATTING ===
+Metrics/ParameterLists:
+  CountKeywordArgs: false
 
 Layout/LineLength:
   Max: 120
@@ -38,291 +39,40 @@ Layout/LineLength:
     - '^\s*context\s'  # Test contexts
     - '^\s*describe\s'  # Test descriptions
 
-Layout/MultilineMethodCallIndentation:
-  EnforcedStyle: indented
-
-Layout/FirstHashElementIndentation:
-  EnforcedStyle: consistent
-
-Layout/FirstArrayElementIndentation:
-  EnforcedStyle: consistent
-
-Layout/HashAlignment:
-  EnforcedHashRocketStyle: table
-  EnforcedColonStyle: table
-
-Layout/SpaceInsideHashLiteralBraces:
-  EnforcedStyle: space
-
-Layout/EmptyLinesAroundModuleBody:
-  Enabled: false
-
-Layout/EmptyLinesAroundClassBody:
-  Enabled: false
-
-# === STYLE ===
-
 Style/StringLiterals:
-  EnforcedStyle: single_quotes
+  EnforcedStyle: double_quotes
 
 Style/StringLiteralsInInterpolation:
-  EnforcedStyle: single_quotes
-
-Style/FrozenStringLiteralComment:
-  Enabled: true
-  EnforcedStyle: always
-  Exclude:
-    - 'examples/**/*'
-
-Style/Documentation:
-  Enabled: false
-
-Style/ClassAndModuleChildren:
-  EnforcedStyle: compact
-
-Style/TrailingCommaInArguments:
-  EnforcedStyleForMultiline: comma
-
-Style/TrailingCommaInArrayLiteral:
-  EnforcedStyleForMultiline: comma
-
-Style/TrailingCommaInHashLiteral:
-  EnforcedStyleForMultiline: comma
-
-Style/HashSyntax:
-  EnforcedStyle: ruby19_no_mixed_keys
-
-Style/Lambda:
-  EnforcedStyle: literal
-
-Style/NumericLiterals:
-  MinDigits: 6
-
-Style/BlockDelimiters:
-  EnforcedStyle: semantic
-  AllowedMethods:
-    - expect
-    - let
-    - subject
-
-Style/WordArray:
-  EnforcedStyle: brackets
-
-Style/SymbolArray:
-  EnforcedStyle: brackets
-
-Style/FormatString:
-  EnforcedStyle: percent
-
-Style/CollectionMethods:
-  PreferredMethods:
-    collect: map
-    collect!: map!
-    detect: find
-    find_all: select
-    reduce: inject
-
-Style/Alias:
-  EnforcedStyle: prefer_alias_method
-
-Style/AccessorGrouping:
-  EnforcedStyle: separated
-
-Style/BisectedAttrAccessor:
-  Enabled: true
-
-Style/RedundantAssignment:
-  Enabled: true
-
-Style/RedundantFetchBlock:
-  Enabled: true
-
-Style/RedundantFileExtensionInRequire:
-  Enabled: true
-
-Style/RedundantRegexpCharacterClass:
-  Enabled: true
-
-Style/RedundantRegexpEscape:
-  Enabled: true
-
-Style/SlicingWithRange:
-  Enabled: true
-
-Style/ExponentialNotation:
-  Enabled: true
-
-Style/HashTransformKeys:
-  Enabled: true
-
-Style/HashTransformValues:
-  Enabled: true
-
-Style/RedundantReturn:
-  AllowMultipleReturnValues: true
-
-# === METRICS ===
-
-Metrics/ModuleLength:
-  Max: 150
+  EnforcedStyle: double_quotes
 
 Metrics/ClassLength:
-  Enabled: false
-  Max: 150
+  Enabled: true
+  Max: 145
   Exclude:
     - 'test/**/*'
 
 Metrics/MethodLength:
-  Enabled: false
-  Max: 25
+  Max: 37
   Exclude:
-    - 'test/**/*'
-    - 'db/**/*'
-    - 'lib/prescient/provider/*.rb'
-
-Metrics/BlockLength:
-  Enabled: false
-  Max: 25
-  Exclude:
-    - 'test/**/*'
-    - 'lib/prescient.rb'  # Configuration block
+    - "test/**/*"
+    - "db/migrate/**/*"
 
 Metrics/AbcSize:
-  Max: 20
+  Enabled: true
+  Max: 55
   Exclude:
-    - 'test/**/*'
-    - 'db/**/*'
-    - 'lib/prescient/provider/*.rb'
-
-Metrics/CyclomaticComplexity:
-  Max: 8
-  Exclude:
-    - 'lib/prescient/provider/*.rb'
-
-Metrics/PerceivedComplexity:
-  Enabled: false
-  Max: 8
-  Exclude:
-    - 'lib/prescient/provider/*.rb'
-
-Metrics/ParameterLists:
-  Max: 5
-  CountKeywordArgs: false
-
-# === LINT ===
-
-Lint/RaiseException:
-  Enabled: true
-
-Lint/StructNewOverride:
-  Enabled: true
-
-Lint/DeprecatedOpenSSLConstant:
-  Enabled: true
-
-Lint/MixedRegexpCaptureTypes:
-  Enabled: true
-
-Lint/DuplicateElsifCondition:
-  Enabled: true
-
-Lint/BinaryOperatorWithIdenticalOperands:
-  Enabled: true
-
-Lint/DuplicateRescueException:
-  Enabled: true
-
-Lint/EmptyConditionalBody:
-  Enabled: true
-
-Lint/FloatComparison:
-  Enabled: true
-
-Lint/MissingSuper:
-  Enabled: true
-
-Lint/OutOfRangeRegexpRef:
-  Enabled: true
-
-Lint/SelfAssignment:
-  Enabled: true
-
-Lint/TopLevelReturnWithArgument:
-  Enabled: true
-
-Lint/UnreachableLoop:
-  Enabled: true
-
-# === NAMING ===
-
-Naming/PredicatePrefix:
-  ForbiddenPrefixes:
-    - is_
-  AllowedMethods:
-    - is_a?
-
-Naming/MemoizedInstanceVariableName:
-  EnforcedStyleForLeadingUnderscores: required
-
-Naming/VariableNumber:
-  EnforcedStyle: snake_case
-
-# === SECURITY ===
-
-Security/Open:
-  Enabled: true
-
-Security/YAMLLoad:
-  Enabled: true
-
-Security/JSONLoad:
-  Enabled: true
-
-# === PERFORMANCE ===
-
-Performance/AncestorsInclude:
-  Enabled: true
-
-Performance/BigDecimalWithNumericArgument:
-  Enabled: true
-
-Performance/RedundantSortBlock:
-  Enabled: true
-
-Performance/RedundantStringChars:
-  Enabled: true
-
-Performance/ReverseFirst:
-  Enabled: true
-
-Performance/SortReverse:
-  Enabled: true
-
-Performance/Squeeze:
-  Enabled: true
-
-Performance/StringInclude:
-  Enabled: true
-
-Performance/Sum:
-  Enabled: true
-
-# === MINITEST ===
+    - "test/**/*"
+    - "db/migrate/**/*"
 
 Minitest/MultipleAssertions:
+  Max: 20
+
+Metrics/PerceivedComplexity:
   Max: 10
 
-Minitest/AssertTruthy:
-  Enabled: true
+Metrics/BlockLength:
+  Max: 35
 
-Minitest/AssertWithExpectedArgument:
-  Enabled: true
 
-Minitest/RefuteFalse:
-  Enabled: true
-
-Minitest/RefuteNil:
-  Enabled: true
-
-Minitest/TestMethodName:
-  Enabled: true
+Metrics/CyclomaticComplexity:
+  Max: 10

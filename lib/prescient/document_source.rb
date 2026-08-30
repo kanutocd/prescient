@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
-require 'json'
+require "json"
 
-# rubocop:disable Style/ClassAndModuleChildren
 module Prescient
   # Bounded sources of JSON documents suitable for generation context.
   module DocumentSource
@@ -14,8 +13,8 @@ module Prescient
     # Common validation and size-bound behavior for document sources.
     class Base
       def initialize(max_documents: DEFAULT_MAX_DOCUMENTS, max_bytes: DEFAULT_MAX_BYTES)
-        @max_documents = positive_integer(max_documents, 'max_documents')
-        @max_bytes = positive_integer(max_bytes, 'max_bytes')
+        @max_documents = positive_integer(max_documents, "max_documents")
+        @max_bytes = positive_integer(max_bytes, "max_bytes")
       end
 
       # @return [Array<Hash>] JSON object documents
@@ -27,7 +26,7 @@ module Prescient
 
       def normalize(value)
         documents = value.is_a?(Array) ? value : [value]
-        raise Prescient::Error, 'document source must contain JSON objects' unless documents.all?(Hash)
+        raise Prescient::Error, "document source must contain JSON objects" unless documents.all?(Hash)
         if documents.length > @max_documents
           raise Prescient::Error, "document source cannot contain more than #{@max_documents} documents"
         end
@@ -73,7 +72,7 @@ module Prescient
         @path = path
         return if @path.is_a?(String) && !@path.empty?
 
-        raise Prescient::Error, 'document source path must be a non-empty string'
+        raise Prescient::Error, "document source path must be a non-empty string"
       end
 
       # @return [Array<Hash>] Documents loaded from the file
@@ -98,7 +97,7 @@ module Prescient
         @key = key
         return if @key.is_a?(String) && !@key.empty?
 
-        raise Prescient::Error, 'Redis document key must be a non-empty string'
+        raise Prescient::Error, "Redis document key must be a non-empty string"
       end
 
       # @return [Array<Hash>] Documents loaded from Redis
@@ -108,9 +107,8 @@ module Prescient
 
         parse_json(value)
       rescue NoMethodError
-        raise Prescient::Error, 'Redis document source client must provide get'
+        raise Prescient::Error, "Redis document source client must provide get"
       end
     end
   end
 end
-# rubocop:enable Style/ClassAndModuleChildren

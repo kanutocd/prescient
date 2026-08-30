@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Main Prescient module for AI provider abstraction
 module Prescient
   # Client class for interacting with AI providers
   #
@@ -104,10 +105,10 @@ module Prescient
     #   and recursively sanitized :options
     def provider_info
       {
-        name:      @provider_name,
-        class:     @provider.class.name.split('::').last,
+        name: @provider_name,
+        class: @provider.class.name.split("::").last,
         available: available?,
-        options:   sanitize_options(@provider.options),
+        options: sanitize_options(@provider.options)
       }
     end
 
@@ -210,7 +211,7 @@ module Prescient
         Prescient::ConnectionError,
         Prescient::RateLimitError,
         Prescient::ModelNotAvailableError,
-        Prescient::ProviderError,
+        Prescient::ProviderError
       ].any? { |error_class| error.is_a?(error_class) }
     end
   end
@@ -264,12 +265,12 @@ module Prescient
 
     search_result = search_tool.search(query, limit: limit)
     context_items = search_result[:results]
-    raise Prescient::ToolInvalidResponseError, 'tool results must be an array' unless context_items.is_a?(Array)
+    raise Prescient::ToolInvalidResponseError, "tool results must be an array" unless context_items.is_a?(Array)
 
     client(provider, enable_fallback:, provider_options:).generate_response(
       query,
       context_items,
-      **options,
+      **options
     )
   end
 

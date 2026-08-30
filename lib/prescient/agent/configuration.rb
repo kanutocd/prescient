@@ -13,23 +13,18 @@ module Prescient::Agent
     # @return [Integer] Default observation size limit
     DEFAULT_MAX_OBSERVATION_BYTES = 16_384
 
-    attr_reader :max_loops
-    attr_reader :max_context_bytes
-    attr_reader :max_action_bytes
-    attr_reader :max_observation_bytes
-    attr_reader :authorization
-    attr_reader :telemetry
+    attr_reader :max_loops, :max_context_bytes, :max_action_bytes, :max_observation_bytes, :authorization, :telemetry
 
     def initialize(max_loops: DEFAULT_MAX_LOOPS, max_context_bytes: DEFAULT_MAX_CONTEXT_BYTES,
                    max_action_bytes: DEFAULT_MAX_ACTION_BYTES,
                    max_observation_bytes: DEFAULT_MAX_OBSERVATION_BYTES,
                    authorization: nil, telemetry: nil)
-      @max_loops = positive_integer(max_loops, 'max_loops')
-      @max_context_bytes = positive_integer(max_context_bytes, 'max_context_bytes')
-      @max_action_bytes = positive_integer(max_action_bytes, 'max_action_bytes')
-      @max_observation_bytes = positive_integer(max_observation_bytes, 'max_observation_bytes')
-      @authorization = callable_or_nil(authorization, 'authorization')
-      @telemetry = callable_or_nil(telemetry, 'telemetry')
+      @max_loops = positive_integer(max_loops, "max_loops")
+      @max_context_bytes = positive_integer(max_context_bytes, "max_context_bytes")
+      @max_action_bytes = positive_integer(max_action_bytes, "max_action_bytes")
+      @max_observation_bytes = positive_integer(max_observation_bytes, "max_observation_bytes")
+      @authorization = callable_or_nil(authorization, "authorization")
+      @telemetry = callable_or_nil(telemetry, "telemetry")
     end
 
     private

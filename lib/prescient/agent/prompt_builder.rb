@@ -9,7 +9,7 @@ module Prescient::Agent
     # @param tools [Array<ToolRegistry::Tool>] Allowed tools
     # @return [String] Deterministic orchestration prompt
     def self.build(system_instruction:, tools:)
-      tool_text = tools.empty? ? 'None' : tools.map { |tool| tool_instruction(tool) }.join("\n")
+      tool_text = tools.empty? ? "None" : tools.map { |tool| tool_instruction(tool) }.join("\n")
       <<~PROMPT
         #{system_instruction}
 
