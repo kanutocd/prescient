@@ -312,19 +312,12 @@ module Prescient
       return options if options.is_a?(Integer)
 
       task = read_text(options[:arguments], "task")
-      runtime = agent_runtime(options)
-      result = runtime.run(task)
-      options[:format] == "json" ? print_json(result.to_h) : @output.puts(result.response)
-      0
-    end
-
-    def agent_runtime(options)
-      configuration = Prescient::Agent::Configuration.new(max_loops: options[:max_loops] || 5)
-      Prescient::Agent::Runtime.new(
-        provider: options[:provider]&.to_sym,
+      Prescient::Agent::CLIAdapter.new(output: @output, errors: @errors).run(
+        task:,
         client: client_for(options),
         tool_names: options.fetch(:tools, []),
-        configuration: configuration,
+        max_loops: options[:max_loops] || Prescient::Agent::Configuration::DEFAULT_MAX_LOOPS,
+        format: options[:format],
         provider_options: provider_options(options),
         generation_options: model_options(options)
       )

@@ -257,6 +257,10 @@ class APITest < PrescientTest
     assert_equal "authentication_required", body(unauthorized).dig("error", "type")
     assert_equal 200, protected_api.call("REQUEST_METHOD" => "GET", "PATH_INFO" => "/healthz").first
 
+    principal_api = Prescient::API.new(authentication: ->(_env) { { id: "user-1" } })
+
+    assert_equal 200, principal_api.call("REQUEST_METHOD" => "GET", "PATH_INFO" => "/v1/providers").first
+
     generated_id = call("GET", "/v1/providers", headers: { "HTTP_X_REQUEST_ID" => "not valid" })
 
     assert_match(/\A[0-9a-f-]{36}\z/, generated_id[1]["x-request-id"])

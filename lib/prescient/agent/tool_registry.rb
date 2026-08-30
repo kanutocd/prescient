@@ -21,6 +21,7 @@ module Prescient::Agent
       tool = @tools[name.to_sym]
       raise UnauthorizedToolError, "agent tool not allowed: #{name}" unless tool
 
+      SchemaValidator.validate!(tool.schema, arguments)
       tool.callable.call(arguments)
     end
 

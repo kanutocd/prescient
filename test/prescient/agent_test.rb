@@ -200,6 +200,12 @@ class AgentTest < PrescientTest
     assert_raises(Prescient::Agent::ConfigurationError) do
       Prescient::Agent::Configuration.new(max_observation_bytes: nil)
     end
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::Configuration.new(max_task_bytes: 0)
+    end
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::Configuration.new(max_response_bytes: "large")
+    end
   end
 
   def test_context_rejects_initial_and_appended_overflow
@@ -234,6 +240,45 @@ class AgentTest < PrescientTest
     assert_equal "provider_unavailable", serialized[:error][:category]
     assert_equal "The requested operation failed.", serialized[:error][:message]
     refute_includes JSON.generate(serialized), "secret"
+  end
+
+  def test_runtime_enforces_task_and_response_limits_and_emits_failures
+    client = FakeClient.new([{ response: "x" * 20 }])
+    configuration = Prescient::Agent::Configuration.new(max_task_bytes: 2, max_response_bytes: 2)
+
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::Runtime.new(client:, tools: {}, configuration:).run("task")
+    end
+
+    events = []
+    configuration = Prescient::Agent::Configuration.new(max_response_bytes: 2, telemetry: ->(event) { events << event })
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::Runtime.new(client:, tools: {}, configuration:).run("ok")
+    end
+    assert_equal :failed, events.last[:event]
+    refute events.last[:success]
+  end
+
+  def test_tool_schema_validates_required_and_additional_arguments
+    tool = CallableTool.new
+    tool.instance_variable_set(
+      :@schema,
+      {
+        type: "object", required: ["account_id"], properties: { account_id: { type: "string" } },
+        additionalProperties: false
+      }
+    )
+    registry = Prescient::Agent::ToolRegistry.new(accounts: tool)
+
+    assert_raises(Prescient::Agent::MalformedActionError) { registry.invoke(:accounts, {}) }
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      registry.invoke(:accounts, { account_id: "acct-1", extra: true })
+    end
+    assert_equal({ account_id: "acct-1", status: "due" }, registry.invoke(:accounts, { "account_id" => "acct-1" }))
+    assert_equal({}, Prescient::Agent::SchemaValidator.validate!({}, {}))
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!({ type: "boolean" }, "true")
+    end
   end
 
   def test_parser_returns_nil_without_an_action_and_rejects_oversize_actions

@@ -19,15 +19,21 @@ module Prescient::Agent
       @authorization = authorization || configuration.authorization
       @telemetry = telemetry || configuration.telemetry
       @actions = []
+      @loops_run = 0
     end
 
+    # Execute one bounded agent task.
+    # @param task [String] Task instruction
+    # @return [Result] Completed agent result
     def run(task)
       validate_task(task)
       context = build_context(task)
 
       @configuration.max_loops.times do |index|
+        @loops_run = index + 1
         emit(:iteration, loop: index + 1)
         response = @client.generate_response(task, context.to_a, **@generation_options)
+        validate_response!(response)
         unless action_appended?(context, response)
           emit(:completed, loops_run: index + 1, actions: @actions.dup, success: true)
           return result(response, index + 1)
@@ -36,6 +42,15 @@ module Prescient::Agent
 
       emit(:max_loops_exceeded, loops_run: @configuration.max_loops, actions: @actions.dup, success: false)
       raise MaxLoopsExceededError, "agent exceeded maximum loops: #{@configuration.max_loops}"
+    rescue StandardError => e
+      failure = {
+        loops_run: @loops_run,
+        actions: @actions.dup,
+        success: false,
+        error: ErrorSerializer.serialize(e).fetch(:error)
+      }
+      emit(:failed, **failure)
+      raise
     end
 
     private
@@ -81,9 +96,18 @@ module Prescient::Agent
     end
 
     def validate_task(task)
-      return if task.is_a?(String) && !task.strip.empty?
+      valid = task.is_a?(String) && !task.strip.empty? && task.bytesize <= @configuration.max_task_bytes
+      return if valid
 
-      raise ConfigurationError, "agent task must be a non-empty string"
+      raise ConfigurationError, "agent task must be a non-empty string within #{@configuration.max_task_bytes} bytes"
+    end
+
+    def validate_response!(response)
+      text = response[:response]
+      return if text.is_a?(String) && text.bytesize <= @configuration.max_response_bytes
+
+      raise ConfigurationError,
+            "agent response must be a string within #{@configuration.max_response_bytes} bytes"
     end
 
     def result(response, loops_run)
@@ -100,6 +124,8 @@ module Prescient::Agent
       return unless @telemetry
 
       @telemetry.call({ event:, **attributes }.freeze)
+    rescue StandardError
+      nil
     end
   end
 end

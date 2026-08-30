@@ -312,14 +312,19 @@ module Prescient
     def authenticated?(env)
       return true unless @authentication
 
-      @authentication.call(env) == true
+      @principal = nil
+      result = @authentication.call(env)
+      return false unless result
+
+      @principal = result == true ? nil : result
+      true
     end
 
     def request_context(env, request_id)
       base = {
         request_id: request_id,
         tenant_id: env["HTTP_X_TENANT_ID"],
-        principal: env["REMOTE_USER"]
+        principal: @principal || env["REMOTE_USER"]
       }.compact
       return base unless @request_context
 
