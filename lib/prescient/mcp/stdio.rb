@@ -26,18 +26,12 @@ module Prescient::MCP
 
       def handle(request)
         id = request["id"]
-        result = case request["method"]
-                 when "initialize" then @server.initialize_result
-                 when "tools/list" then { tools: @server.tools }
-                 when "tools/call"
-                   @server.call_tool(request.dig("params", "name"), request.dig("params", "arguments") || {})
-                 when "resources/list" then { resources: @server.resources }
-                 when "resources/read" then @server.read_resource(request.dig("params", "uri"))
-                 else return error_response(id, -32_601, "method not found")
-                 end
+        result = @server.dispatch(request)
         { jsonrpc: "2.0", id:, result: }
-      rescue StandardError => e
-        error_response(id, -32_600, e.message)
+      rescue ArgumentError
+        error_response(id, -32_601, "MCP method not found")
+      rescue StandardError
+        error_response(id, -32_600, "MCP operation failed")
       end
 
       def error_response(id, code, message)

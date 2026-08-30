@@ -115,6 +115,20 @@ class MCPTest < PrescientTest
     ).call_tool("unknown")
 
     assert_includes unknown[:content].first[:text], "invalid_request"
+
+    missing_prompt = @server.call_tool("prescient_generate")
+
+    assert_includes missing_prompt[:content].first[:text], "invalid_request"
+    non_object = @server.call_tool("prescient_generate", [])
+
+    assert_includes non_object[:content].first[:text], "invalid_request"
+
+    authorized = Prescient::MCP::Server.new(
+      client_factory: ->(_provider) { Client.new },
+      authorization: ->(**) { true }
+    )
+
+    assert_includes authorized.call_tool("prescient_providers")[:content].first[:text], "mcp_test"
   end
 
   def test_server_runs_agent_tool_and_stdio_handles_protocol_messages
@@ -138,5 +152,50 @@ class MCPTest < PrescientTest
     assert_equal "2.0", responses.first["jsonrpc"]
     assert_equal(-32_601, responses[-2].dig("error", "code"))
     assert_equal(-32_700, responses.last.dig("error", "code"))
+  end
+
+  def test_rack_transport_requires_authentication_and_dispatches_requests
+    rack = Prescient::MCP::Rack.new(
+      authentication: ->(_env) { { principal: "user-1" } },
+      server: @server,
+      request_context: ->(env) { { tenant_id: env["HTTP_X_TENANT_ID"] } }
+    )
+    env = {
+      "REQUEST_METHOD" => "POST",
+      "HTTP_X_TENANT_ID" => "tenant-1",
+      "rack.input" => StringIO.new(JSON.generate(jsonrpc: "2.0", id: 1, method: "initialize"))
+    }
+
+    response = rack.call(env)
+
+    assert_equal 200, response.first
+    assert_includes JSON.parse(response.last.first).keys, "result"
+
+    assert_equal 404, rack.call("REQUEST_METHOD" => "GET").first
+    denied = Prescient::MCP::Rack.new(authentication: ->(_env) { false }, server: @server)
+
+    assert_equal 401, denied.call(env).first
+    invalid = env.merge("rack.input" => StringIO.new("{"))
+
+    assert_equal 400, rack.call(invalid).first
+    limited = Prescient::MCP::Rack.new(authentication: ->(_env) { true }, max_body_bytes: 2, server: @server)
+    limited_env = env.merge("rack.input" => StringIO.new(JSON.generate(jsonrpc: "2.0")))
+
+    assert_equal 400, limited.call(limited_env).first
+
+    invalid_context = Prescient::MCP::Rack.new(
+      authentication: ->(_env) { true },
+      request_context: ->(_env) { Object.new },
+      server: @server
+    )
+    valid_env = {
+      "REQUEST_METHOD" => "POST",
+      "rack.input" => StringIO.new(JSON.generate(jsonrpc: "2.0", id: 2, method: "initialize"))
+    }
+
+    assert_equal 400, invalid_context.call(valid_env).first
+    assert_raises(ArgumentError) do
+      Prescient::MCP::Rack.new(authentication: ->(_env) { true }, max_body_bytes: 0, server: @server)
+    end
   end
 end

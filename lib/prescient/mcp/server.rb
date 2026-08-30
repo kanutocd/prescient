@@ -47,6 +47,22 @@ module Prescient::MCP
         # rubocop:enable Layout/HashAlignment
       end
 
+      # Dispatch one MCP JSON-RPC method.
+      # @param request [Hash] JSON-RPC request
+      # @param context [Hash] Request-scoped context
+      # @return [Hash] Method result
+      def dispatch(request, context: {})
+        case request["method"]
+        when "initialize" then initialize_result
+        when "tools/list" then { tools: }
+        when "tools/call"
+          call_tool(request.dig("params", "name"), request.dig("params", "arguments") || {}, context:)
+        when "resources/list" then { resources: }
+        when "resources/read" then read_resource(request.dig("params", "uri"))
+        else raise ArgumentError, "MCP method not found: #{request["method"]}"
+        end
+      end
+
       # Return enabled MCP tool definitions.
       # @return [Array<Hash>] Discoverable tools
       def tools
