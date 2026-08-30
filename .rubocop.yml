@@ -76,3 +76,6 @@ Metrics/BlockLength:
 
 Metrics/CyclomaticComplexity:
   Max: 10
+
+Style/DirectiveScope:
+  Enabled: false
