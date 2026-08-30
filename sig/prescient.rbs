@@ -128,7 +128,9 @@ module Prescient
       attr_reader max_action_bytes: Integer
       attr_reader max_observation_bytes: Integer
 
-      def initialize: (?max_loops: Integer, ?max_context_bytes: Integer, ?max_action_bytes: Integer, ?max_observation_bytes: Integer) -> void
+      attr_reader authorization: Proc?
+      attr_reader telemetry: Proc?
+      def initialize: (?max_loops: Integer, ?max_context_bytes: Integer, ?max_action_bytes: Integer, ?max_observation_bytes: Integer, ?authorization: Proc?, ?telemetry: Proc?) -> void
     end
 
     class Context
@@ -153,6 +155,7 @@ module Prescient
       class Tool
         attr_reader name: Symbol
         attr_reader description: String
+        attr_reader schema: Hash[untyped, untyped]
         attr_reader callable: Proc
       end
 
@@ -173,8 +176,36 @@ module Prescient
     end
 
     class Runtime
-      def initialize: (?provider: Symbol?, ?client: untyped, ?tools: Hash[Symbol | String, untyped]?, ?tool_names: Array[Symbol | String], ?configuration: Configuration, ?system_prompt: String) -> void
+      def initialize: (?provider: Symbol?, ?client: untyped, ?tools: Hash[Symbol | String, untyped]?, ?tool_names: Array[Symbol | String], ?configuration: Configuration, ?system_prompt: String, ?provider_options: Hash[Symbol, untyped], ?generation_options: Hash[Symbol, untyped], ?authorization: Proc?, ?telemetry: Proc?, ?request_context: Hash[Symbol, untyped]) -> void
       def run: (String) -> Result
+    end
+  end
+
+  module MCP
+    class Configuration
+      DEFAULT_MAX_INPUT_BYTES: Integer
+      DEFAULT_TOOLS: Array[String]
+      SUPPORTED_RESOURCES: Array[String]
+      attr_reader name: String
+      attr_reader version: String
+      attr_reader max_input_bytes: Integer
+      attr_reader tools: Array[String]
+      attr_reader resources: Array[String]
+      def initialize: (?name: String, ?version: String, ?max_input_bytes: Integer, ?tools: Array[String], ?resources: Array[String]) -> void
+    end
+
+    class Server
+      def initialize: (?configuration: Configuration, ?client_factory: Proc?, ?authorization: Proc?) -> void
+      def initialize_result: () -> Hash[Symbol, untyped]
+      def tools: () -> Array[Hash[String, untyped]]
+      def resources: () -> Array[Hash[String, untyped]]
+      def call_tool: (String | Symbol, ?Hash[String, untyped], ?context: Hash[Symbol, untyped]) -> Hash[Symbol, untyped]
+      def read_resource: (String | Symbol) -> Hash[Symbol, untyped]
+    end
+
+    class Stdio
+      def initialize: (?server: Server, ?input: untyped, ?output: untyped) -> void
+      def run: () -> void
     end
   end
 
