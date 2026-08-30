@@ -101,6 +101,79 @@ module Prescient
     end
   end
 
+  module Agent
+    class Error < Prescient::Error
+    end
+    class ConfigurationError < Error
+    end
+    class MalformedActionError < Error
+    end
+    class UnauthorizedToolError < Error
+    end
+    class MaxLoopsExceededError < Error
+    end
+
+    class Configuration
+      DEFAULT_MAX_LOOPS: Integer
+      DEFAULT_MAX_CONTEXT_BYTES: Integer
+      DEFAULT_MAX_ACTION_BYTES: Integer
+      DEFAULT_MAX_OBSERVATION_BYTES: Integer
+
+      attr_reader max_loops: Integer
+      attr_reader max_context_bytes: Integer
+      attr_reader max_action_bytes: Integer
+      attr_reader max_observation_bytes: Integer
+
+      def initialize: (?max_loops: Integer, ?max_context_bytes: Integer, ?max_action_bytes: Integer, ?max_observation_bytes: Integer) -> void
+    end
+
+    class Context
+      attr_reader messages: Array[Hash[Symbol, String]]
+      def initialize: (system_prompt: String, task: String, ?max_bytes: Integer) -> void
+      def append: (role: String, content: String) -> void
+      def to_a: () -> Array[Hash[Symbol, String]]
+    end
+
+    class Parser
+      ACTION_PATTERN: Regexp
+      def self.parse: (String, ?max_bytes: Integer) -> Hash[Symbol, untyped]?
+      def initialize: (?max_bytes: Integer) -> void
+      def parse: (String) -> Hash[Symbol, untyped]?
+    end
+
+    class PromptBuilder
+      def self.build: (system_instruction: String, tools: Array[ToolRegistry::Tool]) -> String
+    end
+
+    class ToolRegistry
+      class Tool
+        attr_reader name: Symbol
+        attr_reader description: String
+        attr_reader callable: Proc
+      end
+
+      def initialize: (Hash[Symbol | String, untyped]) -> void
+      def all: () -> Array[Tool]
+      def invoke: (Symbol | String, Hash[String | Symbol, untyped]) -> untyped
+    end
+
+    class Result
+      attr_reader response: String
+      attr_reader provider: Symbol | String | nil
+      attr_reader model: String | nil
+      attr_reader loops_run: Integer
+      attr_reader metadata: Hash[untyped, untyped]
+      def initialize: (response: String, provider: Symbol | String | nil, model: String | nil, loops_run: Integer, ?success: bool, ?metadata: Hash[untyped, untyped]) -> void
+      def success?: () -> bool
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+
+    class Runtime
+      def initialize: (?provider: Symbol?, ?client: untyped, ?tools: Hash[Symbol | String, untyped]?, ?tool_names: Array[Symbol | String], ?configuration: Configuration, ?system_prompt: String) -> void
+      def run: (String) -> Result
+    end
+  end
+
   class Base
     attr_reader options: Hash[Symbol, untyped]
     attr_reader provider_name: String
