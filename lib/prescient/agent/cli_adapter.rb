@@ -11,10 +11,11 @@ module Prescient::Agent
 
     # Run an agent task and render a text or JSON result.
     # @return [Integer] Process exit status
-    def run(task:, client:, tool_names: [], max_loops: Configuration::DEFAULT_MAX_LOOPS,
-            format: "text", provider_options: {}, generation_options: {})
+    def run(task:, client: nil, provider: nil, tool_names: [], max_loops: Configuration::DEFAULT_MAX_LOOPS,
+            format: "text", provider_options: {}, generation_options: {}, telemetry: nil)
       runtime = Runtime.new(
-        client:, tool_names:, configuration: Configuration.new(max_loops:), provider_options:, generation_options:
+        client:, provider:, tool_names:, configuration: Configuration.new(max_loops:, telemetry:),
+        provider_options:, generation_options:
       )
       result = runtime.run(task)
       format == "json" ? @output.puts(JSON.generate(result.to_h)) : @output.puts(result.response)

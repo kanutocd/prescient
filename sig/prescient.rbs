@@ -186,13 +186,13 @@ module Prescient
     end
 
     class Runtime
-      def initialize: (?provider: Symbol?, ?client: untyped, ?tools: Hash[Symbol | String, untyped]?, ?tool_names: Array[Symbol | String], ?configuration: Configuration, ?system_prompt: String, ?provider_options: Hash[Symbol, untyped], ?generation_options: Hash[Symbol, untyped], ?authorization: Proc?, ?telemetry: Proc?, ?request_context: Hash[Symbol, untyped]) -> void
+      def initialize: (?provider: Symbol?, ?client: untyped, ?tools: Hash[Symbol | String, untyped]?, ?tool_names: Array[Symbol | String], ?configuration: Configuration, ?system_prompt: String, ?provider_options: Hash[Symbol, untyped], ?generation_options: Hash[Symbol, untyped], ?authorization: Proc?, ?telemetry: Proc?, ?enable_fallback: bool, ?request_context: Hash[Symbol, untyped]) -> void
       def run: (String) -> Result
     end
 
     class CLIAdapter
       def initialize: (?output: untyped, ?errors: untyped) -> void
-      def run: (task: String, client: untyped, ?tool_names: Array[Symbol | String], ?max_loops: Integer, ?format: String, ?provider_options: Hash[Symbol, untyped], ?generation_options: Hash[Symbol, untyped]) -> Integer
+      def run: (task: String, ?client: untyped, ?provider: Symbol?, ?tool_names: Array[Symbol | String], ?max_loops: Integer, ?format: String, ?provider_options: Hash[Symbol, untyped], ?generation_options: Hash[Symbol, untyped], ?telemetry: Proc?) -> Integer
     end
   end
 
@@ -505,7 +505,7 @@ module Prescient
     API_VERSION: String
     ROUTES: Hash[Array[String], Symbol]
 
-    def initialize: (?authentication: untyped, ?max_body_bytes: Integer) -> void
+      def initialize: (?authentication: untyped, ?authorization: untyped, ?request_context: untyped, ?telemetry: Proc?, ?max_body_bytes: Integer) -> void
     def call: (Hash[String, untyped]) -> [Integer, Hash[String, String], Array[String]]
   end
 

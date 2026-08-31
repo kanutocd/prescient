@@ -40,10 +40,11 @@ module Prescient
     # @param max_body_bytes [Integer] Maximum accepted request body size
     # @return [void]
     def initialize(authentication: nil, authorization: nil, request_context: nil,
-                   max_body_bytes: DEFAULT_MAX_BODY_BYTES)
+                   telemetry: nil, max_body_bytes: DEFAULT_MAX_BODY_BYTES)
       @authentication = authentication
       @authorization = authorization
       @request_context = request_context
+      @telemetry = telemetry
       @max_body_bytes = validate_body_limit(max_body_bytes)
     end
 
@@ -145,13 +146,21 @@ module Prescient
       configuration = Prescient::Agent::Configuration.new(max_loops: payload.fetch("max_loops", 5))
       Prescient::Agent::Runtime.new(
         provider: payload["provider"]&.to_sym,
-        client: client_for(payload),
         tool_names: tools,
         configuration: configuration,
         authorization: @authorization,
+        telemetry: @telemetry,
+        enable_fallback: agent_fallback(payload),
         generation_options: model_options(payload),
         request_context: request_context(env, request_id, principal:)
       )
+    end
+
+    def agent_fallback(payload)
+      fallback = payload.fetch("fallback", true)
+      raise ArgumentError, "fallback must be boolean" unless [true, false].include?(fallback)
+
+      fallback
     end
 
     def validate_agent_tools(tools)

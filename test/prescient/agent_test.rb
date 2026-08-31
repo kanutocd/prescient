@@ -259,6 +259,19 @@ class AgentTest < PrescientTest
     refute events.last[:success]
   end
 
+  def test_runtime_emits_initialization_failures
+    events = []
+    configuration = Prescient::Agent::Configuration.new(telemetry: ->(event) { events << event })
+
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::Runtime.new(client: FakeClient.new([]), tools: { bare: BareCallableTool.new }, configuration:)
+    end
+
+    assert_equal :failed, events.last[:event]
+    assert_equal :initialization, events.last[:phase]
+    assert_equal 0, events.last[:loops_run]
+  end
+
   def test_reusing_runtime_does_not_leak_state_between_runs
     client = FakeClient.new(
       [
@@ -411,8 +424,36 @@ class AgentTest < PrescientTest
       registry.invoke(:search, { "query" => "" })
     end
 
-    bare = Prescient::Agent::ToolRegistry.new(bare: BareCallableTool.new)
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::ToolRegistry.new(bare: BareCallableTool.new)
+    end
 
-    assert_equal({ result: "ok" }, bare.invoke(:bare, {}))
+    schema_only_tool = Class.new do
+      def call(_arguments)
+        { result: "ok" }
+      end
+
+      def schema
+        { type: "object" }
+      end
+    end.new
+
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::ToolRegistry.new(schema_only: schema_only_tool)
+    end
+
+    no_type_schema_tool = Class.new do
+      def call(_arguments)
+        { result: "ok" }
+      end
+
+      def schema
+        { description: "missing type" }
+      end
+    end.new
+
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::ToolRegistry.new(no_type_schema: no_type_schema_tool)
+    end
   end
 end

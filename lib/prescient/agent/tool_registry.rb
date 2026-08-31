@@ -32,6 +32,8 @@ module Prescient::Agent
         raise ConfigurationError, "agent tool does not support invocation: #{name}"
       end
 
+      validate_callable_schema!(name, tool) if tool.respond_to?(:call) && !tool.respond_to?(:search)
+
       Tool.new(
         name: name.to_sym,
         description: tool_description(tool),
@@ -59,13 +61,28 @@ module Prescient::Agent
 
       return "Search using the configured external capability." if tool.respond_to?(:search)
 
-      "Invoke the configured external capability."
+      raise ConfigurationError, "generic agent tool requires a description"
     end
 
     def tool_schema(tool)
       return tool.schema if tool.respond_to?(:schema)
 
-      tool.respond_to?(:search) ? { type: "object", required: ["query"] } : { type: "object" }
+      { type: "object", required: ["query"] }
+    end
+
+    def validate_callable_schema!(name, tool)
+      schema = tool.respond_to?(:schema) ? tool.schema : nil
+      valid = schema.is_a?(Hash) && !schema.empty? && schema_value(schema, "type") == "object"
+      return if valid
+
+      raise ConfigurationError, "generic agent tool requires a non-empty object schema: #{name}"
+    end
+
+    def schema_value(schema, key)
+      return schema[key] if schema.key?(key)
+      return schema[key.to_sym] if schema.key?(key.to_sym)
+
+      nil
     end
   end
 end

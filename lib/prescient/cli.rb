@@ -314,7 +314,7 @@ module Prescient
       task = read_text(options[:arguments], "task")
       Prescient::Agent::CLIAdapter.new(output: @output, errors: @errors).run(
         task:,
-        client: client_for(options),
+        provider: options[:provider]&.to_sym,
         tool_names: options.fetch(:tools, []),
         max_loops: options[:max_loops] || Prescient::Agent::Configuration::DEFAULT_MAX_LOOPS,
         format: options[:format],

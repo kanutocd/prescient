@@ -6,18 +6,23 @@ module Prescient::Agent
   class Runtime
     def initialize(provider: nil, client: nil, tools: nil, tool_names: [], configuration: Configuration.new,
                    system_prompt: "You are a helpful assistant.", provider_options: {}, generation_options: {},
-                   authorization: nil, telemetry: nil,
+                   authorization: nil, telemetry: nil, enable_fallback: true,
                    request_context: {})
-      @client = client || Prescient.client(provider, enable_fallback: true, provider_options: provider_options)
-      configured_tools = tools || tool_names.to_h { |name| [name, Prescient.tool(name)] }
-      configured_tools = configured_tools.compact
-      @registry = ToolRegistry.new(configured_tools)
       @configuration = configuration
+      @telemetry = telemetry || configuration.telemetry
+      @authorization = authorization || configuration.authorization
+      @request_context = request_context
       @system_prompt = system_prompt
       @generation_options = generation_options
-      @request_context = request_context
-      @authorization = authorization || configuration.authorization
-      @telemetry = telemetry || configuration.telemetry
+
+      begin
+        @client = client || Prescient.client(provider, enable_fallback:, provider_options:)
+        configured_tools = tools || tool_names.to_h { |name| [name, Prescient.tool(name)] }
+        @registry = ToolRegistry.new(configured_tools.compact)
+      rescue StandardError => e
+        emit_failure(e, phase: :initialization, loops_run: 0, actions: [])
+        raise
+      end
     end
 
     # Execute one bounded agent task.
@@ -43,13 +48,7 @@ module Prescient::Agent
       emit(:max_loops_exceeded, loops_run: @configuration.max_loops, actions: actions.dup, success: false)
       raise MaxLoopsExceededError, "agent exceeded maximum loops: #{@configuration.max_loops}"
     rescue StandardError => e
-      failure = {
-        loops_run: loops_run,
-        actions: actions.dup,
-        success: false,
-        error: ErrorSerializer.serialize(e).fetch(:error)
-      }
-      emit(:failed, **failure)
+      emit_failure(e, phase: :execution, loops_run:, actions: actions.dup)
       raise
     end
 
@@ -126,6 +125,14 @@ module Prescient::Agent
       @telemetry.call({ event:, **attributes }.freeze)
     rescue StandardError
       nil
+    end
+
+    def emit_failure(error, phase:, loops_run:, actions:)
+      emit(
+        :failed,
+        phase:, loops_run:, actions:, success: false,
+        error: ErrorSerializer.serialize(error).fetch(:error)
+      )
     end
   end
 end

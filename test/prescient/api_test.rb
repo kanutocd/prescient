@@ -235,6 +235,7 @@ class APITest < PrescientTest
       authentication: lambda { |env|
         env["HTTP_X_USER"] == "alice" ? { name: "alice" } : true
       },
+      request_context: ->(_env) { { source: "test" } },
       authorization: lambda { |context:, **|
         principals << (context[:principal] && context[:principal][:name])
         true
@@ -253,6 +254,13 @@ class APITest < PrescientTest
     end
 
     assert_equal ["alice", nil], principals
+  end
+
+  def test_agent_endpoint_rejects_invalid_fallback_values
+    response = call("POST", "/v1/agent", body: { prompt: "task", fallback: "yes" })
+
+    assert_equal 400, response.first
+    assert_equal "invalid_request", body(response).dig("error", "type")
   end
 
   def test_request_context_keeps_principals_isolated_for_concurrent_requests
