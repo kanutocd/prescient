@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.8.0] - 2025-08-31
+
 ### Added
 
 - Added an optional, bounded Ruby agent runtime with strict single-action tool
