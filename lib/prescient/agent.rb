@@ -5,11 +5,11 @@ require "json"
 module Prescient
   # Optional bounded agent orchestration over Prescient Core.
   module Agent
+    autoload :AuditLog, "prescient/agent/audit_log"
   end
 end
 
 require_relative "agent/configuration"
-require_relative "agent/audit_log"
 require_relative "agent/errors"
 require_relative "agent/error_serializer"
 require_relative "agent/schema_validator"

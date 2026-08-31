@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- Fixed the Agent audit-log load path to avoid a circular-require warning while
+  preserving lazy loading of the optional Agent implementation.
+
 ## [0.8.0] - 2025-08-31
 
 ### Added
