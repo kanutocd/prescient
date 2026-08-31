@@ -16,6 +16,12 @@ class AgentTest < PrescientTest
     end
   end
 
+  class LargeTool
+    def search(query, **)
+      { query: query, result: "🙂" * 200 }
+    end
+  end
+
   class CallableTool
     attr_reader :description, :schema
 
@@ -89,6 +95,40 @@ class AgentTest < PrescientTest
 
     assert_includes observation, "tool_failure"
     refute_includes observation, "secret response payload"
+  end
+
+  def test_truncates_observations_to_valid_utf8_json
+    client = FakeClient.new(
+      [
+        { response: "```json\n{\"action\":\"search\",\"args\":{\"query\":\"Ruby\"}}\n```" },
+        { response: "final" }
+      ]
+    )
+    configuration = Prescient::Agent::Configuration.new(max_observation_bytes: 100)
+
+    Prescient::Agent::Runtime.new(client:, tools: { search: LargeTool.new }, configuration:).run("find Ruby")
+
+    observation = client.calls.last[:context].last[:content].delete_prefix("Observation: ")
+    parsed = JSON.parse(observation)
+
+    assert parsed["truncated"]
+    assert_operator observation.bytesize, :<=, 100
+    assert_equal Encoding::UTF_8, observation.encoding
+  end
+
+  def test_uses_valid_json_fallbacks_for_extremely_small_observation_limits
+    observation = { result: "large" }
+    tiny = Prescient::Agent::Runtime.new(
+      client: FakeClient.new([{ response: "done" }]), tools: {},
+      configuration: Prescient::Agent::Configuration.new(max_observation_bytes: 1)
+    )
+    small = Prescient::Agent::Runtime.new(
+      client: FakeClient.new([{ response: "done" }]), tools: {},
+      configuration: Prescient::Agent::Configuration.new(max_observation_bytes: 10)
+    )
+
+    assert_equal "0", tiny.send(:bounded_observation, observation)
+    assert_equal "null", small.send(:bounded_observation, observation)
   end
 
   def test_rejects_unallowed_tool

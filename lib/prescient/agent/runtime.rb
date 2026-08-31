@@ -68,10 +68,39 @@ module Prescient::Agent
 
       observation = invoke_tool(action)
       actions << action[:name].to_s
-      observation_text = JSON.generate(observation).byteslice(0, @configuration.max_observation_bytes)
+      observation_text = bounded_observation(observation)
       context.append(role: "assistant", content: response[:response])
       context.append(role: "user", content: "Observation: #{observation_text}")
       true
+    end
+
+    def bounded_observation(observation)
+      serialized = JSON.generate(observation)
+      return serialized if serialized.bytesize <= @configuration.max_observation_bytes
+
+      limit = @configuration.max_observation_bytes
+      envelope = lambda do |value|
+        JSON.generate(truncated: true, value: value)
+      end
+      return limit < 4 ? "0" : "null" if limit < envelope.call("").bytesize
+
+      low = 0
+      high = serialized.bytesize
+      while low < high
+        midpoint = (low + high + 1) / 2
+        candidate = envelope.call(utf8_prefix(serialized, midpoint))
+        if candidate.bytesize <= limit
+          low = midpoint
+        else
+          high = midpoint - 1
+        end
+      end
+
+      envelope.call(utf8_prefix(serialized, low))
+    end
+
+    def utf8_prefix(value, max_bytes)
+      value.byteslice(0, max_bytes).to_s.force_encoding(Encoding::UTF_8).scrub
     end
 
     def invoke_tool(action)

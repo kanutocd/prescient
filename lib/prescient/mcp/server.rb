@@ -54,6 +54,7 @@ module Prescient::MCP
       def dispatch(request, context: {})
         case request["method"]
         when "initialize" then initialize_result
+        when "notifications/initialized", "notifications/cancelled", "notifications/progress" then nil
         when "tools/list" then { tools: }
         when "tools/call"
           call_tool(request.dig("params", "name"), request.dig("params", "arguments") || {}, context:)

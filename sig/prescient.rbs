@@ -197,6 +197,10 @@ module Prescient
   end
 
   module MCP
+    interface _Authenticator
+      def call: (Hash[String, untyped]) -> untyped
+    end
+
     class Configuration
       DEFAULT_MAX_INPUT_BYTES: Integer
       DEFAULT_TOOLS: Array[String]
@@ -225,8 +229,19 @@ module Prescient
     end
 
     class Rack
-      def initialize: (authentication: Proc, ?server: Server, ?request_context: Proc?, ?max_body_bytes: Integer) -> void
+      PROTOCOL_VERSION: String
+      SESSION_HEADER: String
+      PROTOCOL_HEADER: String
+      ALLOWED_ORIGINS_DEFAULT: Array[String]
+      def initialize: (authentication: _Authenticator, ?server: Server, ?request_context: Proc?, ?max_body_bytes: Integer, ?allowed_origins: Array[String], ?session_ttl: Numeric) -> void
       def call: (Hash[String, untyped]) -> Array[untyped]
+    end
+
+    module Authentication
+      class BearerToken
+        def initialize: (token: String, ?principal: untyped) -> void
+        def call: (Hash[String, untyped]) -> untyped
+      end
     end
   end
 

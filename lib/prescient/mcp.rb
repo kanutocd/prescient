@@ -2,6 +2,7 @@
 
 require "json"
 require_relative "mcp/configuration"
+require_relative "mcp/authentication"
 require_relative "mcp/server"
 require_relative "mcp/stdio"
 require_relative "mcp/rack"

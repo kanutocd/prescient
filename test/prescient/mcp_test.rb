@@ -170,8 +170,58 @@ class MCPTest < PrescientTest
 
     assert_equal 200, response.first
     assert_includes JSON.parse(response.last.first).keys, "result"
+    session_id = response[1].fetch("mcp-session-id")
 
-    assert_equal 404, rack.call("REQUEST_METHOD" => "GET").first
+    assert_equal 400, rack.call("REQUEST_METHOD" => "GET").first
+    next_env = {
+      "REQUEST_METHOD" => "POST",
+      "HTTP_MCP_SESSION_ID" => session_id,
+      "HTTP_MCP_PROTOCOL_VERSION" => Prescient::MCP::Rack::PROTOCOL_VERSION,
+      "HTTP_ACCEPT" => "application/json, text/event-stream",
+      "rack.input" => StringIO.new(JSON.generate(jsonrpc: "2.0", id: 2, method: "tools/list"))
+    }
+
+    assert_equal 200, rack.call(next_env).first
+
+    notification = next_env.merge(
+      "rack.input" => StringIO.new(JSON.generate(jsonrpc: "2.0", method: "notifications/initialized"))
+    )
+    notification_response = rack.call(notification)
+
+    assert_equal 202, notification_response.first
+    assert_empty notification_response.last
+
+    sse = next_env.merge(
+      "HTTP_ACCEPT" => "text/event-stream",
+      "rack.input" => StringIO.new(JSON.generate(jsonrpc: "2.0", id: 3, method: "tools/list"))
+    )
+    sse_response = rack.call(sse)
+
+    assert_equal 200, sse_response.first
+    assert_equal "text/event-stream", sse_response[1]["content-type"]
+    assert JSON.parse(sse_response.last.first.delete_prefix("data: ").strip)["result"]
+
+    get_response = rack.call(
+      "REQUEST_METHOD" => "GET", "HTTP_MCP_SESSION_ID" => session_id,
+      "HTTP_MCP_PROTOCOL_VERSION" => Prescient::MCP::Rack::PROTOCOL_VERSION,
+      "HTTP_ACCEPT" => "text/event-stream"
+    )
+
+    assert_equal 200, get_response.first
+    assert_equal get_response.last.first.bytesize.to_s, get_response[1]["content-length"]
+
+    delete_response = rack.call(
+      "REQUEST_METHOD" => "DELETE", "HTTP_MCP_SESSION_ID" => session_id,
+      "HTTP_MCP_PROTOCOL_VERSION" => Prescient::MCP::Rack::PROTOCOL_VERSION
+    )
+
+    assert_equal 204, delete_response.first
+    expired_env = next_env.merge(
+      "rack.input" => StringIO.new(JSON.generate(jsonrpc: "2.0", id: 4, method: "tools/list"))
+    )
+
+    assert_equal 404, rack.call(expired_env).first
+
     denied = Prescient::MCP::Rack.new(authentication: ->(_env) { false }, server: @server)
 
     assert_equal 401, denied.call(env).first
@@ -197,5 +247,81 @@ class MCPTest < PrescientTest
     assert_raises(ArgumentError) do
       Prescient::MCP::Rack.new(authentication: ->(_env) { true }, max_body_bytes: 0, server: @server)
     end
+  end
+
+  def test_rack_bearer_authentication_and_origin_policy
+    principal = { id: "admin" }
+    rack = Prescient::MCP::Rack.new(
+      authentication: Prescient::MCP::Authentication::BearerToken.new(token: "secret", principal:),
+      server: @server,
+      allowed_origins: ["https://app.example"]
+    )
+    request = JSON.generate(jsonrpc: "2.0", id: 1, method: "initialize")
+    base = { "REQUEST_METHOD" => "POST", "rack.input" => StringIO.new(request) }
+
+    assert_equal 401, rack.call(base).first
+    assert_equal 403, rack.call(base.merge("HTTP_ORIGIN" => "https://evil.example")).first
+    authorized = rack.call(
+      base.merge(
+        "HTTP_ORIGIN" => "https://app.example", "HTTP_AUTHORIZATION" => "Bearer secret"
+      )
+    )
+
+    assert_equal 200, authorized.first
+    default_principal = Prescient::MCP::Authentication::BearerToken.new(token: "secret")
+
+    assert_equal({ type: "bearer" }, default_principal.call("HTTP_AUTHORIZATION" => "Bearer secret"))
+    refute default_principal.call("HTTP_AUTHORIZATION" => "Basic secret")
+    refute default_principal.call("HTTP_AUTHORIZATION" => "Bearer wrong")
+  end
+
+  def test_rack_enforces_protocol_and_session_rules
+    rack = Prescient::MCP::Rack.new(
+      authentication: ->(env) { { principal: env["HTTP_X_PRINCIPAL"] || "one" } }, server: @server
+    )
+    request = lambda do |payload, headers = {}|
+      rack.call(
+        {
+          "REQUEST_METHOD" => "POST",
+          "rack.input" => StringIO.new(JSON.generate(payload))
+        }.merge(headers)
+      )
+    end
+
+    assert_equal 405, rack.call("REQUEST_METHOD" => "PUT").first
+    assert_equal 400, request.call(jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "old" }).first
+    initialized = request.call(jsonrpc: "2.0", id: 1, method: "initialize")
+    session_id = initialized[1].fetch("mcp-session-id")
+    session_headers = { "HTTP_MCP_SESSION_ID" => session_id }
+
+    assert_equal 400, request.call({ jsonrpc: "2.0", id: 2, method: "tools/list" }, session_headers).first
+    mismatch = request.call(
+      { jsonrpc: "2.0", id: 2, method: "tools/list" },
+      session_headers.merge("HTTP_X_PRINCIPAL" => "two",
+                            "HTTP_MCP_PROTOCOL_VERSION" => Prescient::MCP::Rack::PROTOCOL_VERSION)
+    )
+
+    assert_equal 401, mismatch.first
+    assert_equal 400, request.call(
+      { jsonrpc: "2.0", id: 2, method: "tools/list" },
+      session_headers.merge("HTTP_MCP_PROTOCOL_VERSION" => "wrong")
+    ).first
+    assert_equal 400, request.call(
+      { jsonrpc: "2.0" },
+      session_headers.merge("HTTP_MCP_PROTOCOL_VERSION" => Prescient::MCP::Rack::PROTOCOL_VERSION)
+    ).first
+    assert_equal 400, request.call({ jsonrpc: "2.0", id: 2, method: "initialize" }, session_headers).first
+    assert_equal 400, rack.call(
+      "REQUEST_METHOD" => "POST", "rack.input" => StringIO.new("not an object")
+    ).first
+    assert_equal 400, request.call({ jsonrpc: "1.0", id: 2, method: "tools/list" }, session_headers).first
+    assert_equal 400, request.call({ jsonrpc: "2.0", id: 2, method: 42 }, session_headers).first
+
+    no_sse = rack.call(
+      "REQUEST_METHOD" => "GET", "HTTP_MCP_SESSION_ID" => session_id,
+      "HTTP_MCP_PROTOCOL_VERSION" => Prescient::MCP::Rack::PROTOCOL_VERSION
+    )
+
+    assert_equal 400, no_sse.first
   end
 end
