@@ -13,6 +13,94 @@ For focused guidance, see the **[examples guide](https://github.com/kanutocd/pre
 **[Rails integration guide](https://github.com/kanutocd/prescient/blob/main/INTEGRATION_GUIDE.md)**, and
 **[pgvector guide](https://github.com/kanutocd/prescient/blob/main/VECTOR_SEARCH_GUIDE.md)**.
 
+Prescient has three primary application entry points:
+
+- **Ruby gem** — Use `Prescient` directly from a Ruby application.
+- **CLI** — Run provider operations and configuration checks from scripts or a
+  terminal.
+- **Rack-compatible REST API** — Mount `Prescient::API` in a Rack, Rails, or
+  other Rack-compatible application.
+
+The Ruby entry point does not load the CLI, REST API, or MCP transport. Those
+surfaces are loaded lazily when referenced or explicitly required.
+MCP is an optional protocol integration surface available through explicit
+`prescient/mcp` loading; it does not change the three primary entry points.
+
+## Contents
+
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Supported Providers](#supported-providers)
+- [Installation](#installation)
+- [Command-Line Interface](#command-line-interface)
+- [REST API](#rest-api)
+- [Configuration](#configuration)
+- [Ruby API](#ruby-api)
+- [Agent runtime](#agent-runtime)
+- [Custom Prompt Templates](#custom-prompt-templates)
+- [Custom Context Configurations](#custom-context-configurations)
+- [Vector Database Integration](#vector-database-integration-pgvector)
+- [Testing](#testing)
+- [Development](#development)
+
+## Quick Start
+
+Prescient reads provider credentials from the environment. The following
+example uses OpenAI; replace it with a configured provider when appropriate.
+
+```bash
+export OPENAI_API_KEY=your_api_key
+```
+
+Create `example.rb`:
+
+```ruby
+require "prescient"
+
+Prescient.configure do |config|
+  config.default_provider = :openai
+  config.add_provider(
+    :openai,
+    Prescient::Provider::OpenAI,
+    api_key: ENV.fetch("OPENAI_API_KEY"),
+    chat_model: ENV.fetch("OPENAI_CHAT_MODEL", "gpt-4.1-mini")
+  )
+end
+
+result = Prescient.generate_response(
+  "Draft a concise maintenance notice for a scheduled database upgrade."
+)
+
+puts result[:response]
+```
+
+Run it with:
+
+```bash
+bundle exec ruby example.rb
+```
+
+`generate_response` returns a normalized hash containing the generated
+response, provider, model, and provider metadata. Use the client directly when
+you need repeated operations or provider-specific fallback control:
+
+```ruby
+client = Prescient.client(:openai)
+response = client.generate_response("Summarize this release note.")
+embedding = client.generate_embedding("A searchable release note.")
+```
+
+For local development, configure Ollama instead of a hosted provider:
+
+```bash
+docker compose up -d ollama
+docker compose run --rm ollama-init
+```
+
+See the [examples guide](examples/README.md) for complete scripts and the
+[Configuration](#configuration) section for YAML, environment references,
+fallbacks, prompt templates, and external tools.
+
 ## Features
 
 - **Provider abstraction** — One consistent interface across supported AI providers
@@ -106,6 +194,8 @@ prescient config validate
 prescient config example
 prescient generate "Explain Ruby Ractors"
 prescient embed "Ruby is a programming language"
+prescient search "Ruby HTTP clients"
+prescient agent "Summarize the account status" --tool accounts
 ```
 
 Supported options include:
@@ -125,7 +215,14 @@ Supported options include:
 --api-key KEY            Use an API key for the operation
 --api-key-env NAME       Read the API key from an environment variable
 --format FORMAT          Select text or json output
+--json-file PATH         Load JSON documents as generation context
+--no-fallback             Disable provider fallback
 ```
+
+Search-specific options are `--tool NAME`, `--generate`, and `--limit COUNT`.
+Agent-specific options are repeatable `--tool NAME` and `--max-loops COUNT`.
+The full command-specific help is available with `prescient search --help` or
+`prescient agent --help`.
 
 Use `--api-key-env` to source credentials from an environment variable. The
 direct `--api-key` option is available for ephemeral automation but may be
@@ -247,6 +344,7 @@ Available endpoints include:
 - **`POST /v1/generate`**
 - **`POST /v1/search`**
 - **`POST /v1/search/generate`**
+- **`POST /v1/agent`**
 - **`POST /v1/embeddings`**
 - **`POST /v1/embeddings/batch`**
 - **`GET /v1/providers`**
@@ -650,12 +748,39 @@ the REST API does not grant access to configured tools implicitly:
 
 Applications can provide `authorization` and `request_context` hooks to enforce
 tenant/principal policy, and a bounded `telemetry` hook receives only event
-metadata such as loop count, action names, and success status.
+metadata such as loop count, action names, and success status. The authorization
+hook receives `tool:`, copied `arguments:`, and copied request-scoped
+`context:`; only an exact `true` result permits invocation. Prescient does not
+guess roles, ownership, or organization boundaries, so the host application
+must make the access decision.
 
 For MCP hosts, load the optional dependency-free adapter explicitly with
 `require "prescient/mcp"`, or run `prescient-mcp` for newline-delimited
 JSON-RPC over stdio. MCP exposes only explicitly enabled capabilities and never
 returns credentials or raw provider failure bodies.
+
+The optional Rack adapter provides a bounded Streamable HTTP surface with
+bearer-token authentication, Origin allowlisting, initialize-assigned sessions,
+`Mcp-Session-Id` lifecycle management, notifications, and one-shot JSON or
+server-sent-event responses:
+
+```ruby
+require "prescient/mcp"
+
+app = Prescient::MCP::Rack.new(
+  authentication: Prescient::MCP::Authentication::BearerToken.new(
+    token: ENV.fetch("MCP_TOKEN"),
+    principal: { id: "mcp-client" }
+  ),
+  allowed_origins: ["https://admin.example.com"]
+)
+run app
+```
+
+Clients must send `MCP-Protocol-Version: 2025-06-18` and the returned
+`Mcp-Session-Id` on requests after `initialize`. `DELETE` terminates a session.
+The adapter does not implement a long-lived notification queue or replace a
+host application's token provisioning and authorization policy.
 
 **Fallback Behavior:**
 - When a provider fails with a persistent error, Prescient automatically tries the next available provider
@@ -665,7 +790,7 @@ returns credentials or raw provider failure bodies.
 - Provider-service failures, connection failures, rate limits, and unavailable models may trigger fallback; authentication and invalid-request errors are returned to the caller
 - The fallback process preserves all method arguments and options
 
-## Usage
+## Ruby API
 
 ### Quick Start
 

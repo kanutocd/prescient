@@ -14,8 +14,25 @@
   generic callable tools, and independent task and response byte limits.
 - Added structured failure telemetry, principal propagation, and an
   authenticated, bounded MCP Rack transport backed by shared JSON-RPC dispatch.
+- Added valid UTF-8, JSON-safe observation truncation for bounded Agent context.
+- Extended the MCP Rack transport with authenticated sessions, lifecycle
+  termination, notifications, one-shot SSE responses, Origin checks, and a
+  reusable bearer-token authentication policy.
+- Documented the host-owned tenant/principal authorization contract and aligned
+  the Agent implementation plan with the shipped REST and MCP surfaces.
 - Added an optional lazy MCP adapter with capability discovery, safe core
   operations, agent invocation, resources, and newline-delimited JSON-RPC stdio.
+
+### Fixed
+
+- Fixed Agent tool validation to enforce richer JSON Schema constraints,
+  composition, and local references.
+- Fixed request-scoped Agent authorization context handling for concurrent API
+  requests and added regression coverage for principal isolation.
+- Tightened generic callable Agent tools to require explicit object schemas
+  instead of accepting unconstrained arguments.
+- Added structured Agent failure telemetry for initialization failures and
+  propagated telemetry configuration through CLI and REST Agent execution.
 
 ## [0.7.0] - 2025-08-17
 

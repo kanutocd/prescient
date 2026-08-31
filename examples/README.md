@@ -18,7 +18,8 @@ bundle install
 - `vector_search.rb` — `Prescient::Pgvector::Store` PostgreSQL/pgvector storage
   and similarity search.
 - `rest_api.ru` — a tiny Rack-compatible application that mounts
-  `Prescient::API` and lists its endpoints at `/`.
+  `Prescient::API` and lists its endpoints at `/`, including the bounded agent
+  and search-generation routes.
 - `web_search.rb` — explicit SearXNG tool invocation with normalized JSON output.
 
 The same `web_search` capability can use SearchApi instead of SearXNG when the

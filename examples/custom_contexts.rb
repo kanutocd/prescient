@@ -96,9 +96,9 @@ Prescient.configure do |config|
         embedding_fields: %w[medical_conditions medications]
       },
       'appointment' => {
-        fields: %w[patient_name date type notes doctor],
-        format: 'Appointment for %{patient_name} on %{date} - %{type} with Dr. %{doctor}: %{notes}',
-        embedding_fields: %w[type notes]
+        fields: %w[patient_name date appointment_type notes doctor],
+        format: 'Appointment for %{patient_name} on %{date} - %{appointment_type} with Dr. %{doctor}: %{notes}',
+        embedding_fields: %w[appointment_type notes]
       }
     },
     prompt_templates: {
@@ -135,7 +135,7 @@ begin
         'type' => 'appointment',
         'patient_name' => 'Patient A',
         'date' => '2024-01-20',
-        'type' => 'Follow-up',
+        'appointment_type' => 'Follow-up',
         'notes' => 'Blood sugar levels improving with current treatment',
         'doctor' => 'Johnson'
       }

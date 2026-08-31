@@ -20,6 +20,9 @@ module Prescient::Agent
     attr_reader :max_loops, :max_context_bytes, :max_action_bytes, :max_observation_bytes,
                 :max_task_bytes, :max_response_bytes, :authorization, :telemetry
 
+    # @param authorization [#call, nil] Host policy receiving tool, arguments,
+    #   and request-scoped context. Only exactly true permits a tool call.
+    # @param telemetry [#call, nil] Bounded event sink for execution metadata.
     def initialize(max_loops: DEFAULT_MAX_LOOPS, max_context_bytes: DEFAULT_MAX_CONTEXT_BYTES,
                    max_action_bytes: DEFAULT_MAX_ACTION_BYTES,
                    max_observation_bytes: DEFAULT_MAX_OBSERVATION_BYTES,
