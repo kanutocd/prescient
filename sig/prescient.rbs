@@ -143,6 +143,12 @@ module Prescient
       def initialize: (?max_loops: Integer, ?max_context_bytes: Integer, ?max_action_bytes: Integer, ?max_observation_bytes: Integer, ?max_task_bytes: Integer, ?max_response_bytes: Integer, ?authorization: Proc?, ?telemetry: Proc?) -> void
     end
 
+    class AuditLog
+      FIELDS: Array[Symbol]
+      def initialize: (?path: String?, ?io: untyped) -> void
+      def call: (Hash[Symbol, untyped]) -> void
+    end
+
     class Context
       attr_reader messages: Array[Hash[Symbol, String]]
       def initialize: (system_prompt: String, task: String, ?max_bytes: Integer) -> void
@@ -186,7 +192,7 @@ module Prescient
     end
 
     class Runtime
-      def initialize: (?provider: Symbol?, ?client: untyped, ?tools: Hash[Symbol | String, untyped]?, ?tool_names: Array[Symbol | String], ?configuration: Configuration, ?system_prompt: String, ?provider_options: Hash[Symbol, untyped], ?generation_options: Hash[Symbol, untyped], ?authorization: Proc?, ?telemetry: Proc?, ?enable_fallback: bool, ?request_context: Hash[Symbol, untyped]) -> void
+      def initialize: (?provider: Symbol?, ?client: untyped, ?tools: Hash[Symbol | String, untyped]?, ?tool_names: Array[Symbol | String], ?configuration: Configuration, ?system_prompt: String, ?provider_options: Hash[Symbol, untyped], ?generation_options: Hash[Symbol, untyped], ?authorization: Proc?, ?telemetry: Proc?, ?enable_fallback: bool, ?request_context: Hash[Symbol, untyped], ?audit_log: AuditLog?) -> void
       def run: (String) -> Result
     end
 

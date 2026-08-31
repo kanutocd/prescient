@@ -754,6 +754,17 @@ hook receives `tool:`, copied `arguments:`, and copied request-scoped
 guess roles, ownership, or organization boundaries, so the host application
 must make the access decision.
 
+For durable, privacy-preserving audit records, pass an opt-in JSONL sink:
+
+```ruby
+audit_log = Prescient::Agent::AuditLog.new(path: "tmp/prescient-agent.jsonl")
+Prescient::Agent::Runtime.new(audit_log:).run("Summarize account status")
+```
+
+The sink persists event metadata and timestamps, never prompts, documents, or
+raw observations. Audit storage failures are isolated from agent execution;
+configure retention, access controls, and storage protection in the host.
+
 For MCP hosts, load the optional dependency-free adapter explicitly with
 `require "prescient/mcp"`, or run `prescient-mcp` for newline-delimited
 JSON-RPC over stdio. MCP exposes only explicitly enabled capabilities and never

@@ -20,6 +20,7 @@
   reusable bearer-token authentication policy.
 - Documented the host-owned tenant/principal authorization contract and aligned
   the Agent implementation plan with the shipped REST and MCP surfaces.
+- Added an opt-in thread-safe JSONL Agent audit sink for durable safe telemetry.
 - Added an optional lazy MCP adapter with capability discovery, safe core
   operations, agent invocation, resources, and newline-delimited JSON-RPC stdio.
 

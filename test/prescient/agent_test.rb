@@ -41,6 +41,18 @@ class AgentTest < PrescientTest
     end
   end
 
+  class NoFlushIO
+    attr_reader :contents
+
+    def initialize
+      @contents = +""
+    end
+
+    def write(value)
+      @contents << value
+    end
+  end
+
   class FakeClient
     attr_reader :calls, :provider_name
 
@@ -175,6 +187,51 @@ class AgentTest < PrescientTest
     assert_equal :completed, events.last[:event]
     assert events.last[:success]
     assert(events.all? { |event| !event.key?(:prompt) })
+  end
+
+  def test_audit_log_persists_safe_agent_events
+    io = StringIO.new
+    audit_log = Prescient::Agent::AuditLog.new(io:)
+    client = FakeClient.new([{ response: "done", provider: "fake", model: "model" }])
+
+    Prescient::Agent::Runtime.new(client:, tools: {}, audit_log:).run("task")
+
+    record = JSON.parse(io.string.lines.last)
+
+    assert_equal "completed", record["event"]
+    assert record["success"]
+    assert record["timestamp"]
+    refute record.key?("prompt")
+    refute record.key?("context")
+    refute record.key?("observation")
+  end
+
+  def test_audit_log_does_not_break_agent_execution_when_it_fails
+    audit_log = Object.new
+    def audit_log.call(_event)
+      raise "audit storage unavailable"
+    end
+
+    result = Prescient::Agent::Runtime.new(
+      client: FakeClient.new([{ response: "done" }]), tools: {}, audit_log:
+    ).run("task")
+
+    assert_predicate result, :success?
+  end
+
+  def test_audit_log_requires_one_writable_destination
+    assert_raises(ArgumentError) { Prescient::Agent::AuditLog.new }
+    assert_raises(ArgumentError) do
+      Prescient::Agent::AuditLog.new(path: "tmp/audit.log", io: StringIO.new)
+    end
+  end
+
+  def test_audit_log_supports_streams_without_flush
+    io = NoFlushIO.new
+
+    Prescient::Agent::AuditLog.new(io:).call(event: :completed, success: true)
+
+    assert_equal "completed", JSON.parse(io.contents)["event"]
   end
 
   def test_rejects_non_callable_policy_and_unauthorized_actions

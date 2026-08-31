@@ -9,6 +9,7 @@ module Prescient
 end
 
 require_relative "agent/configuration"
+require_relative "agent/audit_log"
 require_relative "agent/errors"
 require_relative "agent/error_serializer"
 require_relative "agent/schema_validator"

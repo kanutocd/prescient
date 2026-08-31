@@ -7,9 +7,10 @@ module Prescient::Agent
     def initialize(provider: nil, client: nil, tools: nil, tool_names: [], configuration: Configuration.new,
                    system_prompt: "You are a helpful assistant.", provider_options: {}, generation_options: {},
                    authorization: nil, telemetry: nil, enable_fallback: true,
-                   request_context: {})
+                   request_context: {}, audit_log: nil)
       @configuration = configuration
       @telemetry = telemetry || configuration.telemetry
+      @audit_log = audit_log
       @authorization = authorization || configuration.authorization
       @request_context = request_context
       @system_prompt = system_prompt
@@ -149,9 +150,15 @@ module Prescient::Agent
     end
 
     def emit(event, attributes)
-      return unless @telemetry
+      payload = { event:, **attributes }.freeze
+      safely_emit(@telemetry, payload)
+      safely_emit(@audit_log, payload)
+    rescue StandardError
+      nil
+    end
 
-      @telemetry.call({ event:, **attributes }.freeze)
+    def safely_emit(sink, payload)
+      sink&.call(payload)
     rescue StandardError
       nil
     end
