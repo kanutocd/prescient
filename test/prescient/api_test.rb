@@ -255,6 +255,30 @@ class APITest < PrescientTest
     assert_equal ["alice", nil], principals
   end
 
+  def test_request_context_keeps_principals_isolated_for_concurrent_requests
+    contexts = Queue.new
+    threads = %w[alice bob].map do |user|
+      Thread.new do
+        10.times do |index|
+          contexts << @api.send(
+            :request_context,
+            { "REMOTE_USER" => user },
+            "request-#{user}-#{index}",
+            principal: { id: user }
+          )
+        end
+      end
+    end
+    threads.each(&:join)
+
+    received = Array.new(20) { contexts.pop }
+
+    assert_equal %w[alice bob], received.map { |context| context[:principal][:id] }.uniq.sort
+    assert(received.all? do |context|
+      context[:principal][:id] == context[:request_id].split("-").fetch(1)
+    end)
+  end
+
   def test_agent_endpoint_rejects_invalid_tool_lists
     response = call("POST", "/v1/agent", body: { prompt: "task", tools: "search" })
 

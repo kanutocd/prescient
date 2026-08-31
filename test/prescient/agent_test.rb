@@ -299,6 +299,87 @@ class AgentTest < PrescientTest
     end
   end
 
+  def test_schema_validator_supports_constraints_composition_and_local_references
+    schema = {
+      type: "object",
+      required: %w[account_id status amounts],
+      properties: {
+        account_id: { "$ref" => "#/$defs/account_id" },
+        status: { type: "string", enum: %w[open due] },
+        amounts: { type: "array", minItems: 1, maxItems: 2, items: { type: "integer", minimum: 1 } },
+        score: {
+          oneOf: [
+            { type: "string", minLength: 3, pattern: "\\A[a-z]+\\z" },
+            { type: "integer", minimum: 10, maximum: 20 }
+          ]
+        }
+      },
+      additionalProperties: false,
+      "$defs" => {
+        account_id: { type: "string", minLength: 6, pattern: "\\Aacct-" }
+      }
+    }
+
+    valid = { account_id: "acct-1", status: "due", amounts: [1, 2], score: "ready" }
+
+    assert_equal valid, Prescient::Agent::SchemaValidator.validate!(schema, valid)
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!(schema, valid.merge(status: "paid"))
+    end
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!(schema, valid.merge(amounts: [0]))
+    end
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!(schema, valid.merge(score: "12"))
+    end
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!(schema, valid.merge(account_id: "user-1"))
+    end
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!(schema, valid.merge(amounts: []))
+    end
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!(schema, valid.merge(amounts: [1, 2, 3]))
+    end
+
+    assert_equal "ready", Prescient::Agent::SchemaValidator.validate!(
+      { type: "array", items: { type: "string" } }, ["ready"]
+    ).first
+    assert_equal [], Prescient::Agent::SchemaValidator.validate!({ type: "array" }, [])
+    assert_equal [], Prescient::Agent::SchemaValidator.validate!({ type: "array", items: true }, [])
+    assert_equal "account", Prescient::Agent::SchemaValidator.validate!(
+      { type: "object", properties: { "name" => { type: "string", maxLength: 10 } } },
+      { "name" => "account" }
+    )["name"]
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!(
+        { type: "string", minLength: 3, maxLength: 5 }, "too-long"
+      )
+    end
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!({ type: "string", minLength: 3 }, "no")
+    end
+    assert Prescient::Agent::SchemaValidator.validate!(
+      { type: "number", exclusiveMinimum: 1, exclusiveMaximum: 5 }, 3
+    )
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!({ type: "number", exclusiveMinimum: 1 }, 1)
+    end
+    assert_raises(Prescient::Agent::MalformedActionError) do
+      Prescient::Agent::SchemaValidator.validate!({ type: "number", exclusiveMaximum: 5 }, 5)
+    end
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::SchemaValidator.validate!({ type: "string", pattern: "[" }, "value")
+    end
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::SchemaValidator.validate!({ "$ref" => "other.json#/value" }, {})
+    end
+    assert_raises(Prescient::Agent::ConfigurationError) do
+      Prescient::Agent::SchemaValidator.validate!({ "$ref" => "#/missing" }, {})
+    end
+    assert_equal({}, Prescient::Agent::SchemaValidator.validate!("not a schema", {}))
+  end
+
   def test_parser_returns_nil_without_an_action_and_rejects_oversize_actions
     assert_nil Prescient::Agent::Parser.parse("final answer")
     action = "```json\n{\"action\":\"search\",\"args\":{\"query\":\"Ruby\"}}\n```"
