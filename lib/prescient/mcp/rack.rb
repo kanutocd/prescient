@@ -10,9 +10,17 @@ module Prescient::MCP
   # Optional Rack-compatible MCP HTTP handler with explicit authentication.
   # rubocop:disable Metrics/ClassLength
   class Rack
+    # MCP protocol version supported by the HTTP transport.
+    # @return [String] Protocol version identifier
     PROTOCOL_VERSION = "2025-06-18"
+    # Rack environment key containing the MCP session identifier.
+    # @return [String] Rack header key
     SESSION_HEADER = "HTTP_MCP_SESSION_ID"
+    # Rack environment key containing the MCP protocol version.
+    # @return [String] Rack header key
     PROTOCOL_HEADER = "HTTP_MCP_PROTOCOL_VERSION"
+    # Default policy allowing requests without an Origin header restriction.
+    # @return [Array<String>] Empty Origin allowlist
     ALLOWED_ORIGINS_DEFAULT = [].freeze
 
     def initialize(authentication:, server: Server.new, request_context: nil,
@@ -228,6 +236,7 @@ module Prescient::MCP
   class SessionNotFoundError < StandardError
   end
 
+  # Raised when an authenticated request does not own the MCP session.
   class AuthenticationError < StandardError
   end
 end
