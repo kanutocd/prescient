@@ -63,6 +63,7 @@ class CLITest < PrescientTest
 
   def teardown
     ENV["PRESCIENT_CONFIG"] = @prescient_config if @prescient_config
+    @configuration_files&.each(&:unlink)
     super
   end
 
@@ -482,6 +483,7 @@ class CLITest < PrescientTest
     file.write(content)
     file.flush
     file.close
+    (@configuration_files ||= []) << file
     file.path
   end
 
