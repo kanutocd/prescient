@@ -508,6 +508,54 @@ class AgentTest < PrescientTest
     end
   end
 
+  def test_parser_handles_nested_json_and_braces_inside_strings
+    action = <<~TEXT
+      ```json
+      {"action":"search","args":{"query":"json{Ruby}","filters":{"kind":"book"}}}
+      ```
+    TEXT
+
+    assert_equal(
+      { name: :search, arguments: { "query" => "json{Ruby}", "filters" => { "kind" => "book" } } },
+      Prescient::Agent::Parser.parse(action)
+    )
+  end
+
+  def test_parser_scans_repeated_unterminated_fences_without_backtracking
+    text = "```json{" * 10_000
+
+    assert_nil Prescient::Agent::Parser.parse(text)
+  end
+
+  def test_parser_skips_non_action_fences_and_unterminated_json_objects
+    text = <<~TEXT
+      ```json
+      This is not an action.
+      ```
+      ```json
+      {"action":"ignored","args":{}}
+      not a closing fence
+      ```json
+      {"action":"search","args":{}}
+      ```
+    TEXT
+
+    assert_equal({ name: :search, arguments: {} }, Prescient::Agent::Parser.parse(text))
+  end
+
+  def test_parser_handles_escaped_json_string_values
+    action = <<~'TEXT'
+      ```json
+      {"action":"search","args":{"query":"quote: \" and slash: \\"}}
+      ```
+    TEXT
+
+    assert_equal(
+      { name: :search, arguments: { "query" => "quote: \" and slash: \\" } },
+      Prescient::Agent::Parser.parse(action)
+    )
+  end
+
   def test_registry_rejects_non_search_tools_and_missing_queries
     assert_raises(Prescient::Agent::ConfigurationError) do
       Prescient::Agent::ToolRegistry.new({ unsupported: Object.new })

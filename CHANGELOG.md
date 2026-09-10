@@ -6,6 +6,10 @@
 
 - Fixed the Agent audit-log load path to avoid a circular-require warning while
   preserving lazy loading of the optional Agent implementation.
+- Replaced the Agent parser's polynomial-time fenced-JSON regular expression
+  with a linear scanner to prevent ReDoS behavior on untrusted provider output.
+- Added Agent parser regression coverage for nested objects, escaped string
+  values, malformed fences, and repeated unterminated action prefixes.
 
 ## [0.8.0] - 2025-08-31
 
