@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.8.1] - 2025-09-10
+
 ### Fixed
 
 - Fixed the Agent audit-log load path to avoid a circular-require warning while
