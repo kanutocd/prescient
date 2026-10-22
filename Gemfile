@@ -11,7 +11,7 @@ group :development, :test do
   gem "webmock", "~> 3.26"
   gem "vcr", "~> 6.4"
   gem "rubocop", "~> 1.89"
-  gem "rubocop-minitest", "~> 0.40.0"
+  gem "rubocop-minitest", "~> 0.41.0"
   gem "rubocop-performance", "~> 1.26"
   gem "rubocop-rake", "~> 0.7.1"
   gem "simplecov", "~> 0.22.0"
