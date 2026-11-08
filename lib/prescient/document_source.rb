@@ -53,8 +53,8 @@ module Prescient
     # Validate and bound application-provided JSON documents.
     class Memory < Base
       # @param documents [Array<Hash>, Hash] Documents to validate
-      def initialize(documents:, **options)
-        super(**options)
+      def initialize(documents:, **)
+        super(**)
         @documents = documents
       end
 
@@ -67,8 +67,8 @@ module Prescient
     # Read JSON documents from a local file.
     class JsonFile < Base
       # @param path [String] JSON file path
-      def initialize(path:, **options)
-        super(**options)
+      def initialize(path:, **)
+        super(**)
         @path = path
         return if @path.is_a?(String) && !@path.empty?
 
@@ -91,8 +91,8 @@ module Prescient
     class RedisJson < Base
       # @param client [#get] Redis-compatible client
       # @param key [String] Redis key containing a JSON document or array
-      def initialize(client:, key:, **options)
-        super(**options)
+      def initialize(client:, key:, **)
+        super(**)
         @client = client
         @key = key
         return if @key.is_a?(String) && !@key.empty?

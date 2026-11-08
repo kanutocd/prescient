@@ -232,8 +232,8 @@ module Prescient
   # @param provider [Symbol, nil] Provider to use
   # @param enable_fallback [Boolean] Whether provider fallback is enabled
   # @return [Array<Float>] Embedding vector
-  def self.generate_embedding(text, provider: nil, enable_fallback: true, **options)
-    client(provider, enable_fallback: enable_fallback).generate_embedding(text, **options)
+  def self.generate_embedding(text, provider: nil, enable_fallback: true, **)
+    client(provider, enable_fallback: enable_fallback).generate_embedding(text, **)
   end
 
   # Generate a response through a configured provider.
@@ -244,8 +244,8 @@ module Prescient
   # @param enable_fallback [Boolean] Whether provider fallback is enabled
   # @return [Hash] Normalized provider response with :response, :model, :provider
   #   and optional metadata
-  def self.generate_response(prompt, context_items = [], provider: nil, enable_fallback: true, **options)
-    client(provider, enable_fallback: enable_fallback).generate_response(prompt, context_items, **options)
+  def self.generate_response(prompt, context_items = [], provider: nil, enable_fallback: true, **)
+    client(provider, enable_fallback: enable_fallback).generate_response(prompt, context_items, **)
   end
 
   # Search with an explicit external tool and optionally use the normalized
@@ -259,7 +259,7 @@ module Prescient
   # @param provider_options [Hash] Temporary provider configuration overrides
   # @return [Hash] Normalized provider response
   def self.search_and_generate(query, tool: :web_search, provider: nil, limit: nil,
-                               enable_fallback: true, provider_options: {}, **options)
+                               enable_fallback: true, provider_options: {}, **)
     search_tool = self.tool(tool)
     raise Prescient::ToolConfigurationError, "tool not configured: #{tool}" unless search_tool
 
@@ -270,7 +270,7 @@ module Prescient
     client(provider, enable_fallback:, provider_options:).generate_response(
       query,
       context_items,
-      **options
+      **
     )
   end
 
