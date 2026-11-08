@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## [0.8.2] - 2026-11-09
+
+### Breaking changes
+
+- Dropped support for Ruby 3.1. Ruby 3.2 or newer is now required.
+
 ## [0.8.1] - 2025-09-10
 
 ### Fixed

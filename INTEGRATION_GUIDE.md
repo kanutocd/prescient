@@ -11,7 +11,7 @@ and [examples guide](examples/README.md).
 
 ```ruby
 # Add to your Gemfile
-gem 'prescient', '~> 0.8.1'
+gem 'prescient', '~> 0.8.2'
 ```
 
 ### 2. Replace Existing AI Service
