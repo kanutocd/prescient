@@ -1,7 +1,7 @@
 # Prescient
 
 [![Gem Version](https://img.shields.io/gem/v/prescient?logo=rubygems&logoColor=white)](https://rubygems.org/gems/prescient)
-[![Requires Ruby 3.1+](https://img.shields.io/badge/Requires-Ruby%203.1%2B-CC342D?logo=ruby&logoColor=white)](https://www.ruby-lang.org/)
+[![Requires Ruby 3.2+](https://img.shields.io/badge/Requires-Ruby%203.2%2B-CC342D?logo=ruby&logoColor=white)](https://www.ruby-lang.org/)
 [![Docker](https://img.shields.io/badge/Docker-GHCR-2496ED?logo=docker&logoColor=white)](https://github.com/kanutocd/prescient/pkgs/container/prescient)
 [![CI](https://github.com/kanutocd/prescient/actions/workflows/ci.yml/badge.svg)](https://github.com/kanutocd/prescient/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/kanutocd/prescient/security.yml?branch=main&event=push&label=Security)](https://github.com/kanutocd/prescient/actions/workflows/security.yml)

@@ -27,7 +27,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           # Exercise dependency installation at the gem's minimum supported Ruby.
-          ruby-version: "3.1"
+          ruby-version: "3.2"
           bundler-cache: true
 
       - name: Install Bundler Audit
