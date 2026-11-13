@@ -18,7 +18,7 @@ group :development, :test do
   gem "rake", "~> 13.4"
   gem "irb", "~> 1.18"
   gem "yard", "~> 0.9.45"
-  gem "steep", "~> 1.10"
+  gem "steep", "~> 2.0"
   # Optional dependencies for vector database integration
   # PostgreSQL adapter for pgvector integration
   gem "pg", "~> 1.6"
