@@ -14,7 +14,7 @@ group :development, :test do
   gem "rubocop-minitest", "~> 0.41.0"
   gem "rubocop-performance", "~> 1.26"
   gem "rubocop-rake", "~> 0.7.1"
-  gem "simplecov", "~> 0.22.0"
+  gem "simplecov", "~> 1.2.0"
   gem "rake", "~> 13.4"
   gem "irb", "~> 1.18"
   gem "yard", "~> 0.9.45"
