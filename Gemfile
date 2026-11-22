@@ -6,7 +6,7 @@ source "https://rubygems.org"
 gemspec
 
 group :development, :test do
-  gem "minitest", "~> 5.27"
+  gem "minitest", "~> 6.1"
   gem "mocha", "~> 3.1"
   gem "webmock", "~> 3.26"
   gem "vcr", "~> 6.4"
