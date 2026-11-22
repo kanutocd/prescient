@@ -12,6 +12,7 @@ end
 
 require "bundler/setup"
 require "minitest/autorun"
+require "minitest/mock"
 require "minitest/pride"
 require "mocha/minitest"
 require "prescient"

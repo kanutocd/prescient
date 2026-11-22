@@ -7,6 +7,7 @@ gemspec
 
 group :development, :test do
   gem "minitest", "~> 6.1"
+  gem "minitest-mock", "~> 5.27"
   gem "mocha", "~> 3.1"
   gem "webmock", "~> 3.26"
   gem "vcr", "~> 6.4"
@@ -29,3 +30,4 @@ group :rack_example do
   gem "rackup", "~> 2.3"
   gem "puma", "~> 8.0"
 end
+
